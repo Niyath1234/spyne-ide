@@ -166,29 +166,42 @@ impl RelationalEngine {
         
         let mut agg_exprs = Vec::new();
         for (alias, func) in agg {
-            let expr = match func.to_uppercase().as_str() {
-                "SUM" | "SUM(OUTSTANDING)" => {
-                    // Extract column name from expression like "SUM(outstanding)"
-                    let col_name = if func.contains('(') {
-                        func.strip_prefix("SUM(")
-                            .and_then(|s| s.strip_suffix(")"))
-                            .unwrap_or("outstanding")
-                    } else {
-                        "outstanding"
-                    };
-                    col(col_name).sum().alias(alias)
+            let expr = if func.to_uppercase().starts_with("SUM(") {
+                // Extract column name from "SUM(column_name)"
+                let col_name = func
+                    .strip_prefix("SUM(")
+                    .or_else(|| func.strip_prefix("sum("))
+                    .and_then(|s| s.strip_suffix(")"))
+                    .unwrap_or("computed_value")
+                    .trim();
+                col(col_name).sum().alias(alias)
+            } else if func.to_uppercase().starts_with("AVG(") {
+                // Extract column name from "AVG(column_name)"
+                let col_name = func
+                    .strip_prefix("AVG(")
+                    .or_else(|| func.strip_prefix("avg("))
+                    .and_then(|s| s.strip_suffix(")"))
+                    .unwrap_or(func)
+                    .trim();
+                col(col_name).mean().alias(alias)
+            } else if func.to_uppercase().starts_with("COUNT(") {
+                // Extract column name from "COUNT(column_name)"
+                let col_name = func
+                    .strip_prefix("COUNT(")
+                    .or_else(|| func.strip_prefix("count("))
+                    .and_then(|s| s.strip_suffix(")"))
+                    .unwrap_or("*")
+                    .trim();
+                if col_name == "*" {
+                    len().alias(alias)
+                } else {
+                    col(col_name).count().alias(alias)
                 }
-                "COUNT" => len().alias(alias),
-                "AVG" => {
-                    let col_name = func.strip_prefix("AVG(")
-                        .and_then(|s| s.strip_suffix(")"))
-                        .unwrap_or(func);
-                    col(col_name).mean().alias(alias)
-                }
-                _ => {
-                    // Try to parse as column reference
-                    col(func).alias(alias)
-                }
+            } else if func.to_uppercase() == "COUNT" {
+                len().alias(alias)
+            } else {
+                // Direct column reference (no aggregation function)
+                col(func.trim()).alias(alias)
             };
             agg_exprs.push(expr);
         }
@@ -232,9 +245,36 @@ impl RelationalEngine {
     
     fn parse_derive_expr(&self, expr: &str, alias: &str) -> Result<Expr> {
         // Simplified expression parsing
-        // Handle simple arithmetic like "a - b" or "COALESCE(a, 0)"
+        // Handle expressions like "emi_amount - COALESCE(transaction_amount, 0)"
+        
+        // First, check if expression contains subtraction
+        if let Some((left, right)) = expr.split_once(" - ") {
+            let left_expr = col(left.trim());
+            
+            // Check if right side is a COALESCE expression
+            if right.contains("COALESCE") {
+                // Extract column name and default from COALESCE
+                if let Ok(re) = regex::Regex::new(r"COALESCE\((\w+),\s*(\d+)\)") {
+                    if let Some(caps) = re.captures(right) {
+                        if let (Some(col_match), Some(val_match)) = (caps.get(1), caps.get(2)) {
+                            let col_name = col_match.as_str();
+                            if let Ok(default_val) = val_match.as_str().parse::<f64>() {
+                                let coalesce_expr = col(col_name).fill_null(lit(default_val));
+                                return Ok((left_expr - coalesce_expr).alias(alias));
+                            }
+                        }
+                    }
+                }
+                // If COALESCE parsing fails, try simple subtraction
+                return Ok((left_expr - col(right.trim())).alias(alias));
+            } else {
+                // Simple subtraction: "a - b"
+                return Ok((left_expr - col(right.trim())).alias(alias));
+            }
+        }
+        
+        // Handle standalone COALESCE
         if expr.contains("COALESCE") {
-            // Extract column name and default
             if let Ok(re) = regex::Regex::new(r"COALESCE\((\w+),\s*(\d+)\)") {
                 if let Some(caps) = re.captures(expr) {
                     if let (Some(col_match), Some(val_match)) = (caps.get(1), caps.get(2)) {
@@ -245,11 +285,6 @@ impl RelationalEngine {
                     }
                 }
             }
-        }
-        
-        // Handle subtraction like "a - b"
-        if let Some((left, right)) = expr.split_once(" - ") {
-            return Ok((col(left.trim()) - col(right.trim())).alias(alias));
         }
         
         // Default: treat as column reference

@@ -92,7 +92,8 @@ impl RuleCompiler {
                     continue;
                 }
                 
-                // Find join path from root or any visited table to this entity table
+                // Find join path from root to this entity table
+                // BFS will find path through any intermediate nodes
                 let join_path = self.find_join_path_to_table(&root_table.name, &entity_table.name, &visited_tables)?;
                 
                 for join_step in join_path {
@@ -125,11 +126,13 @@ impl RuleCompiler {
         if has_aggregation {
             // Formula like "SUM(emi_amount - COALESCE(transaction_amount, 0))"
             // Step 4a: Derive intermediate column first
-            let agg_func_start = formula_upper.find("(").unwrap_or(0);
-            let inner_expr = rule.computation.formula[agg_func_start+1..]
-                .trim_start_matches('(')
-                .trim_end_matches(')')
-                .to_string();
+            // Extract inner expression by finding the first '(' and removing the last ')'
+            let agg_func_start = formula_upper.find('(').unwrap_or(0);
+            let mut inner_expr = rule.computation.formula[agg_func_start+1..].to_string();
+            // Remove trailing ')' if present
+            if inner_expr.ends_with(')') {
+                inner_expr.pop();
+            }
             
             let intermediate_col = "computed_value".to_string(); // Temporary column
             steps.push(PipelineOp::Derive {
@@ -156,7 +159,7 @@ impl RuleCompiler {
             });
         } else {
             // Formula is a direct column reference like "total_outstanding"
-            // If we need aggregation grain, group by it, otherwise just select
+            // If we need aggregation grain, group by it, otherwise just rename in select
             if !rule.computation.aggregation_grain.is_empty() && 
                rule.computation.aggregation_grain != rule.target_grain {
                 // Need to group by aggregation grain
@@ -167,38 +170,46 @@ impl RuleCompiler {
                     agg: agg_map,
                 });
             }
-            // If no special aggregation needed, formula column is already selected in final step
+            // If no special aggregation needed, we'll rename the column in the select step
         }
         
         // Step 6: Select final columns (grain + metric)
         let mut final_columns = rule.target_grain.clone();
-        final_columns.push(rule.metric.clone());
+        // For direct column formulas, alias the column to the metric name
+        if !has_aggregation {
+            final_columns.push(format!("{} as {}", rule.computation.formula, rule.metric));
+        } else {
+            final_columns.push(rule.metric.clone());
+        }
         steps.push(PipelineOp::Select { columns: final_columns });
         
         Ok(steps)
     }
     
     /// Find join path from a source table to a target table using lineage
+    /// Returns the shortest path through lineage edges (can include intermediate nodes)
     fn find_join_path_to_table(
         &self,
         from: &str,
         to: &str,
         visited: &HashSet<String>,
     ) -> Result<Vec<JoinPathStep>> {
-        // BFS to find shortest path
+        // BFS to find shortest path - intermediate nodes are allowed
         let mut queue = VecDeque::new();
         queue.push_back((from.to_string(), vec![]));
         let mut seen = HashSet::new();
         seen.insert(from.to_string());
-        seen.extend(visited.iter().cloned());
+        // Don't add visited to seen - allow traversal through already-visited nodes
+        // We just need to find a path, not avoid visited nodes
         
-        while let Some((current, mut path)) = queue.pop_front() {
+        while let Some((current, path)) = queue.pop_front() {
             if current == to {
                 return Ok(path);
             }
             
-            // Check all lineage edges
+            // Check all lineage edges from current node
             for edge in &self.metadata.lineage.edges {
+                // Forward direction
                 if edge.from == current && !seen.contains(&edge.to) {
                     let mut new_path = path.clone();
                     new_path.push(JoinPathStep {
@@ -215,9 +226,9 @@ impl RuleCompiler {
                     queue.push_back((edge.to.clone(), new_path));
                 }
                 
-                // Also check reverse direction for symmetric joins
+                // Reverse direction (if bidirectional joins are supported)
                 if edge.to == current && !seen.contains(&edge.from) {
-                    // Create reverse edge
+                    // Create reverse edge keys
                     let mut reverse_keys = HashMap::new();
                     for (k, v) in &edge.keys {
                         reverse_keys.insert(v.clone(), k.clone());
@@ -241,8 +252,8 @@ impl RuleCompiler {
         }
         
         Err(RcaError::Execution(format!(
-            "No join path found from {} to {}",
-            from, to
+            "No join path found from {} to {} (checked {} edges)",
+            from, to, self.metadata.lineage.edges.len()
         )))
     }
     

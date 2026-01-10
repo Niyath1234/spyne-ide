@@ -82,8 +82,25 @@ impl RcaEngine {
             metric.grain.clone()
         };
         
-        let df_a_normalized = identity_resolver.normalize_keys(df_a, &subgraph.tables_a[0], &common_grain).await?;
-        let df_b_normalized = identity_resolver.normalize_keys(df_b, &subgraph.tables_b[0], &common_grain).await?;
+        // Find the target entity table for each system (not just any table)
+        let rule_a = self.metadata.get_rule(&rule_a_id)
+            .ok_or_else(|| RcaError::Execution(format!("Rule not found: {}", rule_a_id)))?;
+        let rule_b = self.metadata.get_rule(&rule_b_id)
+            .ok_or_else(|| RcaError::Execution(format!("Rule not found: {}", rule_b_id)))?;
+        
+        // Find tables for target entity in each system
+        let table_a = self.metadata.tables
+            .iter()
+            .find(|t| t.entity == rule_a.target_entity && t.system == rule_a.system)
+            .ok_or_else(|| RcaError::Execution(format!("No table found for target entity {} in system {}", rule_a.target_entity, rule_a.system)))?;
+        
+        let table_b = self.metadata.tables
+            .iter()
+            .find(|t| t.entity == rule_b.target_entity && t.system == rule_b.system)
+            .ok_or_else(|| RcaError::Execution(format!("No table found for target entity {} in system {}", rule_b.target_entity, rule_b.system)))?;
+        
+        let df_a_normalized = identity_resolver.normalize_keys(df_a, &table_a.name, &common_grain).await?;
+        let df_b_normalized = identity_resolver.normalize_keys(df_b, &table_b.name, &common_grain).await?;
         
         // Step 9: Apply time logic
         let time_resolver = TimeResolver::new(self.metadata.clone());

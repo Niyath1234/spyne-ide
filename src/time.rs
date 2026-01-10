@@ -21,14 +21,20 @@ impl TimeResolver {
     }
     
     /// Apply as-of filtering to a dataframe
+    /// Returns dataframe unchanged if no rule exists (graceful degradation)
     pub fn apply_as_of(
         &self,
         df: DataFrame,
         table_name: &str,
         as_of_date: Option<NaiveDate>,
     ) -> Result<DataFrame> {
-        let rule = self.get_as_of_rule(table_name)
-            .ok_or_else(|| RcaError::Time(format!("No as-of rule for table: {}", table_name)))?;
+        let rule = match self.get_as_of_rule(table_name) {
+            Some(r) => r,
+            None => {
+                // No rule found - return dataframe as-is (graceful degradation)
+                return Ok(df);
+            }
+        };
         
         let time_col = &rule.as_of_column;
         

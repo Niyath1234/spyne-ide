@@ -225,9 +225,25 @@ pub struct LatenessRule {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct Identity {
+#[serde(untagged)]
+pub enum Identity {
+    Array(Vec<IdentityItem>),
+    Object(IdentityObject),
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct IdentityObject {
     pub canonical_keys: Vec<CanonicalKey>,
     pub key_mappings: Vec<KeyMapping>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(tag = "type")]
+pub enum IdentityItem {
+    #[serde(rename = "canonical_key")]
+    CanonicalKey(CanonicalKey),
+    #[serde(rename = "key_mapping")]
+    KeyMapping(KeyMapping),
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -254,7 +270,14 @@ pub struct KeyMapping {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct Exceptions {
+#[serde(untagged)]
+pub enum Exceptions {
+    Array(Vec<Exception>),
+    Object(ExceptionsObject),
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ExceptionsObject {
     pub exceptions: Vec<Exception>,
 }
 
@@ -283,8 +306,8 @@ pub struct Metadata {
     pub rules: Vec<Rule>,
     pub lineage: LineageObject,
     pub time_rules: TimeRules,
-    pub identity: Identity,
-    pub exceptions: Exceptions,
+    pub identity: IdentityObject,
+    pub exceptions: ExceptionsObject,
     
     // Indexes for fast lookup
     pub tables_by_name: HashMap<String, Table>,
@@ -315,8 +338,10 @@ impl Metadata {
         let lineage_raw: Lineage = Self::load_json(dir.join("lineage.json"))?;
         let lineage = Self::normalize_lineage(lineage_raw)?;
         let time_rules: TimeRules = Self::load_json(dir.join("time.json"))?;
-        let identity: Identity = Self::load_json(dir.join("identity.json"))?;
-        let exceptions: Exceptions = Self::load_json(dir.join("exceptions.json"))?;
+        let identity_raw: Identity = Self::load_json(dir.join("identity.json"))?;
+        let identity_obj = Self::normalize_identity(identity_raw)?;
+        let exceptions_raw: Exceptions = Self::load_json(dir.join("exceptions.json"))?;
+        let exceptions_obj = Self::normalize_exceptions(exceptions_raw)?;
         
         // Build indexes
         let tables_by_name: HashMap<_, _> = tables.iter()
@@ -367,8 +392,8 @@ impl Metadata {
             rules,
             lineage,
             time_rules,
-            identity,
-            exceptions,
+            identity: identity_obj,
+            exceptions: exceptions_obj,
             tables_by_name,
             tables_by_entity,
             tables_by_system,
@@ -426,6 +451,34 @@ impl Metadata {
                 }
                 
                 Ok(LineageObject { edges, possible_joins })
+            }
+        }
+    }
+    
+    fn normalize_identity(identity: Identity) -> Result<IdentityObject> {
+        match identity {
+            Identity::Object(obj) => Ok(obj),
+            Identity::Array(items) => {
+                let mut canonical_keys = Vec::new();
+                let mut key_mappings = Vec::new();
+                
+                for item in items {
+                    match item {
+                        IdentityItem::CanonicalKey(ck) => canonical_keys.push(ck),
+                        IdentityItem::KeyMapping(km) => key_mappings.push(km),
+                    }
+                }
+                
+                Ok(IdentityObject { canonical_keys, key_mappings })
+            }
+        }
+    }
+    
+    fn normalize_exceptions(exceptions: Exceptions) -> Result<ExceptionsObject> {
+        match exceptions {
+            Exceptions::Object(obj) => Ok(obj),
+            Exceptions::Array(items) => {
+                Ok(ExceptionsObject { exceptions: items })
             }
         }
     }
