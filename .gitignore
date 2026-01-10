@@ -1,5 +1,6 @@
 target/
 Cargo.lock
+!vendor/**/Cargo.lock
 *.log
 .env
 data/*.parquet
