@@ -33,5 +33,11 @@ pub enum RcaError {
     Polars(String),
 }
 
+impl From<polars::error::PolarsError> for RcaError {
+    fn from(err: polars::error::PolarsError) -> Self {
+        RcaError::Polars(err.to_string())
+    }
+}
+
 pub type Result<T> = std::result::Result<T, RcaError>;
 

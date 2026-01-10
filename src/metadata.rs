@@ -42,7 +42,23 @@ pub struct MetricVersion {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct BusinessLabel {
+#[serde(untagged)]
+pub enum BusinessLabelItem {
+    System(SystemLabel),
+    Metric(MetricLabel),
+    ReconciliationType(ReconciliationTypeLabel),
+}
+
+// For backward compatibility, also support the old object format
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(untagged)]
+pub enum BusinessLabel {
+    Array(Vec<BusinessLabelItem>),
+    Object(BusinessLabelObject),
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct BusinessLabelObject {
     pub systems: Vec<SystemLabel>,
     pub metrics: Vec<MetricLabel>,
     pub reconciliation_types: Vec<ReconciliationTypeLabel>,
@@ -68,17 +84,36 @@ pub struct ReconciliationTypeLabel {
     pub aliases: Vec<String>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct Rule {
     pub id: String,
-    pub name: String,
     pub system: String,
     pub metric: String,
-    pub grain: Vec<String>,
-    pub pipeline: Vec<PipelineOp>,
+    pub target_entity: String,
+    pub target_grain: Vec<String>,
+    pub computation: ComputationDefinition,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+pub struct ComputationDefinition {
+    pub description: String,
+    pub source_entities: Vec<String>,
+    pub attributes_needed: HashMap<String, Vec<String>>,
+    pub formula: String,
+    pub aggregation_grain: Vec<String>,
+}
+
+impl std::hash::Hash for Rule {
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        self.id.hash(state);
+        self.system.hash(state);
+        self.metric.hash(state);
+        self.target_entity.hash(state);
+        self.target_grain.hash(state);
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(tag = "op")]
 pub enum PipelineOp {
     #[serde(rename = "scan")]
@@ -95,10 +130,64 @@ pub enum PipelineOp {
     Select { columns: Vec<String> },
 }
 
+impl std::hash::Hash for PipelineOp {
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        match self {
+            PipelineOp::Scan { table } => {
+                "scan".hash(state);
+                table.hash(state);
+            }
+            PipelineOp::Join { table, on, join_type } => {
+                "join".hash(state);
+                table.hash(state);
+                on.hash(state);
+                join_type.hash(state);
+            }
+            PipelineOp::Filter { expr } => {
+                "filter".hash(state);
+                expr.hash(state);
+            }
+            PipelineOp::Derive { expr, r#as } => {
+                "derive".hash(state);
+                expr.hash(state);
+                r#as.hash(state);
+            }
+            PipelineOp::Group { by, agg } => {
+                "group".hash(state);
+                by.hash(state);
+                // For HashMap, convert to sorted Vec for consistent hashing
+                let mut agg_vec: Vec<_> = agg.iter().collect();
+                agg_vec.sort();
+                agg_vec.hash(state);
+            }
+            PipelineOp::Select { columns } => {
+                "select".hash(state);
+                columns.hash(state);
+            }
+        }
+    }
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct Lineage {
+#[serde(untagged)]
+pub enum Lineage {
+    Array(Vec<LineageItem>),
+    Object(LineageObject),
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct LineageObject {
     pub edges: Vec<LineageEdge>,
     pub possible_joins: Vec<PossibleJoin>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(tag = "type")]
+pub enum LineageItem {
+    #[serde(rename = "edge")]
+    Edge(LineageEdge),
+    #[serde(rename = "possible_join")]
+    PossibleJoin(PossibleJoin),
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -185,22 +274,26 @@ pub struct ExceptionCondition {
     pub filter: String,
 }
 
+#[derive(Clone)]
 pub struct Metadata {
     pub entities: Vec<Entity>,
     pub tables: Vec<Table>,
     pub metrics: Vec<Metric>,
-    pub business_labels: BusinessLabel,
+    pub business_labels: BusinessLabelObject,
     pub rules: Vec<Rule>,
-    pub lineage: Lineage,
+    pub lineage: LineageObject,
     pub time_rules: TimeRules,
     pub identity: Identity,
     pub exceptions: Exceptions,
     
     // Indexes for fast lookup
     pub tables_by_name: HashMap<String, Table>,
+    pub tables_by_entity: HashMap<String, Vec<Table>>,
+    pub tables_by_system: HashMap<String, Vec<Table>>,
     pub rules_by_id: HashMap<String, Rule>,
     pub rules_by_system_metric: HashMap<(String, String), Vec<Rule>>,
     pub metrics_by_id: HashMap<String, Metric>,
+    pub entities_by_id: HashMap<String, Entity>,
 }
 
 impl Metadata {
@@ -208,11 +301,19 @@ impl Metadata {
         let dir = dir.as_ref();
         
         let entities: Vec<Entity> = Self::load_json(dir.join("entities.json"))?;
-        let tables: Vec<Table> = Self::load_json(dir.join("tables.json"))?;
+        let tables_obj: serde_json::Value = Self::load_json(dir.join("tables.json"))?;
+        let tables: Vec<Table> = if tables_obj.get("tables").is_some() {
+            serde_json::from_value(tables_obj["tables"].clone())?
+        } else {
+            serde_json::from_value(tables_obj)?
+        };
+        
         let metrics: Vec<Metric> = Self::load_json(dir.join("metrics.json"))?;
-        let business_labels: BusinessLabel = Self::load_json(dir.join("business_labels.json"))?;
+        let business_labels_raw: BusinessLabel = Self::load_json(dir.join("business_labels.json"))?;
+        let business_labels = Self::normalize_business_labels(business_labels_raw)?;
         let rules: Vec<Rule> = Self::load_json(dir.join("rules.json"))?;
-        let lineage: Lineage = Self::load_json(dir.join("lineage.json"))?;
+        let lineage_raw: Lineage = Self::load_json(dir.join("lineage.json"))?;
+        let lineage = Self::normalize_lineage(lineage_raw)?;
         let time_rules: TimeRules = Self::load_json(dir.join("time.json"))?;
         let identity: Identity = Self::load_json(dir.join("identity.json"))?;
         let exceptions: Exceptions = Self::load_json(dir.join("exceptions.json"))?;
@@ -221,6 +322,22 @@ impl Metadata {
         let tables_by_name: HashMap<_, _> = tables.iter()
             .map(|t| (t.name.clone(), t.clone()))
             .collect();
+        
+        let mut tables_by_entity: HashMap<_, _> = HashMap::new();
+        for table in &tables {
+            tables_by_entity
+                .entry(table.entity.clone())
+                .or_insert_with(Vec::new)
+                .push(table.clone());
+        }
+        
+        let mut tables_by_system: HashMap<_, _> = HashMap::new();
+        for table in &tables {
+            tables_by_system
+                .entry(table.system.clone())
+                .or_insert_with(Vec::new)
+                .push(table.clone());
+        }
         
         let rules_by_id: HashMap<_, _> = rules.iter()
             .map(|r| (r.id.clone(), r.clone()))
@@ -238,6 +355,10 @@ impl Metadata {
             .map(|m| (m.id.clone(), m.clone()))
             .collect();
         
+        let entities_by_id: HashMap<_, _> = entities.iter()
+            .map(|e| (e.id.clone(), e.clone()))
+            .collect();
+        
         Ok(Metadata {
             entities,
             tables,
@@ -249,9 +370,12 @@ impl Metadata {
             identity,
             exceptions,
             tables_by_name,
+            tables_by_entity,
+            tables_by_system,
             rules_by_id,
             rules_by_system_metric,
             metrics_by_id,
+            entities_by_id,
         })
     }
     
@@ -260,6 +384,50 @@ impl Metadata {
             .map_err(|e| RcaError::Metadata(format!("Failed to read {}: {}", path.display(), e)))?;
         serde_json::from_str(&content)
             .map_err(|e| RcaError::Metadata(format!("Failed to parse {}: {}", path.display(), e)))
+    }
+    
+    fn normalize_business_labels(labels: BusinessLabel) -> Result<BusinessLabelObject> {
+        match labels {
+            BusinessLabel::Object(obj) => Ok(obj),
+            BusinessLabel::Array(items) => {
+                let mut systems = Vec::new();
+                let mut metrics = Vec::new();
+                let mut recon_types = Vec::new();
+                
+                for item in items {
+                    match item {
+                        BusinessLabelItem::System(s) => systems.push(s),
+                        BusinessLabelItem::Metric(m) => metrics.push(m),
+                        BusinessLabelItem::ReconciliationType(r) => recon_types.push(r),
+                    }
+                }
+                
+                Ok(BusinessLabelObject {
+                    systems,
+                    metrics,
+                    reconciliation_types: recon_types,
+                })
+            }
+        }
+    }
+    
+    fn normalize_lineage(lineage: Lineage) -> Result<LineageObject> {
+        match lineage {
+            Lineage::Object(obj) => Ok(obj),
+            Lineage::Array(items) => {
+                let mut edges = Vec::new();
+                let mut possible_joins = Vec::new();
+                
+                for item in items {
+                    match item {
+                        LineageItem::Edge(e) => edges.push(e),
+                        LineageItem::PossibleJoin(pj) => possible_joins.push(pj),
+                    }
+                }
+                
+                Ok(LineageObject { edges, possible_joins })
+            }
+        }
     }
     
     pub fn get_table(&self, name: &str) -> Option<&Table> {

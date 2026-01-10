@@ -11,22 +11,23 @@ impl Hypergraph {
         Self { metadata }
     }
     
-    /// Get all tables referenced by a rule
+    /// Get all tables referenced by a rule (derived from rule's computation definition)
     pub fn get_rule_tables(&self, rule_id: &str) -> Result<Vec<String>> {
         let rule = self.metadata
             .get_rule(rule_id)
             .ok_or_else(|| RcaError::Graph(format!("Rule not found: {}", rule_id)))?;
         
+        // Derive tables from rule's source entities
         let mut tables = HashSet::new();
-        for op in &rule.pipeline {
-            match op {
-                crate::metadata::PipelineOp::Scan { table } => {
-                    tables.insert(table.clone());
-                }
-                crate::metadata::PipelineOp::Join { table, .. } => {
-                    tables.insert(table.clone());
-                }
-                _ => {}
+        for entity in &rule.computation.source_entities {
+            // Find all tables for this entity in the rule's system
+            let entity_tables: Vec<&crate::metadata::Table> = self.metadata.tables
+                .iter()
+                .filter(|t| t.entity == *entity && t.system == rule.system)
+                .collect();
+            
+            for table in entity_tables {
+                tables.insert(table.name.clone());
             }
         }
         
@@ -112,7 +113,7 @@ impl Hypergraph {
             .get_rule(rule_id)
             .ok_or_else(|| RcaError::Graph(format!("Rule not found: {}", rule_id)))?;
         
-        Ok(rule.grain.clone())
+        Ok(rule.target_grain.clone())
     }
 }
 

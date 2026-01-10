@@ -116,7 +116,7 @@ impl RcaEngine {
                 for col_name in &common_grain {
                     if let Ok(col_val) = mismatch_df.column(col_name) {
                         let val_str = match col_val.dtype() {
-                            DataType::Utf8 => {
+                            DataType::String => {
                                 col_val.str().unwrap().get(row_idx).unwrap_or("").to_string()
                             }
                             DataType::Int64 => {

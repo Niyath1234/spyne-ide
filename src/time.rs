@@ -42,7 +42,7 @@ impl TimeResolver {
                 // Filter to rows where time_col <= as_of_date
                 let date_str = date.format("%Y-%m-%d").to_string();
                 let filter_expr = col(time_col).lt_eq(lit(date_str));
-                Ok(df.filter(&filter_expr)?)
+                Ok(df.lazy().filter(filter_expr).collect()?)
             }
             None => {
                 // Use default behavior
@@ -62,8 +62,8 @@ impl TimeResolver {
     /// Detect temporal misalignment between two dataframes
     pub fn detect_temporal_misalignment(
         &self,
-        df_a: &DataFrame,
-        df_b: &DataFrame,
+        _df_a: &DataFrame,
+        _df_b: &DataFrame,
         table_a: &str,
         table_b: &str,
     ) -> Result<Option<TemporalMisalignment>> {
@@ -74,8 +74,8 @@ impl TimeResolver {
             return Ok(None);
         }
         
-        let time_col_a = &rule_a.unwrap().as_of_column;
-        let time_col_b = &rule_b.unwrap().as_of_column;
+        let _time_col_a = &rule_a.unwrap().as_of_column;
+        let _time_col_b = &rule_b.unwrap().as_of_column;
         
         // Get date ranges (simplified - would need proper date column handling)
         // For now, return None as placeholder

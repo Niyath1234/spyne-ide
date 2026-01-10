@@ -38,20 +38,22 @@ pub struct Explanation {
 pub struct LlmClient {
     api_key: String,
     base_url: String,
+    model: String,
 }
 
 impl LlmClient {
-    pub fn new(api_key: String) -> Self {
+    pub fn new(api_key: String, model: String, base_url: String) -> Self {
         Self {
             api_key,
-            base_url: "https://api.openai.com/v1".to_string(),
+            base_url,
+            model,
         }
     }
     
     pub async fn interpret_query(
         &self,
         query: &str,
-        business_labels: &crate::metadata::BusinessLabel,
+        business_labels: &crate::metadata::BusinessLabelObject,
         metrics: &[crate::metadata::Metric],
     ) -> Result<QueryInterpretation> {
         // Build context for LLM
@@ -143,33 +145,17 @@ Only return the JSON, no other text."#,
         &self,
         rca_result: &crate::rca::RcaResult,
     ) -> Result<Explanation> {
-        let result_json = serde_json::to_string(rca_result)
-            .map_err(|e| RcaError::Llm(format!("Failed to serialize RCA result: {}", e)))?;
-        
-        let prompt = format!(
-            r#"Explain this Root Cause Analysis result in business-friendly language:
-
-{}
-
-Provide:
-1. A clear summary (2-3 sentences)
-2. Key findings (bullet points)
-
-Return JSON:
-{{
-  "summary": "Brief summary",
-  "details": ["Finding 1", "Finding 2"]
-}}
-
-Only return the JSON, no other text."#,
-            result_json
+        // For now, skip LLM explanation since we're not testing LLM yet
+        // Return a simple explanation based on the result structure
+        let summary = format!(
+            "RCA completed for {} vs {} - {} metric",
+            rca_result.system_a, rca_result.system_b, rca_result.metric
         );
+        let details: Vec<String> = rca_result.classifications.iter()
+            .map(|c| format!("{}: {}", c.root_cause, c.description))
+            .collect();
         
-        let response = self.call_llm(&prompt).await?;
-        let explanation: Explanation = serde_json::from_str(&response)
-            .map_err(|e| RcaError::Llm(format!("Failed to parse explanation: {}", e)))?;
-        
-        Ok(explanation)
+        Ok(Explanation { summary, details })
     }
     
     async fn call_llm(&self, prompt: &str) -> Result<String> {
@@ -180,7 +166,7 @@ Only return the JSON, no other text."#,
         
         let client = reqwest::Client::new();
         let body = serde_json::json!({
-            "model": "gpt-4",
+            "model": self.model,
             "messages": [
                 {"role": "system", "content": "You are a precise JSON-only responder. Always return valid JSON, no other text."},
                 {"role": "user", "content": prompt}

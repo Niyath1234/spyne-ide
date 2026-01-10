@@ -103,7 +103,7 @@ impl IdentityResolver {
         // Select only grain columns and metric columns
         let metric_cols: Vec<String> = result.get_column_names()
             .iter()
-            .filter(|c| !target_grain.contains(c))
+            .filter(|c| !target_grain.contains(&c.to_string()))
             .map(|s| s.to_string())
             .collect();
         

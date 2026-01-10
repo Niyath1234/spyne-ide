@@ -1,26 +1,23 @@
-{
-  "exceptions": [
-    {
-      "id": "test_loan_exclusion",
-      "description": "Exclude test loans from reconciliation",
-      "condition": {
-        "table": "khatabook_loans",
-        "filter": "loan_id LIKE 'TEST%'"
-      },
-      "applies_to": ["khatabook_tos"]
+[
+  {
+    "id": "test_loan_exclusion",
+    "description": "Exclude test loans from reconciliation",
+    "condition": {
+      "table": "khatabook_loans",
+      "filter": "loan_id LIKE 'TEST%'"
     },
-    {
-      "id": "writeoff_handling",
-      "description": "Handle writeoff loans differently",
-      "condition": {
-        "table": "tb_loan_summary",
-        "filter": "status = 'WRITEOFF'"
-      },
-      "applies_to": ["tb_tos"],
-      "override": {
-        "tos": 0
-      }
+    "applies_to": ["khatabook_tos"]
+  },
+  {
+    "id": "writeoff_handling",
+    "description": "Handle writeoff loans differently",
+    "condition": {
+      "table": "tb_loan_summary",
+      "filter": "status = 'WRITEOFF'"
+    },
+    "applies_to": ["tb_tos"],
+    "override": {
+      "tos": 0
     }
-  ]
-}
-
+  }
+]

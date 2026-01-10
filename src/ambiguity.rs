@@ -1,5 +1,5 @@
 use crate::error::{RcaError, Result};
-use crate::llm::{AmbiguityOption, AmbiguityQuestion, AmbiguityResolution};
+use crate::llm::{AmbiguityOption, AmbiguityQuestion};
 use crate::metadata::Metadata;
 use std::io::{self, Write};
 
@@ -72,13 +72,17 @@ impl AmbiguityResolver {
             answers.insert(question.question.clone(), selected.id.clone());
         }
         
+        // Extract rule answers based on question keys
+        let rule_a_question = format!("Which rule version for {}?", interpretation.system_a);
+        let rule_b_question = format!("Which rule version for {}?", interpretation.system_b);
+        
         Ok(ResolvedInterpretation {
             system_a: interpretation.system_a.clone(),
             system_b: interpretation.system_b.clone(),
             metric: interpretation.metric.clone(),
             as_of_date: interpretation.as_of_date.clone(),
-            rule_a: answers.get("Which rule version?").cloned(),
-            rule_b: answers.get("Which rule version?").cloned(),
+            rule_a: answers.get(&rule_a_question).cloned(),
+            rule_b: answers.get(&rule_b_question).cloned(),
         })
     }
     
@@ -91,8 +95,8 @@ impl AmbiguityResolver {
             .iter()
             .map(|r| AmbiguityOption {
                 id: r.id.clone(),
-                label: r.name.clone(),
-                description: format!("Rule ID: {}", r.id),
+                label: r.id.clone(),
+                description: r.computation.description.clone(),
             })
             .collect();
         

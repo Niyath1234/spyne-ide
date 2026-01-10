@@ -80,11 +80,16 @@ impl DiffEngine {
                 df_b_renamed,
                 grain_cols.clone(),
                 grain_cols.clone(),
-                JoinType::Inner,
+                JoinArgs::new(JoinType::Inner),
             )
             .with_columns([
                 (col("metric_a") - col("metric_b")).alias("diff"),
-                (col("metric_a") - col("metric_b")).abs().alias("abs_diff"),
+            ])
+            .with_columns([
+                when(col("diff").gt(lit(0)))
+                    .then(col("diff"))
+                    .otherwise(-col("diff"))
+                    .alias("abs_diff"),
             ])
             .collect()?;
         
@@ -101,7 +106,7 @@ impl DiffEngine {
         let matches_df = joined
             .clone()
             .lazy()
-            .filter(col("abs_diff").le(lit(threshold)))
+            .filter(col("abs_diff").lt_eq(lit(threshold)))
             .collect()?;
         
         let mismatches = mismatches_df.height();
@@ -122,7 +127,7 @@ impl DiffEngine {
             for col_name in grain {
                 let col_val = df.column(col_name)?;
                 let val_str = match col_val.dtype() {
-                    DataType::Utf8 => col_val.str().unwrap().get(row_idx).unwrap().to_string(),
+                    DataType::String => col_val.str().unwrap().get(row_idx).unwrap().to_string(),
                     DataType::Int64 => col_val.i64().unwrap().get(row_idx).unwrap().to_string(),
                     DataType::Float64 => col_val.f64().unwrap().get(row_idx).unwrap().to_string(),
                     _ => format!("{:?}", col_val.get(row_idx)),
@@ -142,7 +147,7 @@ impl DiffEngine {
             .clone()
             .lazy()
             .group_by(grain_cols.clone())
-            .agg([count().alias("count")])
+            .agg([len().alias("count")])
             .filter(col("count").gt(lit(1)))
             .collect()?;
         
@@ -152,7 +157,7 @@ impl DiffEngine {
             for col_name in grain {
                 let col_val = duplicates.column(col_name)?;
                 let val_str = match col_val.dtype() {
-                    DataType::Utf8 => col_val.str().unwrap().get(row_idx).unwrap().to_string(),
+                    DataType::String => col_val.str().unwrap().get(row_idx).unwrap().to_string(),
                     DataType::Int64 => col_val.i64().unwrap().get(row_idx).unwrap().to_string(),
                     DataType::Float64 => col_val.f64().unwrap().get(row_idx).unwrap().to_string(),
                     _ => format!("{:?}", col_val.get(row_idx)),

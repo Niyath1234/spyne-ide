@@ -24,6 +24,9 @@ impl RelationalEngine {
                 self.scan(table, table_path).await
             }
             PipelineOp::Join { table, on, join_type } => {
+                // Note: This method doesn't have access to metadata
+                // Joins should be handled in the executor which has metadata access
+                // For now, use basic scan - but this should be refactored
                 let right = self.scan(table, table_path).await?;
                 self.join(input.unwrap(), right, on, join_type).await
             }
@@ -42,7 +45,7 @@ impl RelationalEngine {
         }
     }
     
-    async fn scan(&self, table: &str, table_path: Option<&str>) -> Result<DataFrame> {
+    pub async fn scan(&self, table: &str, table_path: Option<&str>) -> Result<DataFrame> {
         let path = if let Some(p) = table_path {
             PathBuf::from(p)
         } else {
@@ -63,22 +66,41 @@ impl RelationalEngine {
         Ok(df)
     }
     
-    async fn join(
+    /// Scan with metadata - uses table path from metadata
+    pub async fn scan_with_metadata(&self, table_name: &str, metadata: &crate::metadata::Metadata) -> Result<DataFrame> {
+        let table = metadata.get_table(table_name)
+            .ok_or_else(|| RcaError::Execution(format!("Table not found in metadata: {}", table_name)))?;
+        
+        let path = self.data_dir.join(&table.path);
+        
+        if !path.exists() {
+            return Err(RcaError::Execution(format!("Table file not found: {}", path.display())));
+        }
+        
+        let df = LazyFrame::scan_parquet(&path, ScanArgsParquet::default())
+            .map_err(|e| RcaError::Execution(format!("Failed to scan {}: {}", table_name, e)))?
+            .collect()
+            .map_err(|e| RcaError::Execution(format!("Failed to collect {}: {}", table_name, e)))?;
+        
+        Ok(df)
+    }
+    
+    pub async fn join(
         &self,
         left: DataFrame,
         right: DataFrame,
         on: &[String],
         join_type: &str,
     ) -> Result<DataFrame> {
+        let row_count_before = left.height();
         let left_lazy = left.lazy();
         let right_lazy = right.lazy();
         
         let join_type_enum = match join_type.to_lowercase().as_str() {
-            "left" => JoinType::Left,
-            "inner" => JoinType::Inner,
-            "outer" => JoinType::Outer,
-            "right" => JoinType::Right,
-            _ => JoinType::Inner,
+            "left" => JoinArgs::new(JoinType::Left),
+            "inner" => JoinArgs::new(JoinType::Inner),
+            "outer" => JoinArgs::new(JoinType::Outer),
+            _ => JoinArgs::new(JoinType::Inner),
         };
         
         let on_cols: Vec<Expr> = on.iter().map(|c| col(c)).collect();
@@ -89,7 +111,6 @@ impl RelationalEngine {
             .map_err(|e| RcaError::Execution(format!("Join failed: {}", e)))?;
         
         // Check for join explosion
-        let row_count_before = left.height();
         let row_count_after = result.height();
         if row_count_after > row_count_before * 10 {
             return Err(RcaError::Execution(format!(
@@ -157,7 +178,7 @@ impl RelationalEngine {
                     };
                     col(col_name).sum().alias(alias)
                 }
-                "COUNT" => count().alias(alias),
+                "COUNT" => len().alias(alias),
                 "AVG" => {
                     let col_name = func.strip_prefix("AVG(")
                         .and_then(|s| s.strip_suffix(")"))

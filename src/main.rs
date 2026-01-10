@@ -39,6 +39,9 @@ struct Args {
 
 #[tokio::main]
 async fn main() -> Result<()> {
+    // Load environment variables from .env file
+    dotenv::dotenv().ok();
+    
     tracing_subscriber::fmt::init();
     
     let args = Args::parse();
@@ -53,7 +56,11 @@ async fn main() -> Result<()> {
     let api_key = args.api_key
         .or_else(|| std::env::var("OPENAI_API_KEY").ok())
         .unwrap_or_else(|| "dummy-api-key".to_string());
-    let llm = llm::LlmClient::new(api_key);
+    let model = std::env::var("OPENAI_MODEL")
+        .unwrap_or_else(|_| "gpt-4o-mini".to_string());
+    let base_url = std::env::var("OPENAI_BASE_URL")
+        .unwrap_or_else(|_| "https://api.openai.com/v1".to_string());
+    let llm = llm::LlmClient::new(api_key, model, base_url);
     
     // Run RCA
     let engine = rca::RcaEngine::new(metadata, llm, args.data_dir);
