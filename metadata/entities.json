@@ -1,0 +1,26 @@
+{
+  "entities": [
+    {
+      "id": "loan",
+      "name": "Loan",
+      "description": "Individual loan entity",
+      "grain": ["loan_id"],
+      "attributes": ["loan_id", "customer_id", "disbursement_date", "principal_amount"]
+    },
+    {
+      "id": "emi",
+      "name": "EMI",
+      "description": "Equated Monthly Installment",
+      "grain": ["loan_id", "emi_number"],
+      "attributes": ["loan_id", "emi_number", "due_date", "amount", "status"]
+    },
+    {
+      "id": "transaction",
+      "name": "Transaction",
+      "description": "Financial transaction",
+      "grain": ["transaction_id"],
+      "attributes": ["transaction_id", "loan_id", "emi_number", "amount", "transaction_date", "type"]
+    }
+  ]
+}
+

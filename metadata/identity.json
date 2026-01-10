@@ -1,0 +1,29 @@
+{
+  "canonical_keys": [
+    {
+      "entity": "loan",
+      "canonical": "loan_id",
+      "alternates": [
+        {
+          "system": "khatabook",
+          "key": "kb_loan_id"
+        },
+        {
+          "system": "tb",
+          "key": "tb_loan_id"
+        }
+      ]
+    }
+  ],
+  "key_mappings": [
+    {
+      "from_system": "khatabook",
+      "to_system": "tb",
+      "from_key": "loan_id",
+      "to_key": "loan_id",
+      "mapping_table": "loan_id_mapping",
+      "confidence": "high"
+    }
+  ]
+}
+

@@ -1,0 +1,59 @@
+{
+  "rules": [
+    {
+      "id": "khatabook_tos",
+      "name": "Khatabook TOS Calculation",
+      "system": "khatabook",
+      "metric": "tos",
+      "grain": ["loan_id"],
+      "pipeline": [
+        {
+          "op": "scan",
+          "table": "khatabook_loans"
+        },
+        {
+          "op": "join",
+          "table": "khatabook_emis",
+          "on": ["loan_id"],
+          "type": "left"
+        },
+        {
+          "op": "join",
+          "table": "khatabook_transactions",
+          "on": ["loan_id", "emi_number"],
+          "type": "left"
+        },
+        {
+          "op": "derive",
+          "expr": "emi_amount - COALESCE(transaction_amount, 0)",
+          "as": "outstanding"
+        },
+        {
+          "op": "group",
+          "by": ["loan_id"],
+          "agg": {
+            "tos": "SUM(outstanding)"
+          }
+        }
+      ]
+    },
+    {
+      "id": "tb_tos",
+      "name": "TB TOS Calculation",
+      "system": "tb",
+      "metric": "tos",
+      "grain": ["loan_id"],
+      "pipeline": [
+        {
+          "op": "scan",
+          "table": "tb_loan_summary"
+        },
+        {
+          "op": "select",
+          "columns": ["loan_id", "total_outstanding as tos"]
+        }
+      ]
+    }
+  ]
+}
+

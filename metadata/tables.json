@@ -1,0 +1,45 @@
+{
+  "tables": [
+    {
+      "name": "khatabook_loans",
+      "entity": "loan",
+      "primary_key": ["loan_id"],
+      "time_column": "disbursement_date",
+      "system": "khatabook",
+      "path": "khatabook/loans.parquet"
+    },
+    {
+      "name": "khatabook_emis",
+      "entity": "emi",
+      "primary_key": ["loan_id", "emi_number"],
+      "time_column": "due_date",
+      "system": "khatabook",
+      "path": "khatabook/emis.parquet"
+    },
+    {
+      "name": "khatabook_transactions",
+      "entity": "transaction",
+      "primary_key": ["transaction_id"],
+      "time_column": "transaction_date",
+      "system": "khatabook",
+      "path": "khatabook/transactions.parquet"
+    },
+    {
+      "name": "tb_loans",
+      "entity": "loan",
+      "primary_key": ["loan_id"],
+      "time_column": "disbursement_date",
+      "system": "tb",
+      "path": "tb/loans.parquet"
+    },
+    {
+      "name": "tb_loan_summary",
+      "entity": "loan",
+      "primary_key": ["loan_id"],
+      "time_column": "as_of_date",
+      "system": "tb",
+      "path": "tb/loan_summary.parquet"
+    }
+  ]
+}
+

@@ -1,0 +1,37 @@
+{
+  "systems": [
+    {
+      "label": "Khatabook",
+      "aliases": ["khatabook", "kb", "kbk"],
+      "system_id": "khatabook"
+    },
+    {
+      "label": "TB",
+      "aliases": ["tb", "tallybook", "tally book"],
+      "system_id": "tb"
+    }
+  ],
+  "metrics": [
+    {
+      "label": "TOS",
+      "aliases": ["tos", "total outstanding", "total outstanding amount"],
+      "metric_id": "tos"
+    },
+    {
+      "label": "POS",
+      "aliases": ["pos", "principal outstanding"],
+      "metric_id": "pos"
+    }
+  ],
+  "reconciliation_types": [
+    {
+      "label": "reconciliation",
+      "aliases": ["recon", "reconcile", "compare", "match"]
+    },
+    {
+      "label": "as of",
+      "aliases": ["as-of", "asof", "as of date", "snapshot"]
+    }
+  ]
+}
+

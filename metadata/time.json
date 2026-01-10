@@ -1,0 +1,32 @@
+{
+  "as_of_rules": [
+    {
+      "table": "khatabook_loans",
+      "as_of_column": "disbursement_date",
+      "default": "latest"
+    },
+    {
+      "table": "khatabook_emis",
+      "as_of_column": "due_date",
+      "default": "latest"
+    },
+    {
+      "table": "khatabook_transactions",
+      "as_of_column": "transaction_date",
+      "default": "latest"
+    },
+    {
+      "table": "tb_loan_summary",
+      "as_of_column": "as_of_date",
+      "default": "latest"
+    }
+  ],
+  "lateness_rules": [
+    {
+      "table": "khatabook_transactions",
+      "max_lateness_days": 7,
+      "action": "warn"
+    }
+  ]
+}
+
