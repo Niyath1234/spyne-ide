@@ -16,4 +16,7 @@ pub mod agent;
 pub mod llm;
 pub mod performance;
 pub mod trust;
+pub mod observability;
+pub mod safety;
+pub mod identity;
 

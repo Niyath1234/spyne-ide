@@ -49,5 +49,91 @@
       },
       "note": "Date snapshot: 2026-01-07. Business filters: Only successful repayments, exclude deleted records, only unsettled loans, specific NBFCs only, exclude credin orders."
     }
+  },
+  {
+    "id": "khatabook_tos_calculation",
+    "system": "khatabook",
+    "metric": "tos",
+    "target_entity": "loan",
+    "target_grain": ["loan_id"],
+    "computation": {
+      "description": "Khatabook Total Outstanding calculation from loan and transaction data",
+      "source_entities": ["loan", "transaction"],
+      "source_table": "khatabook_loans",
+      "attributes_needed": {
+        "loan": ["loan_id", "disbursement_amount", "principal_amount", "final_outstanding", "leadger_balance"],
+        "transaction": ["loan_id", "amount", "transaction_date", "type"]
+      },
+      "formula": "COALESCE(final_outstanding, leadger_balance, principal_amount - SUM(CASE WHEN transaction.type = 'repayment' THEN transaction.amount ELSE 0 END))",
+      "aggregation_grain": ["loan_id"],
+      "filter_conditions": {
+        "loan.disbursement_date": "IS NOT NULL"
+      },
+      "note": "Total Outstanding for Khatabook system. Uses final_outstanding if available, otherwise calculates from principal minus repayments. Falls back to leadger_balance if principal not available."
+    }
+  },
+  {
+    "id": "tb_tos_calculation",
+    "system": "tb",
+    "metric": "tos",
+    "target_entity": "loan",
+    "target_grain": ["loan_id"],
+    "computation": {
+      "description": "TB (TallyBook) Total Outstanding calculation from loan summary",
+      "source_entities": ["loan"],
+      "source_table": "tb_loan_summary",
+      "attributes_needed": {
+        "loan": ["loan_id", "final_outstanding", "principal_outstanding", "interest_outstanding", "as_of_date"]
+      },
+      "formula": "COALESCE(final_outstanding, principal_outstanding + COALESCE(interest_outstanding, 0))",
+      "aggregation_grain": ["loan_id"],
+      "filter_conditions": {
+        "as_of_date": "IS NOT NULL"
+      },
+      "note": "Total Outstanding for TB system. Uses final_outstanding if available, otherwise sums principal_outstanding and interest_outstanding."
+    }
+  },
+  {
+    "id": "khatabook_pos_calculation",
+    "system": "khatabook",
+    "metric": "pos",
+    "target_entity": "loan",
+    "target_grain": ["loan_id"],
+    "computation": {
+      "description": "Khatabook Principal Outstanding calculation",
+      "source_entities": ["loan"],
+      "source_table": "khatabook_loans",
+      "attributes_needed": {
+        "loan": ["loan_id", "principal_amount", "disbursement_amount"]
+      },
+      "formula": "principal_amount",
+      "aggregation_grain": ["loan_id"],
+      "filter_conditions": {
+        "disbursement_date": "IS NOT NULL"
+      },
+      "note": "Principal Outstanding for Khatabook. Uses principal_amount directly from loans table."
+    }
+  },
+  {
+    "id": "tb_pos_calculation",
+    "system": "tb",
+    "metric": "pos",
+    "target_entity": "loan",
+    "target_grain": ["loan_id"],
+    "computation": {
+      "description": "TB (TallyBook) Principal Outstanding calculation",
+      "source_entities": ["loan"],
+      "source_table": "tb_loan_summary",
+      "attributes_needed": {
+        "loan": ["loan_id", "principal_outstanding", "as_of_date"]
+      },
+      "formula": "principal_outstanding",
+      "aggregation_grain": ["loan_id"],
+      "filter_conditions": {
+        "as_of_date": "IS NOT NULL",
+        "principal_outstanding": "IS NOT NULL"
+      },
+      "note": "Principal Outstanding for TB system. Directly uses principal_outstanding field from loan summary table."
+    }
   }
 ]

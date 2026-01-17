@@ -8,6 +8,9 @@ use std::path::PathBuf;
 use rca_engine::rca::RcaEngine;
 use rca_engine::metadata::Metadata;
 use rca_engine::llm::LlmClient;
+use rca_engine::graph_traversal::GraphTraversalAgent;
+use rca_engine::sql_engine::SqlEngine;
+use rca_engine::graph::Hypergraph;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -216,6 +219,56 @@ async fn handle_request(request: &str) -> String {
                 }
             }
         }
+        ("POST", "/api/graph/traverse") => {
+            // Extract query and optional metadata_dir from body
+            let body_start = request.find("\r\n\r\n").unwrap_or(request.len());
+            let body = &request[body_start..].trim();
+            
+            let mut query = String::new();
+            let mut metadata_dir = PathBuf::from("metadata");
+            let mut data_dir = PathBuf::from("data");
+            
+            if let Some(json_start) = body.find('{') {
+                let json_str = &body[json_start..];
+                if let Ok(json) = serde_json::from_str::<serde_json::Value>(json_str) {
+                    if let Some(q) = json.get("query").and_then(|v| v.as_str()) {
+                        query = q.to_string();
+                    }
+                    if let Some(md) = json.get("metadata_dir").and_then(|v| v.as_str()) {
+                        metadata_dir = PathBuf::from(md);
+                    }
+                    if let Some(dd) = json.get("data_dir").and_then(|v| v.as_str()) {
+                        data_dir = PathBuf::from(dd);
+                    }
+                }
+            }
+            
+            if query.is_empty() {
+                return create_response(400, "Bad Request", r#"{"error":"Query is required"}"#);
+            }
+            
+            match execute_graph_traverse(&query, &metadata_dir, &data_dir).await {
+                Ok(state) => {
+                    let result_json = serde_json::json!({
+                        "result": {
+                            "root_cause_found": state.root_cause_found,
+                            "current_hypothesis": state.current_hypothesis,
+                            "findings": state.findings,
+                            "visited_path": state.visited_path,
+                            "current_depth": state.current_depth,
+                            "max_depth": state.max_depth,
+                            "hints": state.hints
+                        },
+                        "state": state
+                    });
+                    create_response(200, "OK", &serde_json::to_string(&result_json).unwrap_or_else(|_| r#"{"error":"Failed to serialize response"}"#.to_string()))
+                }
+                Err(e) => {
+                    eprintln!("❌ Graph traversal failed: {}", e);
+                    create_response(500, "Internal Server Error", r#"{"error":"Graph traversal failed"}"#)
+                }
+            }
+        }
         ("OPTIONS", _) => {
             // Handle CORS preflight
             create_response(200, "OK", "")
@@ -339,6 +392,47 @@ async fn execute_rca_query(query: &str) -> Result<(String, Vec<serde_json::Value
             Err(format!("RCA analysis failed: {}", e).into())
         }
     }
+}
+
+async fn execute_graph_traverse(
+    query: &str,
+    metadata_dir: &PathBuf,
+    data_dir: &PathBuf,
+) -> Result<rca_engine::graph_traversal::TraversalState, Box<dyn std::error::Error>> {
+    let metadata = Metadata::load(metadata_dir)
+        .map_err(|e| format!("Failed to load metadata: {}", e))?;
+    
+    let api_key = std::env::var("OPENAI_API_KEY")
+        .unwrap_or_else(|_| "dummy".to_string());
+    let model = std::env::var("OPENAI_MODEL")
+        .unwrap_or_else(|_| "gpt-4".to_string());
+    let base_url = std::env::var("OPENAI_BASE_URL")
+        .unwrap_or_else(|_| "https://api.openai.com/v1".to_string());
+    let llm = LlmClient::new(api_key, model, base_url);
+    
+    let interpretation = llm.interpret_query(
+        query,
+        &metadata.business_labels,
+        &metadata.metrics,
+    ).await?;
+    
+    let graph = Hypergraph::new(metadata.clone());
+    let sql_engine = SqlEngine::new(metadata.clone(), data_dir.clone());
+    
+    let kb_path = metadata_dir.join("knowledge_base.json");
+    let mut agent = GraphTraversalAgent::new(metadata, graph, sql_engine)
+        .with_llm(llm)
+        .with_knowledge_hints_from_path(kb_path)?;
+    
+    let state = agent.traverse(
+        query,
+        &interpretation.metric,
+        &interpretation.system_a,
+        &interpretation.system_b,
+        interpretation.as_of_date.as_deref(),
+    ).await?;
+    
+    Ok(state)
 }
 
 fn get_tables_from_metadata() -> Result<String, Box<dyn std::error::Error>> {

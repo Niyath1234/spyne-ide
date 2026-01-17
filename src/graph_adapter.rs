@@ -409,6 +409,21 @@ impl GraphAdapter {
         Ok(None)
     }
     
+    /// Get hypergraph node statistics for a table
+    pub fn get_table_stats(&self, table_name: &str) -> Option<NodeStatistics> {
+        let node = self.hypergraph.get_table_node(table_name)?;
+        Some(node.stats.clone())
+    }
+    
+    /// Get hypergraph edge statistics for a join between two tables
+    pub fn get_join_stats(&self, from_table: &str, to_table: &str) -> Option<EdgeStatistics> {
+        let from_id = self.table_to_node.get(from_table)?;
+        let to_id = self.table_to_node.get(to_table)?;
+        let edge_id = self.hypergraph.find_edge_between(*from_id, *to_id)?;
+        let edge = self.hypergraph.get_edge(edge_id)?;
+        Some(edge.stats.clone())
+    }
+    
     /// Get related tables for a given table using Hypergraph's adjacency
     pub fn get_related_tables(&self, table_name: &str) -> Vec<String> {
         let mut related = Vec::new();

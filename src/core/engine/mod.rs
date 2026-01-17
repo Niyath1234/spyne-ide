@@ -6,6 +6,8 @@ pub mod materialize;
 pub mod canonicalize;
 pub mod row_diff;
 pub mod aggregate_reconcile;
+pub mod logical_plan;
+pub mod storage;
 
 pub use materialize::RowMaterializationEngine;
 pub use canonicalize::CanonicalMapper;

@@ -1,6 +1,7 @@
 use crate::error::{RcaError, Result};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
+use tracing::{info, warn};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct QueryInterpretation {
@@ -139,8 +140,56 @@ Format: {{"system_a":"id","system_b":"id","metric":"id","as_of_date":"YYYY-MM-DD
         let cleaned_response = cleaned_response.replace(r#""confidence":null"#, r#""confidence":0.9"#);
         
         // Parse JSON response
-        let interpretation: QueryInterpretation = serde_json::from_str(&cleaned_response)
+        let mut interpretation: QueryInterpretation = serde_json::from_str(&cleaned_response)
             .map_err(|e| RcaError::Llm(format!("Failed to parse LLM response: {}. Response: {}", e, cleaned_response)))?;
+        
+        // Validate and fix system names - must be from the known systems list
+        let valid_system_ids: std::collections::HashSet<String> = business_labels.systems.iter()
+            .map(|s| s.system_id.clone())
+            .collect();
+        
+        // Check system_a
+        if !valid_system_ids.contains(&interpretation.system_a) {
+            warn!("LLM returned invalid system_a '{}', available: {:?}", interpretation.system_a, valid_system_ids);
+            // Try to match by alias or fallback
+            let matched = business_labels.systems.iter().find(|s| {
+                s.aliases.iter().any(|a| a.to_lowercase() == interpretation.system_a.to_lowercase()) ||
+                s.system_id.to_lowercase().contains(&interpretation.system_a.to_lowercase()) ||
+                interpretation.system_a.to_lowercase().contains(&s.system_id.to_lowercase())
+            });
+            interpretation.system_a = matched.map(|s| s.system_id.clone()).unwrap_or_else(|| "khatabook".to_string());
+            info!("Fixed system_a to: {}", interpretation.system_a);
+        }
+        
+        // Check system_b
+        if !valid_system_ids.contains(&interpretation.system_b) {
+            warn!("LLM returned invalid system_b '{}', available: {:?}", interpretation.system_b, valid_system_ids);
+            // Try to match by alias or fallback
+            let matched = business_labels.systems.iter().find(|s| {
+                s.aliases.iter().any(|a| a.to_lowercase() == interpretation.system_b.to_lowercase()) ||
+                s.system_id.to_lowercase().contains(&interpretation.system_b.to_lowercase()) ||
+                interpretation.system_b.to_lowercase().contains(&s.system_id.to_lowercase())
+            });
+            interpretation.system_b = matched.map(|s| s.system_id.clone()).unwrap_or_else(|| "tb".to_string());
+            info!("Fixed system_b to: {}", interpretation.system_b);
+        }
+        
+        // Validate metric as well
+        let valid_metric_ids: std::collections::HashSet<String> = business_labels.metrics.iter()
+            .map(|m| m.metric_id.clone())
+            .collect();
+        
+        if !valid_metric_ids.contains(&interpretation.metric) {
+            warn!("LLM returned invalid metric '{}', available: {:?}", interpretation.metric, valid_metric_ids);
+            // Try to match by alias
+            let matched = business_labels.metrics.iter().find(|m| {
+                m.aliases.iter().any(|a| a.to_lowercase() == interpretation.metric.to_lowercase()) ||
+                m.metric_id.to_lowercase().contains(&interpretation.metric.to_lowercase()) ||
+                interpretation.metric.to_lowercase().contains(&m.metric_id.to_lowercase())
+            });
+            interpretation.metric = matched.map(|m| m.metric_id.clone()).unwrap_or_else(|| "tos".to_string());
+            info!("Fixed metric to: {}", interpretation.metric);
+        }
         
         Ok(interpretation)
     }

@@ -41,6 +41,9 @@ dotenv = "0.15"
 # CSV parsing for ingestion
 csv = "1.3"
 
+# Lazy static for global variables
+lazy_static = "1.4"
+
 # HTTP server for UI - using tokio directly (no external HTTP framework needed)
 
 # Hypergraph module dependencies  

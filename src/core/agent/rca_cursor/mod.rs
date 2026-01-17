@@ -32,4 +32,5 @@ pub use diff::{GrainDiffEngine, GrainDiffResult};
 pub use attribution::GrainAttributionEngine;
 pub use confidence::ConfidenceModel;
 pub use cursor::RcaCursor;
+pub use cursor_old::{RcaCursorResult, RcaSummary};
 

@@ -3,7 +3,7 @@
 //! These prompts help the LLM understand how to navigate the graph,
 //! choose nodes, interpret probe results, and make decisions.
 
-use crate::graph_traversal::{TraversalNode, Finding, FindingType};
+use crate::graph_traversal::{TraversalNode, Finding, FindingType, TraversalHint};
 use serde::{Deserialize, Serialize};
 
 /// System prompt for graph traversal agent
@@ -94,10 +94,12 @@ Remember: You are a **dynamic, adaptive agent** that chooses next step based on 
 
 /// Prompt for choosing next node
 pub fn build_node_selection_prompt(
-    candidates: &[&TraversalNode],
+    candidates: &[TraversalNode],
     findings: &[Finding],
     visited_path: &[String],
     problem: &str,
+    hints: &[TraversalHint],
+    current_hypothesis: Option<&str>,
 ) -> String {
     let candidates_json: Vec<_> = candidates.iter().map(|n| {
         let mut node_json = serde_json::json!({
@@ -189,13 +191,27 @@ pub fn build_node_selection_prompt(
         })
     }).collect();
     
+    let hints_json: Vec<_> = hints.iter().map(|h| {
+        serde_json::json!({
+            "hint_type": format!("{:?}", h.hint_type),
+            "description": h.description,
+            "confidence": h.confidence,
+            "related_nodes": h.related_nodes,
+            "source": h.source,
+        })
+    }).collect();
+    
     format!(
         r#"You are choosing the next node to explore in an RCA investigation.
 
 Problem: {}
 Visited Path: {:?}
+Current Hypothesis: {}
 
 Current Findings:
+{}
+
+Traversal Hints:
 {}
 
 Candidate Nodes:
@@ -223,7 +239,9 @@ Guidelines:
 - If no findings yet → choose metric or base table nodes"#,
         problem,
         visited_path,
+        current_hypothesis.unwrap_or("none"),
         serde_json::to_string_pretty(&findings_json).unwrap_or_default(),
+        serde_json::to_string_pretty(&hints_json).unwrap_or_default(),
         serde_json::to_string_pretty(&candidates_json).unwrap_or_default(),
     )
 }

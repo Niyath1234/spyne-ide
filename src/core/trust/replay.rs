@@ -65,9 +65,6 @@ impl ReplayEngine {
         // Load evidence
         let evidence = self.evidence_store.load(execution_id)?;
         
-        // Reconstruct RCA cursor
-        let cursor = RcaCursor::new(self.metadata.clone(), self.data_dir.clone());
-        
         // Get rules from evidence
         let left_rule_id = evidence.inputs.rule_ids.get(0)
             .ok_or_else(|| RcaError::Execution("Missing left rule ID in evidence".to_string()))?;
@@ -79,13 +76,16 @@ impl ReplayEngine {
         let right_rule = self.metadata.get_rule(right_rule_id)
             .ok_or_else(|| RcaError::Execution(format!("Rule not found: {}", right_rule_id)))?;
         
-        // Re-execute RCA
-        let replay_result = cursor.run_rca(
+        // Re-execute RCA using old cursor implementation
+        use crate::core::agent::rca_cursor::cursor_old::RcaCursor as OldRcaCursor;
+        let old_cursor = OldRcaCursor::new(self.metadata.clone(), self.data_dir.clone());
+        let replay_result = old_cursor.run_rca(
             &evidence.inputs.metric,
             left_rule,
             right_rule,
             &evidence.inputs.value_columns,
             evidence.inputs.reported_mismatch,
+            crate::core::rca::mode::RCAConfig::default(),
         ).await?;
         
         // Verify outputs if requested

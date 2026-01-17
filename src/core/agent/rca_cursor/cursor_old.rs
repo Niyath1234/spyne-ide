@@ -23,7 +23,7 @@ use crate::core::rca::{
     AttributionEngine, NarrativeBuilder, RowNarrative,
     RCAConfig, RCAMode, ModeSelector,
     DimensionAggregator, DimensionAggregationResult,
-    ResultFormatter, FormattedDisplayResult,
+    result_formatter::{ResultFormatter, FormattedDisplayResult},
 };
 use crate::core::performance::{Sampler, SamplingStrategy as PerfSamplingStrategy, HashDiffEngine};
 use crate::core::trust::{EvidenceStore, EvidenceRecord, ExecutionInputs, ExecutionOutputs, OutputSummary};
@@ -232,8 +232,8 @@ impl RcaCursor {
         let left_mapping = mapper.infer_mapping(&left_rows, entity)?;
         let right_mapping = mapper.infer_mapping(&right_rows, entity)?;
         
-        let left_canonical = mapper.canonicalize(left_rows, entity, &left_mapping, Some(&left_rule.system))?;
-        let right_canonical = mapper.canonicalize(right_rows, entity, &right_mapping, Some(&right_rule.system))?;
+        let left_canonical = mapper.canonicalize(left_rows, entity, &left_mapping)?;
+        let right_canonical = mapper.canonicalize(right_rows, entity, &right_mapping)?;
         
         // Phase 5: Diff rows (hash-based for Fast, deterministic for Deep/Forensic)
         let row_diff = if config.use_hash_diff() {
@@ -307,7 +307,6 @@ impl RcaCursor {
         let attribution_engine = AttributionEngine;
         let explanations = attribution_engine.explain_all_differences(
             &row_diff,
-            &entity.keys, // Pass key columns (e.g., UUID) to extract proper row IDs
             &join_traces_left,
             &filter_traces_left,
             &rule_traces_left,

@@ -13,7 +13,17 @@ use std::collections::HashMap;
 /// Transforms dataframes to match the canonical entity schema
 pub struct CanonicalMapper;
 
+impl Default for CanonicalMapper {
+    fn default() -> Self {
+        CanonicalMapper
+    }
+}
+
 impl CanonicalMapper {
+    /// Create a new canonical mapper
+    pub fn new() -> Self {
+        Self::default()
+    }
     /// Canonicalize a dataframe to match the canonical entity schema
     /// 
     /// This performs:

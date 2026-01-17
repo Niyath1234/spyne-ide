@@ -14,6 +14,7 @@ pub mod grain_resolver;
 pub mod granularity_understanding;
 pub mod graph;
 pub mod graph_adapter;
+pub mod knowledge_hints;
 pub mod identity;
 pub mod intelligent_rule_builder;
 pub mod intelligent_rule_parser;

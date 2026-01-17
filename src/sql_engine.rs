@@ -96,6 +96,41 @@ impl SqlEngine {
         Ok(result)
     }
     
+    /// Probe a filter condition using simple expression parsing
+    pub async fn probe_filter(&self, table: &str, condition: &str) -> Result<SqlProbeResult> {
+        let df = self.load_table(table).await?;
+        let expr = match self.parse_filter_expr(condition) {
+            Ok(expr) => expr,
+            Err(e) => {
+                let mut fallback = self.execute_with_polars(
+                    &format!("SELECT * FROM {} LIMIT 100", table),
+                    100,
+                ).await?;
+                fallback.warnings.push(format!("Filter parse failed: {}", e));
+                return Ok(fallback);
+            }
+        };
+        
+        let filtered = df
+            .lazy()
+            .filter(expr)
+            .limit(100)
+            .collect()?;
+        
+        let columns: Vec<String> = filtered.get_column_names().iter().map(|s| s.to_string()).collect();
+        let sample_rows = self.dataframe_to_rows(&filtered, 100)?;
+        let summary = self.calculate_summary(&filtered)?;
+        
+        Ok(SqlProbeResult {
+            row_count: filtered.height(),
+            sample_rows,
+            columns,
+            summary: Some(summary),
+            execution_time_ms: 0,
+            warnings: Vec::new(),
+        })
+    }
+    
     /// Execute SQL using Polars (fallback until DuckDB is integrated)
     async fn execute_with_polars(&self, sql: &str, max_rows: usize) -> Result<SqlProbeResult> {
         // Parse SQL to extract table name and columns
@@ -149,6 +184,51 @@ impl SqlEngine {
             execution_time_ms: 0, // Will be set by caller
             warnings: Vec::new(),
         })
+    }
+    
+    fn parse_filter_expr(&self, condition: &str) -> Result<Expr> {
+        let condition = condition.trim();
+        let upper = condition.to_uppercase();
+        if upper.contains(" AND ") || upper.contains(" OR ") {
+            return Err(RcaError::Execution(format!("Compound conditions not supported: {}", condition)));
+        }
+        let operators = [">=", "<=", "!=", "=", ">", "<"];
+        for op in operators {
+            if let Some((left, right)) = condition.split_once(op) {
+                let column = left.trim();
+                let value = right.trim();
+                return Ok(self.build_comparison_expr(column, op, value));
+            }
+        }
+        Err(RcaError::Execution(format!("Unsupported filter condition: {}", condition)))
+    }
+    
+    fn build_comparison_expr(&self, column: &str, op: &str, raw_value: &str) -> Expr {
+        let value_expr = self.parse_value_expr(raw_value);
+        match op {
+            "=" => col(column).eq(value_expr),
+            "!=" => col(column).neq(value_expr),
+            ">" => col(column).gt(value_expr),
+            "<" => col(column).lt(value_expr),
+            ">=" => col(column).gt_eq(value_expr),
+            "<=" => col(column).lt_eq(value_expr),
+            _ => col(column).eq(value_expr),
+        }
+    }
+    
+    fn parse_value_expr(&self, raw_value: &str) -> Expr {
+        let trimmed = raw_value.trim().trim_matches('\'').trim_matches('"');
+        if let Ok(int_val) = trimmed.parse::<i64>() {
+            lit(int_val)
+        } else if let Ok(float_val) = trimmed.parse::<f64>() {
+            lit(float_val)
+        } else if trimmed.eq_ignore_ascii_case("true") {
+            lit(true)
+        } else if trimmed.eq_ignore_ascii_case("false") {
+            lit(false)
+        } else {
+            lit(trimmed.to_string())
+        }
     }
     
     /// Extract table name from SQL (simplified parser)
@@ -245,10 +325,20 @@ impl SqlEngine {
                 }
             }
             DataType::Boolean => {
-                if let Ok(val) = any_val.try_extract::<bool>() {
-                    Ok(serde_json::Value::Bool(val))
+                // Try to extract boolean value - use get_str and parse since try_extract doesn't work for bool
+                if let Some(s) = any_val.get_str() {
+                    match s {
+                        "true" | "1" | "yes" => Ok(serde_json::Value::Bool(true)),
+                        "false" | "0" | "no" => Ok(serde_json::Value::Bool(false)),
+                        _ => Ok(serde_json::Value::Null),
+                    }
                 } else {
-                    Ok(serde_json::Value::Null)
+                    // Try direct extraction as u8 and convert
+                    if let Ok(val) = any_val.try_extract::<u8>() {
+                        Ok(serde_json::Value::Bool(val != 0))
+                    } else {
+                        Ok(serde_json::Value::Null)
+                    }
                 }
             }
             DataType::Date => {
@@ -355,6 +445,88 @@ impl SqlEngine {
         
         Ok(SqlProbeResult {
             row_count: joined.height(),
+            sample_rows,
+            columns,
+            summary: Some(summary),
+            execution_time_ms: 0,
+            warnings: Vec::new(),
+        })
+    }
+    
+    /// Probe join failures by returning rows from the left side with no match on the right
+    pub async fn probe_join_failures(
+        &self,
+        left_table: &str,
+        right_table: &str,
+        join_keys: &HashMap<String, String>, // left_col -> right_col mapping
+        join_type: &str,
+    ) -> Result<SqlProbeResult> {
+        if join_keys.is_empty() {
+            return Err(RcaError::Execution("Join keys are required for join failure probe".to_string()));
+        }
+        
+        // Load both tables
+        let left_df = self.load_table(left_table).await?;
+        let right_df = self.load_table(right_table).await?;
+        
+        // Always probe missing matches on the right side
+        let join_type_polars = match join_type.to_lowercase().as_str() {
+            "inner" => JoinType::Inner,
+            "left" => JoinType::Left,
+            "right" => JoinType::Left,
+            "outer" | "full" => JoinType::Left,
+            _ => JoinType::Left,
+        };
+        
+        let left_keys: Vec<Expr> = join_keys.keys().map(|k| col(k)).collect();
+        let right_keys: Vec<Expr> = join_keys.values().map(|k| col(k)).collect();
+        
+        let left_cols: std::collections::HashSet<String> = left_df
+            .get_column_names()
+            .iter()
+            .map(|s| s.to_string())
+            .collect();
+        
+        let right_key_columns: Vec<String> = join_keys.values().map(|col_name| {
+            if left_cols.contains(col_name) {
+                format!("{}_right", col_name)
+            } else {
+                col_name.clone()
+            }
+        }).collect();
+        
+        let joined = left_df
+            .lazy()
+            .join(
+                right_df.lazy(),
+                left_keys,
+                right_keys,
+                JoinArgs::new(join_type_polars),
+            );
+        
+        let mut null_filter: Option<Expr> = None;
+        for col_name in right_key_columns {
+            let expr = col(&col_name).is_null();
+            null_filter = Some(match null_filter {
+                Some(existing) => existing.or(expr),
+                None => expr,
+            });
+        }
+        
+        let filtered = if let Some(filter_expr) = null_filter {
+            joined.filter(filter_expr)
+        } else {
+            joined
+        };
+        
+        let result_df = filtered.limit(100).collect()?;
+        
+        let columns: Vec<String> = result_df.get_column_names().iter().map(|s| s.to_string()).collect();
+        let sample_rows = self.dataframe_to_rows(&result_df, 100)?;
+        let summary = self.calculate_summary(&result_df)?;
+        
+        Ok(SqlProbeResult {
+            row_count: result_df.height(),
             sample_rows,
             columns,
             summary: Some(summary),

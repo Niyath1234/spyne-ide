@@ -18,6 +18,7 @@
 
 use crate::error::{RcaError, Result};
 use crate::metadata::Metadata;
+use crate::knowledge_hints::{KnowledgeHints, TermHit};
 use crate::sql_engine::{SqlEngine, SqlProbeResult};
 use crate::llm::LlmClient;
 use crate::graph::Hypergraph;
@@ -28,6 +29,7 @@ use crate::agent_prompts::{
 };
 use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
+use std::path::Path;
 use tracing::{info, debug, warn};
 
 /// Node types in the knowledge graph
@@ -154,7 +156,7 @@ pub struct HypergraphStats {
 }
 
 /// State of the traversal
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct TraversalState {
     /// All nodes in the graph
     pub nodes: HashMap<String, TraversalNode>,
@@ -164,6 +166,9 @@ pub struct TraversalState {
     
     /// Root cause findings
     pub findings: Vec<Finding>,
+    
+    /// Hints collected from knowledge base or graph
+    pub hints: Vec<TraversalHint>,
     
     /// Current hypothesis about the root cause
     pub current_hypothesis: Option<String>,
@@ -197,6 +202,26 @@ pub enum FindingType {
     DataQualityIssue,
 }
 
+/// Hint to guide traversal (from knowledge base, hypergraph, or heuristics)
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct TraversalHint {
+    pub hint_type: HintType,
+    pub description: String,
+    pub confidence: f64,
+    pub related_nodes: Vec<String>,
+    pub source: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub enum HintType {
+    KnowledgeTerm,
+    KnowledgeFilter,
+    KnowledgeRelationship,
+    HypergraphStat,
+    LlmSuggestion,
+    Heuristic,
+}
+
 /// Graph Traversal Agent
 /// 
 /// Dynamically navigates the knowledge graph to find root causes
@@ -205,6 +230,7 @@ pub struct GraphTraversalAgent {
     graph: Hypergraph,
     sql_engine: SqlEngine,
     llm_client: Option<LlmClient>,
+    knowledge_hints: Option<KnowledgeHints>,
 }
 
 // Make graph mutable for adapter access
@@ -227,6 +253,7 @@ impl GraphTraversalAgent {
             graph,
             sql_engine,
             llm_client: None,
+            knowledge_hints: None,
         }
     }
     
@@ -234,6 +261,23 @@ impl GraphTraversalAgent {
     pub fn with_llm(mut self, llm: LlmClient) -> Self {
         self.llm_client = Some(llm);
         self
+    }
+    
+    /// Attach knowledge hints (from knowledge base JSON or other sources)
+    pub fn with_knowledge_hints(mut self, hints: KnowledgeHints) -> Self {
+        self.knowledge_hints = Some(hints);
+        self
+    }
+    
+    /// Load knowledge hints from a JSON file path
+    pub fn with_knowledge_hints_from_path(
+        mut self,
+        path: impl AsRef<Path>,
+    ) -> Result<Self> {
+        if let Some(hints) = KnowledgeHints::load(path)? {
+            self.knowledge_hints = Some(hints);
+        }
+        Ok(self)
     }
     
     /// Start traversal from initial problem
@@ -253,7 +297,10 @@ impl GraphTraversalAgent {
         let mut state = self.initialize_state(initial_metric, system_a, system_b).await?;
         
         // Build initial graph of nodes
-        self.build_initial_graph(&mut state, initial_metric, system_a, system_b).await?;
+        self.build_initial_graph(&mut state, problem, initial_metric, system_a, system_b).await?;
+        
+        // Apply knowledge-base hints to seed additional nodes
+        self.apply_knowledge_hints(&mut state, problem)?;
         
         // Traversal loop: Traverse → Test → Observe → Decide → Repeat
         while !state.root_cause_found && state.current_depth < state.max_depth {
@@ -273,7 +320,7 @@ impl GraphTraversalAgent {
                 let observations = self.observe_probe_result(&probe_result, &node, &state).await?;
                 
                 // Step 4: Decide next step based on observations
-                let decision = self.decide_next_step(&observations, &node, &state).await?;
+                let decision = self.decide_next_step(&observations, &node, &state, &probe_result).await?;
                 
                 // Update state
                 state.nodes.get_mut(&node.node_id).unwrap().visited = true;
@@ -284,6 +331,12 @@ impl GraphTraversalAgent {
                 // Record findings
                 if let Some(finding) = decision.finding {
                     state.findings.push(finding);
+                }
+                
+                if state.current_hypothesis.is_none() {
+                    if let Some(ref hypothesis) = observations.llm_hypothesis {
+                        state.current_hypothesis = Some(hypothesis.clone());
+                    }
                 }
                 
                 // Check if root cause found
@@ -321,6 +374,7 @@ impl GraphTraversalAgent {
             nodes: HashMap::new(),
             visited_path: Vec::new(),
             findings: Vec::new(),
+            hints: Vec::new(),
             current_hypothesis: None,
             root_cause_found: false,
             max_depth: 20, // Maximum traversal depth
@@ -332,6 +386,7 @@ impl GraphTraversalAgent {
     async fn build_initial_graph(
         &mut self,
         state: &mut TraversalState,
+        _problem: &str,
         metric: &str,
         system_a: &str,
         system_b: &str,
@@ -398,15 +453,17 @@ impl GraphTraversalAgent {
         }
         
         // Add table nodes from rules
+        let mut relevant_tables: HashSet<String> = HashSet::new();
         for rule in rules_a.iter().chain(rules_b.iter()) {
             for entity in &rule.computation.source_entities {
                 let tables: Vec<_> = self.metadata.tables
                     .iter()
                     .filter(|t| t.entity == *entity && (t.system == system_a || t.system == system_b))
+                    .cloned()
                     .collect();
                 
                 for table in tables {
-                    let table_metadata = self.build_table_metadata(table)?;
+                    let table_metadata = self.build_table_metadata(&table)?;
                     state.nodes.insert(
                         format!("table:{}", table.name),
                         TraversalNode {
@@ -420,6 +477,82 @@ impl GraphTraversalAgent {
                             metadata: Some(table_metadata),
                         },
                     );
+                    relevant_tables.insert(table.name.clone());
+                }
+            }
+        }
+        
+        // Add filter nodes from rule filter conditions
+        for rule in rules_a.iter().chain(rules_b.iter()) {
+            if let Some(ref filters) = rule.computation.filter_conditions {
+                for (column, value) in filters {
+                    let condition = self.format_filter_condition(column, value);
+                    for entity in &rule.computation.source_entities {
+                        let tables: Vec<_> = self.metadata.tables
+                            .iter()
+                            .filter(|t| t.entity == *entity && t.system == rule.system)
+                            .collect();
+                        for table in tables {
+                            let node_id = format!("filter:{}:{}", table.name, condition);
+                            if !state.nodes.contains_key(&node_id) {
+                                let filter_metadata = NodeMetadata {
+                                    table_info: None,
+                                    rule_info: None,
+                                    join_info: None,
+                                    filter_info: Some(FilterNodeMetadata {
+                                        table: table.name.clone(),
+                                        condition: condition.clone(),
+                                        description: Some(format!("Rule filter from {}", rule.id)),
+                                    }),
+                                    metric_info: None,
+                                    hypergraph_stats: None,
+                                };
+                                state.nodes.insert(
+                                    node_id.clone(),
+                                    TraversalNode {
+                                        node_id,
+                                        node_type: NodeType::Filter {
+                                            table: table.name.clone(),
+                                            condition: condition.clone(),
+                                        },
+                                        visited: false,
+                                        visit_count: 0,
+                                        last_probe_result: None,
+                                        score: 0.55,
+                                        reasons: vec![format!("Filter condition from rule {}", rule.id)],
+                                        metadata: Some(filter_metadata),
+                                    },
+                                );
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        
+        // Add join nodes for relevant tables from lineage
+        let edges: Vec<_> = self.metadata.lineage.edges.iter().cloned().collect();
+        for edge in edges {
+            if relevant_tables.contains(&edge.from) || relevant_tables.contains(&edge.to) {
+                let node_id = format!("join:{}:{}", edge.from, edge.to);
+                if !state.nodes.contains_key(&node_id) {
+                    let join_metadata = self.build_join_metadata(&edge.from, &edge.to, &edge.keys)?;
+                    state.nodes.insert(
+                        node_id.clone(),
+                        TraversalNode {
+                            node_id,
+                            node_type: NodeType::Join {
+                                from: edge.from.clone(),
+                                to: edge.to.clone(),
+                            },
+                            visited: false,
+                            visit_count: 0,
+                            last_probe_result: None,
+                            score: 0.45,
+                            reasons: vec!["Lineage join from metadata".to_string()],
+                            metadata: Some(join_metadata),
+                        },
+                    );
                 }
             }
         }
@@ -428,42 +561,153 @@ impl GraphTraversalAgent {
         
         Ok(())
     }
+
+    /// Apply knowledge base hints to seed additional nodes and hints
+    fn apply_knowledge_hints(&mut self, state: &mut TraversalState, problem: &str) -> Result<()> {
+        let hints = if let Some(ref h) = self.knowledge_hints {
+            h.clone()
+        } else {
+            return Ok(());
+        };
+
+        let mut new_hints = Vec::new();
+        let term_hits = hints.find_term_hits(problem);
+        for hit in term_hits {
+            let mut related_nodes = Vec::new();
+            let related_tables = hit.hint.related_tables.clone();
+            for table_name in &related_tables {
+                if let Some(table) = self.metadata.get_table(table_name).cloned() {
+                    if let Ok(node) = self.make_table_node(&table, 0.7, format!("KB term: {}", hit.term)) {
+                        related_nodes.push(node.node_id.clone());
+                        state.nodes.entry(node.node_id.clone()).or_insert(node);
+                    }
+                }
+            }
+
+            let term_filters = self.collect_term_filters(&hit);
+            for filter in term_filters {
+                for table_name in &hit.hint.related_tables {
+                    let node_id = format!("filter:{}:{}", table_name, filter);
+                    if !state.nodes.contains_key(&node_id) {
+                        let filter_metadata = NodeMetadata {
+                            table_info: None,
+                            rule_info: None,
+                            join_info: None,
+                            filter_info: Some(FilterNodeMetadata {
+                                table: table_name.clone(),
+                                condition: filter.clone(),
+                                description: Some(format!("KB filter from term {}", hit.term)),
+                            }),
+                            metric_info: None,
+                            hypergraph_stats: None,
+                        };
+                        state.nodes.insert(
+                            node_id.clone(),
+                            TraversalNode {
+                                node_id: node_id.clone(),
+                                node_type: NodeType::Filter {
+                                    table: table_name.clone(),
+                                    condition: filter.clone(),
+                                },
+                                visited: false,
+                                visit_count: 0,
+                                last_probe_result: None,
+                                score: 0.6,
+                                reasons: vec![format!("KB filter for {}", hit.term)],
+                                metadata: Some(filter_metadata),
+                            },
+                        );
+                        related_nodes.push(node_id);
+                    }
+                }
+            }
+
+            if !related_nodes.is_empty() {
+                new_hints.push(TraversalHint {
+                    hint_type: HintType::KnowledgeTerm,
+                    description: format!("KB term '{}' matched via '{}'", hit.term, hit.matched),
+                    confidence: 0.75,
+                    related_nodes,
+                    source: "knowledge_base".to_string(),
+                });
+            }
+        }
+
+        // Direct table mentions from knowledge hints
+        let table_mentions = hints.find_table_mentions(problem);
+        for table_name in table_mentions {
+            if let Some(table) = self.metadata.get_table(&table_name).cloned() {
+                if let Ok(node) = self.make_table_node(&table, 0.65, "KB table mention".to_string()) {
+                    let node_id = node.node_id.clone();
+                    state.nodes.entry(node_id.clone()).or_insert(node);
+                    new_hints.push(TraversalHint {
+                        hint_type: HintType::KnowledgeTerm,
+                        description: format!("KB table '{}' mentioned in problem", table_name),
+                        confidence: 0.6,
+                        related_nodes: vec![node_id],
+                        source: "knowledge_base".to_string(),
+                    });
+                }
+            }
+        }
+
+        // Relationship hints from knowledge base
+        let relationships: Vec<(String, _)> = hints.relationships.iter().map(|(k, v)| (k.clone(), v.clone())).collect();
+        for (rel_key, rel_hint) in relationships {
+            if let Some((from_table, to_table)) = self.parse_relationship_key(&rel_key) {
+                if let Ok(join_keys) = self.find_join_keys(&from_table, &to_table) {
+                    let node_id = format!("join:{}:{}", from_table, to_table);
+                    if !state.nodes.contains_key(&node_id) {
+                        let join_metadata = self.build_join_metadata(&from_table, &to_table, &join_keys)?;
+                        state.nodes.insert(
+                            node_id.clone(),
+                            TraversalNode {
+                                node_id: node_id.clone(),
+                                node_type: NodeType::Join {
+                                    from: from_table.clone(),
+                                    to: to_table.clone(),
+                                },
+                                visited: false,
+                                visit_count: 0,
+                                last_probe_result: None,
+                                score: 0.55,
+                                reasons: vec![format!("KB relationship hint: {}", rel_key)],
+                                metadata: Some(join_metadata),
+                            },
+                        );
+                        new_hints.push(TraversalHint {
+                            hint_type: HintType::KnowledgeRelationship,
+                            description: rel_hint.description.clone().unwrap_or_else(|| rel_key.clone()),
+                            confidence: 0.6,
+                            related_nodes: vec![node_id],
+                            source: "knowledge_base".to_string(),
+                        });
+                    }
+                }
+            }
+        }
+
+        state.hints.extend(new_hints);
+        Ok(())
+    }
     
     /// Choose the next best node to visit
     async fn choose_next_node(&self, state: &TraversalState) -> Result<Option<TraversalNode>> {
-        // Score all unvisited nodes
-        let mut candidates: Vec<&TraversalNode> = state.nodes
+        let mut candidates: Vec<TraversalNode> = state.nodes
             .values()
             .filter(|n| !n.visited)
+            .cloned()
             .collect();
         
         if candidates.is_empty() {
             return Ok(None);
         }
         
-        // Score nodes based on:
-        // 1. Current score
-        // 2. Proximity to visited nodes
-        // 3. Relevance to current findings
-        // 4. LLM reasoning (if available)
-        
+        // Score nodes based on findings, hints, proximity, and hypergraph stats
         for candidate in &mut candidates {
-            let mut score = candidate.score;
-            
-            // Boost score if connected to recently visited nodes
-            if !state.visited_path.is_empty() {
-                let last_visited = &state.visited_path[state.visited_path.len() - 1];
-                if self.are_nodes_connected(candidate, last_visited) {
-                    score += 0.2;
-                }
-            }
-            
-            // Boost score if relevant to findings
-            for finding in &state.findings {
-                if self.is_node_relevant_to_finding(candidate, finding) {
-                    score += 0.3;
-                }
-            }
+            let (score, reasons) = self.score_candidate(candidate, state);
+            candidate.score = score;
+            candidate.reasons = reasons;
         }
         
         // Sort by score
@@ -478,8 +722,75 @@ impl GraphTraversalAgent {
             }
         }
         
-        // Return highest scoring node
-        Ok(candidates.first().map(|n| (*n).clone()))
+        Ok(candidates.first().cloned())
+    }
+    
+    fn score_candidate(&self, candidate: &TraversalNode, state: &TraversalState) -> (f64, Vec<String>) {
+        let mut score = candidate.score;
+        let mut reasons = candidate.reasons.clone();
+        
+        // Boost score if connected to recently visited nodes
+        if !state.visited_path.is_empty() {
+            let last_visited = &state.visited_path[state.visited_path.len() - 1];
+            if self.are_nodes_connected(candidate, last_visited) {
+                score += 0.2;
+                reasons.push("connected to last visited node".to_string());
+            }
+        }
+        
+        // Boost score if relevant to findings
+        for finding in &state.findings {
+            if self.is_node_relevant_to_finding(candidate, finding) {
+                score += 0.3;
+                reasons.push("relevant to findings".to_string());
+                break;
+            }
+        }
+        
+        // Boost score if hinted by knowledge base
+        for hint in &state.hints {
+            if hint.related_nodes.iter().any(|n| n == &candidate.node_id) {
+                score += 0.25 * hint.confidence;
+                reasons.push(format!("hint: {}", hint.description));
+                break;
+            }
+        }
+        
+        // Boost score based on hypergraph statistics
+        if let Some(ref metadata) = candidate.metadata {
+            if let Some(ref stats) = metadata.hypergraph_stats {
+                if let Some(row_count) = stats.row_count {
+                    if row_count == 0 {
+                        score += 0.2;
+                        reasons.push("hypergraph indicates zero rows".to_string());
+                    }
+                }
+                if let Some(null_pct) = stats.null_percentage {
+                    if null_pct > 0.2 {
+                        score += 0.15;
+                        reasons.push("high null percentage".to_string());
+                    }
+                }
+                if let Some(quality) = stats.data_quality_score {
+                    if quality < 70.0 {
+                        score += 0.1;
+                        reasons.push("low data quality score".to_string());
+                    }
+                }
+                if let Some(selectivity) = stats.join_selectivity {
+                    if selectivity < 0.3 {
+                        score += 0.1;
+                        reasons.push("low join selectivity".to_string());
+                    }
+                }
+            }
+        }
+        
+        if candidate.visit_count > 0 {
+            score -= 0.1;
+        }
+        
+        (score.min(1.0).max(0.0), reasons)
     }
     
     /// Check if two nodes are connected
@@ -517,14 +828,16 @@ impl GraphTraversalAgent {
     async fn llm_choose_node(
         &self,
         llm: &LlmClient,
-        candidates: &[&TraversalNode],
+        candidates: &[TraversalNode],
         state: &TraversalState,
     ) -> Result<TraversalNode> {
         let prompt = build_node_selection_prompt(
             candidates,
             &state.findings,
             &state.visited_path,
-            "RCA investigation", // Would be passed from traverse() method
+            "RCA investigation",
+            &state.hints,
+            state.current_hypothesis.as_deref(),
         );
         
         let response = llm.call_llm(&prompt).await?;
@@ -538,7 +851,7 @@ impl GraphTraversalAgent {
         
         candidates.iter()
             .find(|n| n.node_id == choice.node_id)
-            .map(|n| (*n).clone())
+            .cloned()
             .ok_or_else(|| RcaError::Llm(format!("Node {} not found in candidates", choice.node_id)))
     }
     
@@ -551,28 +864,28 @@ impl GraphTraversalAgent {
         match &node.node_type {
             NodeType::Table(table_name) => {
                 // Probe: Get base rows from table
-                let mut sql = format!("SELECT * FROM {} LIMIT 100", table_name);
                 if let Some(date) = date_constraint {
                     // Try to find date column
                     if let Some(table) = self.metadata.tables.iter().find(|t| t.name == *table_name) {
-                        if let Some(ref date_col) = table.time_column {
-                            sql = format!("SELECT * FROM {} WHERE {} = '{}' LIMIT 100", 
-                                table_name, date_col, date);
+                        if !table.time_column.is_empty() {
+                            let date_col = &table.time_column;
+                            let condition = format!("{} = '{}'", date_col, date);
+                            return self.sql_engine.probe_filter(table_name, &condition).await;
                         }
                     }
                 }
+                let sql = format!("SELECT * FROM {} LIMIT 100", table_name);
                 self.sql_engine.execute_probe(&sql, Some(100)).await
             }
             NodeType::Join { from, to } => {
                 // Probe: Test the join
                 // Find join keys from metadata
                 let join_keys = self.find_join_keys(from, to)?;
-                self.sql_engine.probe_join(from, to, &join_keys, "left").await
+                self.sql_engine.probe_join_failures(from, to, &join_keys, "left").await
             }
             NodeType::Filter { table, condition } => {
                 // Probe: Test the filter
-                let sql = format!("SELECT * FROM {} WHERE {} LIMIT 100", table, condition);
-                self.sql_engine.execute_probe(&sql, Some(100)).await
+                self.sql_engine.probe_filter(table, condition).await
             }
             NodeType::Rule(rule_id) => {
                 // Probe: Execute rule calculation
@@ -586,12 +899,21 @@ impl GraphTraversalAgent {
             }
             NodeType::Metric { name, system } => {
                 // Probe: Get metric value
+                // Validate system exists
+                if !self.metadata.tables.iter().any(|t| &t.system == system) {
+                    return Err(RcaError::Execution(format!("Invalid system '{}' - not found in metadata. Available systems: {:?}", 
+                        system, 
+                        self.metadata.tables.iter().map(|t| t.system.clone()).collect::<std::collections::HashSet<_>>().into_iter().collect::<Vec<_>>())));
+                }
                 let rules = self.metadata.get_rules_for_system_metric(system, name);
                 if let Some(rule) = rules.first() {
                     let sql = self.build_rule_sql(rule, date_constraint)?;
                     self.sql_engine.execute_probe(&sql, Some(100)).await
                 } else {
-                    Err(RcaError::Execution(format!("No rule found for metric {} in system {}", name, system)))
+                    Err(RcaError::Execution(format!("No rule found for metric {} in system {}. Available rules for this system: {:?}", 
+                        name, 
+                        system,
+                        self.metadata.rules.iter().filter(|r| &r.system == system).map(|r| format!("{}:{}", r.id, r.metric)).collect::<Vec<_>>())))
                 }
             }
         }
@@ -659,12 +981,37 @@ impl GraphTraversalAgent {
         
         // Add date constraint if provided
         if let Some(date) = date_constraint {
-            sql.push_str(&format!(" WHERE paid_date = '{}'", date));
+            if let Some(time_col) = self.find_time_column_for_rule(rule) {
+                sql.push_str(&format!(" WHERE {} = '{}'", time_col, date));
+            } else {
+                sql.push_str(&format!(" WHERE paid_date = '{}'", date));
+            }
         }
         
         sql.push_str(" LIMIT 100");
         
         Ok(sql)
+    }
+    
+    fn find_time_column_for_rule(&self, rule: &crate::metadata::Rule) -> Option<String> {
+        if let Some(ref source_table) = rule.computation.source_table {
+            if let Some(table) = self.metadata.tables.iter().find(|t| t.name == *source_table) {
+                if !table.time_column.is_empty() {
+                    return Some(table.time_column.clone());
+                }
+            }
+        }
+        
+        for entity in &rule.computation.source_entities {
+            if let Some(table) = self.metadata.tables.iter()
+                .find(|t| t.entity == *entity && t.system == rule.system) {
+                if !table.time_column.is_empty() {
+                    return Some(table.time_column.clone());
+                }
+            }
+        }
+        
+        None
     }
     
     /// Observe probe result and extract insights
@@ -682,19 +1029,33 @@ impl GraphTraversalAgent {
             join_failures: false,
             filter_issues: false,
             insights: Vec::new(),
+            data_quality_issue: None,
+            llm_suggested_nodes: Vec::new(),
+            llm_root_cause_found: false,
+            llm_hypothesis: None,
         };
         
         // Check for nulls
         if let Some(ref summary) = result.summary {
             observations.has_nulls = summary.null_counts.values().any(|&count| count > 0);
+            let null_columns: Vec<String> = summary.null_counts.iter()
+                .filter(|(_, count)| **count > 0)
+                .map(|(col, _)| col.clone())
+                .collect();
+            if !null_columns.is_empty() {
+                observations.data_quality_issue = Some(format!(
+                    "Nulls detected in columns: {}",
+                    null_columns.join(", ")
+                ));
+            }
         }
         
         // Detect issues based on node type
         match &node.node_type {
             NodeType::Join { .. } => {
-                if result.row_count == 0 {
+                if result.row_count > 0 {
                     observations.join_failures = true;
-                    observations.insights.push("Join returned no rows - possible join failure".to_string());
+                    observations.insights.push("Join probe returned unmatched rows - possible join failure".to_string());
                 }
             }
             NodeType::Filter { .. } => {
@@ -719,8 +1080,15 @@ impl GraphTraversalAgent {
                         "FilterIssue" => observations.filter_issues = true,
                         "MissingRows" => observations.has_data = false,
                         "ValueMismatch" => observations.value_mismatches.push(finding.description.clone()),
+                        "DataQualityIssue" => observations.data_quality_issue = Some(finding.description.clone()),
                         _ => {}
                     }
+                }
+                
+                observations.llm_root_cause_found = llm_interpretation.root_cause_found;
+                observations.llm_hypothesis = Some(llm_interpretation.hypothesis);
+                if let Some(nodes) = llm_interpretation.new_candidate_nodes {
+                    observations.llm_suggested_nodes = nodes;
                 }
             }
         }
@@ -753,10 +1121,11 @@ impl GraphTraversalAgent {
     
     /// Decide next step based on observations
     async fn decide_next_step(
-        &self,
+        &mut self,
         observations: &Observations,
         node: &TraversalNode,
         state: &TraversalState,
+        probe_result: &SqlProbeResult,
     ) -> Result<Decision> {
         let mut decision = Decision {
             finding: None,
@@ -772,8 +1141,8 @@ impl GraphTraversalAgent {
                 decision.finding = Some(Finding {
                     node_id: node.node_id.clone(),
                     finding_type: FindingType::JoinFailure,
-                    description: format!("Join between {} and {} failed - no matching rows", from, to),
-                    evidence: node.last_probe_result.clone().unwrap(),
+                    description: format!("Join between {} and {} has unmatched rows (join failure)", from, to),
+                    evidence: probe_result.clone(),
                     confidence: 0.9,
                 });
                 
@@ -788,7 +1157,7 @@ impl GraphTraversalAgent {
                     node_id: node.node_id.clone(),
                     finding_type: FindingType::FilterIssue,
                     description: format!("Filter on {} with condition '{}' filtered out all rows", table, condition),
-                    evidence: node.last_probe_result.clone().unwrap(),
+                    evidence: probe_result.clone(),
                     confidence: 0.8,
                 });
             }
@@ -797,15 +1166,37 @@ impl GraphTraversalAgent {
                     node_id: node.node_id.clone(),
                     finding_type: FindingType::MissingRows,
                     description: format!("Table {} has no data", node.node_id),
-                    evidence: node.last_probe_result.clone().unwrap(),
+                    evidence: probe_result.clone(),
                     confidence: 0.7,
+                });
+            }
+            _ if observations.data_quality_issue.is_some() => {
+                decision.finding = Some(Finding {
+                    node_id: node.node_id.clone(),
+                    finding_type: FindingType::DataQualityIssue,
+                    description: observations.data_quality_issue.clone().unwrap_or_else(|| "Data quality issue detected".to_string()),
+                    evidence: probe_result.clone(),
+                    confidence: 0.6,
                 });
             }
             _ => {
                 // No immediate finding, but might need to explore related nodes
                 // Add candidate nodes based on current node
-                decision.new_candidate_nodes = Some(self.generate_candidate_nodes(node, state));
+                let mut candidates = self.generate_candidate_nodes(node, state);
+                for node_id in &observations.llm_suggested_nodes {
+                    if let Some(candidate) = self.build_node_from_id(node_id) {
+                        candidates.push(candidate);
+                    }
+                }
+                if !candidates.is_empty() {
+                    decision.new_candidate_nodes = Some(candidates);
+                }
             }
+        }
+        
+        if observations.llm_root_cause_found {
+            decision.root_cause_found = true;
+            decision.hypothesis = observations.llm_hypothesis.clone();
         }
         
         Ok(decision)
@@ -813,7 +1204,7 @@ impl GraphTraversalAgent {
     
     /// Generate candidate nodes based on current node
     fn generate_candidate_nodes(
-        &self,
+        &mut self,
         node: &TraversalNode,
         state: &TraversalState,
     ) -> Vec<TraversalNode> {
@@ -821,12 +1212,11 @@ impl GraphTraversalAgent {
         
         match &node.node_type {
             NodeType::Table(table_name) => {
-                // Add join nodes for this table
+                // Add join nodes for this table (both directions)
                 for edge in &self.metadata.lineage.edges {
-                    if edge.from == *table_name {
+                    if edge.from == *table_name || edge.to == *table_name {
                         let node_id = format!("join:{}:{}", edge.from, edge.to);
                         if !state.nodes.contains_key(&node_id) {
-                            // Build join metadata
                             let join_metadata = NodeMetadata {
                                 table_info: None,
                                 rule_info: None,
@@ -834,14 +1224,13 @@ impl GraphTraversalAgent {
                                     from_table: edge.from.clone(),
                                     to_table: edge.to.clone(),
                                     join_keys: edge.keys.clone(),
-                                    join_type: "left".to_string(), // Default
+                                    join_type: "left".to_string(),
                                     description: None,
                                 }),
                                 filter_info: None,
                                 metric_info: None,
                                 hypergraph_stats: None,
                             };
-                            
                             candidates.push(TraversalNode {
                                 node_id: node_id.clone(),
                                 node_type: NodeType::Join {
@@ -852,16 +1241,90 @@ impl GraphTraversalAgent {
                                 visit_count: 0,
                                 last_probe_result: None,
                                 score: 0.5,
-                                reasons: vec!["Connected table via join".to_string()],
+                                reasons: vec!["Connected table via lineage".to_string()],
                                 metadata: Some(join_metadata),
                             });
                         }
                     }
                 }
+                
+                // Add rule nodes that use this table's entity
+                if let Some(table) = self.metadata.get_table(table_name) {
+                    for rule in &self.metadata.rules {
+                        if rule.computation.source_entities.contains(&table.entity) {
+                            let node_id = format!("rule:{}", rule.id);
+                            if !state.nodes.contains_key(&node_id) {
+                                if let Ok(rule_metadata) = self.build_rule_metadata(rule) {
+                                    candidates.push(TraversalNode {
+                                        node_id,
+                                        node_type: NodeType::Rule(rule.id.clone()),
+                                        visited: false,
+                                        visit_count: 0,
+                                        last_probe_result: None,
+                                        score: 0.55,
+                                        reasons: vec!["Rule uses this table".to_string()],
+                                        metadata: Some(rule_metadata),
+                                    });
+                                }
+                            }
+                        }
+                    }
+                }
             }
             NodeType::Join { from, to } => {
-                // Add filter nodes for joined tables
-                // Add rule nodes that use these tables
+                // Add table nodes on both sides of join
+                for table_name in [from, to] {
+                    let node_id = format!("table:{}", table_name);
+                    if !state.nodes.contains_key(&node_id) {
+                        if let Some(table) = self.metadata.get_table(table_name).cloned() {
+                            if let Ok(node) = self.make_table_node(&table, 0.5, "Join side table".to_string()) {
+                                candidates.push(node);
+                            }
+                        }
+                    }
+                }
+            }
+            NodeType::Rule(rule_id) => {
+                if let Some(rule) = self.metadata.get_rule(rule_id).cloned() {
+                    // Add tables for source entities
+                    let source_entities = rule.computation.source_entities.clone();
+                    let rule_system = rule.system.clone();
+                    for entity in source_entities {
+                        let tables: Vec<_> = self.metadata.tables
+                            .iter()
+                            .filter(|t| t.entity == entity && t.system == rule_system)
+                            .cloned()
+                            .collect();
+                        for table in tables {
+                            let node_id = format!("table:{}", table.name);
+                            if !state.nodes.contains_key(&node_id) {
+                                if let Ok(node) = self.make_table_node(&table, 0.5, "Rule source table".to_string()) {
+                                    candidates.push(node);
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            NodeType::Metric { name, system } => {
+                let rules = self.metadata.get_rules_for_system_metric(system, name);
+                for rule in rules {
+                    let node_id = format!("rule:{}", rule.id);
+                    if !state.nodes.contains_key(&node_id) {
+                        if let Ok(rule_metadata) = self.build_rule_metadata(&rule) {
+                            candidates.push(TraversalNode {
+                                node_id,
+                                node_type: NodeType::Rule(rule.id.clone()),
+                                visited: false,
+                                visit_count: 0,
+                                last_probe_result: None,
+                                score: 0.6,
+                                reasons: vec!["Metric rule".to_string()],
+                                metadata: Some(rule_metadata),
+                            });
+                        }
+                    }
+                }
             }
             _ => {}
         }
@@ -869,8 +1332,96 @@ impl GraphTraversalAgent {
         candidates
     }
     
+    fn build_node_from_id(&mut self, node_id: &str) -> Option<TraversalNode> {
+        if let Some(table_name) = node_id.strip_prefix("table:") {
+            let table = self.metadata.get_table(table_name)?.clone();
+            return self.make_table_node(&table, 0.55, "LLM suggested table".to_string()).ok();
+        }
+        if let Some(rule_id) = node_id.strip_prefix("rule:") {
+            let rule = self.metadata.get_rule(rule_id)?;
+            let rule_metadata = self.build_rule_metadata(rule).ok()?;
+            return Some(TraversalNode {
+                node_id: node_id.to_string(),
+                node_type: NodeType::Rule(rule_id.to_string()),
+                visited: false,
+                visit_count: 0,
+                last_probe_result: None,
+                score: 0.6,
+                reasons: vec!["LLM suggested rule".to_string()],
+                metadata: Some(rule_metadata),
+            });
+        }
+        if let Some(metric_id) = node_id.strip_prefix("metric:") {
+            let parts: Vec<&str> = metric_id.splitn(2, ':').collect();
+            if parts.len() == 2 {
+                let system = parts[0];
+                let metric = parts[1];
+                let metric_metadata = self.build_metric_metadata(metric, system).ok()?;
+                return Some(TraversalNode {
+                    node_id: node_id.to_string(),
+                    node_type: NodeType::Metric { name: metric.to_string(), system: system.to_string() },
+                    visited: false,
+                    visit_count: 0,
+                    last_probe_result: None,
+                    score: 0.7,
+                    reasons: vec!["LLM suggested metric".to_string()],
+                    metadata: Some(metric_metadata),
+                });
+            }
+        }
+        if let Some(join_spec) = node_id.strip_prefix("join:") {
+            let parts: Vec<&str> = join_spec.splitn(2, ':').collect();
+            if parts.len() == 2 {
+                let from = parts[0];
+                let to = parts[1];
+                let join_keys = self.find_join_keys(from, to).ok()?;
+                let join_metadata = self.build_join_metadata(from, to, &join_keys).ok()?;
+                return Some(TraversalNode {
+                    node_id: node_id.to_string(),
+                    node_type: NodeType::Join { from: from.to_string(), to: to.to_string() },
+                    visited: false,
+                    visit_count: 0,
+                    last_probe_result: None,
+                    score: 0.55,
+                    reasons: vec!["LLM suggested join".to_string()],
+                    metadata: Some(join_metadata),
+                });
+            }
+        }
+        if let Some(filter_spec) = node_id.strip_prefix("filter:") {
+            let parts: Vec<&str> = filter_spec.splitn(2, ':').collect();
+            if parts.len() == 2 {
+                let table = parts[0];
+                let condition = parts[1];
+                let filter_metadata = NodeMetadata {
+                    table_info: None,
+                    rule_info: None,
+                    join_info: None,
+                    filter_info: Some(FilterNodeMetadata {
+                        table: table.to_string(),
+                        condition: condition.to_string(),
+                        description: Some("LLM suggested filter".to_string()),
+                    }),
+                    metric_info: None,
+                    hypergraph_stats: None,
+                };
+                return Some(TraversalNode {
+                    node_id: node_id.to_string(),
+                    node_type: NodeType::Filter { table: table.to_string(), condition: condition.to_string() },
+                    visited: false,
+                    visit_count: 0,
+                    last_probe_result: None,
+                    score: 0.55,
+                    reasons: vec!["LLM suggested filter".to_string()],
+                    metadata: Some(filter_metadata),
+                });
+            }
+        }
+        None
+    }
+    
     /// Build metadata for a table node
-    fn build_table_metadata(&self, table: &crate::metadata::Table) -> Result<NodeMetadata> {
+    fn build_table_metadata(&mut self, table: &crate::metadata::Table) -> Result<NodeMetadata> {
         let entity = self.metadata.entities_by_id.get(&table.entity);
         let grain = entity.map(|e| e.grain.clone()).unwrap_or_default();
         let attributes = entity.map(|e| e.attributes.clone()).unwrap_or_default();
@@ -887,9 +1438,7 @@ impl GraphTraversalAgent {
             .unwrap_or_default();
         
         // Try to get hypergraph stats if available
-        // Note: This requires mutable access to graph, so we'll skip for now
-        // In production, you'd get stats from hypergraph adapter
-        let hypergraph_stats = None; // TODO: Get from hypergraph adapter when available
+        let hypergraph_stats = self.hypergraph_stats_for_table(&table.name);
         
         Ok(NodeMetadata {
             table_info: Some(TableNodeMetadata {
@@ -897,7 +1446,7 @@ impl GraphTraversalAgent {
                 system: table.system.clone(),
                 entity: table.entity.clone(),
                 primary_key: table.primary_key.clone(),
-                time_column: Some(table.time_column.clone()),
+                time_column: if table.time_column.is_empty() { None } else { Some(table.time_column.clone()) },
                 columns,
                 labels: table.labels.as_ref().cloned().unwrap_or_default(),
                 grain,
@@ -958,6 +1507,116 @@ impl GraphTraversalAgent {
         })
     }
     
+    fn build_join_metadata(
+        &mut self,
+        from: &str,
+        to: &str,
+        join_keys: &HashMap<String, String>,
+    ) -> Result<NodeMetadata> {
+        let hypergraph_stats = self.hypergraph_stats_for_join(from, to);
+        Ok(NodeMetadata {
+            table_info: None,
+            rule_info: None,
+            join_info: Some(JoinNodeMetadata {
+                from_table: from.to_string(),
+                to_table: to.to_string(),
+                join_keys: join_keys.clone(),
+                join_type: "left".to_string(),
+                description: None,
+            }),
+            filter_info: None,
+            metric_info: None,
+            hypergraph_stats,
+        })
+    }
+    
+    fn make_table_node(
+        &mut self,
+        table: &crate::metadata::Table,
+        score: f64,
+        reason: String,
+    ) -> Result<TraversalNode> {
+        let table_metadata = self.build_table_metadata(table)?;
+        Ok(TraversalNode {
+            node_id: format!("table:{}", table.name),
+            node_type: NodeType::Table(table.name.clone()),
+            visited: false,
+            visit_count: 0,
+            last_probe_result: None,
+            score,
+            reasons: vec![reason],
+            metadata: Some(table_metadata),
+        })
+    }
+    
+    fn collect_term_filters(&self, hit: &TermHit) -> Vec<String> {
+        let mut filters = Vec::new();
+        if let Some(filter) = &hit.hint.filter {
+            filters.push(filter.clone());
+        }
+        filters.extend(hit.hint.filters.iter().cloned());
+        filters
+    }
+    
+    fn parse_relationship_key(&self, key: &str) -> Option<(String, String)> {
+        if let Some((left, right)) = key.split_once("_to_") {
+            return Some((left.to_string(), right.to_string()));
+        }
+        if let Some((left, right)) = key.split_once("->") {
+            return Some((left.trim().to_string(), right.trim().to_string()));
+        }
+        None
+    }
+    
+    fn format_filter_condition(&self, column: &str, value: &str) -> String {
+        let trimmed = value.trim();
+        let has_operator = trimmed.contains('=') || trimmed.contains('>') || trimmed.contains('<');
+        if trimmed.to_lowercase().contains(&column.to_lowercase()) {
+            return trimmed.to_string();
+        }
+        if has_operator {
+            if trimmed.starts_with('=') || trimmed.starts_with('>') || trimmed.starts_with('<') || trimmed.starts_with("!=") {
+                return format!("{} {}", column, trimmed);
+            }
+        }
+        if trimmed.starts_with('\'') || trimmed.starts_with('"') {
+            format!("{} = {}", column, trimmed)
+        } else {
+            format!("{} = '{}'", column, trimmed)
+        }
+    }
+    
+    fn hypergraph_stats_for_table(&mut self, table_name: &str) -> Option<HypergraphStats> {
+        let adapter = self.graph.adapter().ok()?;
+        let stats = adapter.get_table_stats(table_name)?;
+        let top_n_values = stats.top_n_values.iter()
+            .map(|v| v.value.to_string())
+            .collect::<Vec<_>>();
+        Some(HypergraphStats {
+            row_count: Some(stats.row_count as u64),
+            distinct_count: Some(stats.distinct_count),
+            null_percentage: Some(stats.null_percentage),
+            data_quality_score: Some(stats.data_quality_score),
+            top_n_values,
+            join_selectivity: stats.join_selectivity,
+            filter_selectivity: stats.filter_selectivity,
+        })
+    }
+    
+    fn hypergraph_stats_for_join(&mut self, from: &str, to: &str) -> Option<HypergraphStats> {
+        let adapter = self.graph.adapter().ok()?;
+        let stats = adapter.get_join_stats(from, to)?;
+        Some(HypergraphStats {
+            row_count: None,
+            distinct_count: None,
+            null_percentage: None,
+            data_quality_score: None,
+            top_n_values: Vec::new(),
+            join_selectivity: Some(stats.selectivity),
+            filter_selectivity: None,
+        })
+    }
+    
     /// Extract JSON from LLM response
     fn extract_json(&self, response: &str) -> String {
         // Try to find JSON object/array
@@ -994,6 +1653,10 @@ struct Observations {
     join_failures: bool,
     filter_issues: bool,
     insights: Vec<String>,
+    data_quality_issue: Option<String>,
+    llm_suggested_nodes: Vec<String>,
+    llm_root_cause_found: bool,
+    llm_hypothesis: Option<String>,
 }
 
 #[derive(Debug, Clone)]
