@@ -6,6 +6,7 @@ import { PipelineManager } from './components/PipelineManager';
 import { ReasoningChat } from './components/ReasoningChat';
 import { Monitoring } from './components/Monitoring';
 import { RulesView } from './components/RulesView';
+import { HypergraphVisualizer } from './components/HypergraphVisualizer';
 import { useStore } from './store/useStore';
 
 function App() {
@@ -19,6 +20,8 @@ function App() {
         return <ReasoningChat />;
       case 'rules':
         return <RulesView />;
+      case 'visualizer':
+        return <HypergraphVisualizer />;
       case 'monitoring':
         return <Monitoring />;
       default:

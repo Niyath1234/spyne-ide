@@ -1,24 +1,19 @@
-[
-  {
-    "id": "loan",
-    "name": "Loan",
-    "description": "Individual loan entity",
-    "grain": ["loan_id", "loan_account_id"],
-    "attributes": ["loan_id", "loan_account_id", "customer_id", "customer_number", "account_number", "disbursement_date", "disbursement_amount", "sanction_limit", "principal_amount", "leadger_balance", "final_outstanding", "roi", "branch_code", "branch_name", "product_code", "product_name", "reportdate"]
-  },
-  {
-    "id": "emi",
-    "name": "EMI",
-    "description": "Equated Monthly Installment",
-    "grain": ["loan_id", "emi_number"],
-    "attributes": ["loan_id", "emi_number", "due_date", "amount", "status"]
-  },
-  {
-    "id": "transaction",
-    "name": "Transaction",
-    "description": "Financial transaction",
-    "grain": ["transaction_id"],
-    "attributes": ["transaction_id", "loan_id", "emi_number", "amount", "transaction_date", "type"]
-  }
-]
+{
+  "entities": [
+    {
+      "id": "customer",
+      "name": "Customer",
+      "grain": ["customer_id"],
+      "attributes": ["customer_name", "customer_type", "registration_date"],
+      "description": "Customer entity - can have multiple loans/accounts"
+    },
+    {
+      "id": "loan",
+      "name": "Loan",
+      "grain": ["loan_id"],
+      "attributes": ["loan_amount", "loan_status", "disbursement_date", "interest_rate"],
+      "description": "Loan entity - belongs to a customer, can have multiple disbursements and repayments"
+    }
+  ]
+}
 

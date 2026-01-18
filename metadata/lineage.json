@@ -1,38 +1,77 @@
-[
-  {
-    "type": "edge",
-    "from": "khatabook_loans",
-    "to": "khatabook_emis",
-    "keys": {
-      "loan_id": "loan_id"
+{
+  "edges": [
+    {
+      "from": "customer_accounts_a",
+      "to": "customer_master_a",
+      "join_type": "left",
+      "join_keys": [
+        {"left": "customer_id", "right": "customer_id"}
+      ],
+      "description": "Customer accounts linked to customer master"
     },
-    "relationship": "one_to_many"
-  },
-  {
-    "type": "edge",
-    "from": "khatabook_emis",
-    "to": "khatabook_transactions",
-    "keys": {
-      "loan_id": "loan_id",
-      "emi_number": "emi_number"
+    {
+      "from": "customer_transactions_a",
+      "to": "customer_master_a",
+      "join_type": "left",
+      "join_keys": [
+        {"left": "customer_id", "right": "customer_id"}
+      ],
+      "description": "Customer transactions linked to customer master"
     },
-    "relationship": "one_to_many"
-  },
-  {
-    "type": "edge",
-    "from": "tb_loans",
-    "to": "tb_loan_summary",
-    "keys": {
-      "loan_id": "loan_id"
+    {
+      "from": "customer_summary_a",
+      "to": "customer_master_a",
+      "join_type": "left",
+      "join_keys": [
+        {"left": "customer_id", "right": "customer_id"}
+      ],
+      "description": "Customer summary linked to customer master"
     },
-    "relationship": "one_to_one"
-  },
-  {
-    "type": "possible_join",
-    "tables": ["khatabook_loans", "tb_loans"],
-    "keys": {
-      "loan_id": "loan_id"
+    {
+      "from": "customer_balances_a",
+      "to": "customer_master_a",
+      "join_type": "left",
+      "join_keys": [
+        {"left": "customer_id", "right": "customer_id"}
+      ],
+      "description": "Customer balances linked to customer master"
+    },
+    {
+      "from": "loan_disbursements_b",
+      "to": "loan_master_b",
+      "join_type": "left",
+      "join_keys": [
+        {"left": "loan_id", "right": "loan_id"}
+      ],
+      "description": "Loan disbursements linked to loan master"
+    },
+    {
+      "from": "loan_repayments_b",
+      "to": "loan_master_b",
+      "join_type": "left",
+      "join_keys": [
+        {"left": "loan_id", "right": "loan_id"}
+      ],
+      "description": "Loan repayments linked to loan master"
+    },
+    {
+      "from": "loan_outstanding_b",
+      "to": "loan_master_b",
+      "join_type": "left",
+      "join_keys": [
+        {"left": "loan_id", "right": "loan_id"}
+      ],
+      "description": "Loan outstanding linked to loan master"
+    },
+    {
+      "from": "loan_master_b",
+      "to": "customer_master_a",
+      "join_type": "left",
+      "join_keys": [
+        {"left": "customer_id", "right": "customer_id"}
+      ],
+      "description": "Cross-system join: loans to customers (for reconciliation)"
     }
-  }
-]
+  ]
+}
 

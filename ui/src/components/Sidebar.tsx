@@ -17,6 +17,7 @@ import {
   Monitor as MonitorIcon,
   Add as AddIcon,
   Rule as RuleIcon,
+  AccountTree as VisualizerIcon,
 } from '@mui/icons-material';
 import { useStore } from '../store/useStore';
 
@@ -31,6 +32,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ width }) => {
     { id: 'pipelines', label: 'Pipelines', icon: PipelineIcon },
     { id: 'reasoning', label: 'Reasoning', icon: PsychologyIcon },
     { id: 'rules', label: 'Rules', icon: RuleIcon },
+    { id: 'visualizer', label: 'Graph View', icon: VisualizerIcon },
     { id: 'monitoring', label: 'Monitoring', icon: MonitorIcon },
   ] as const;
 

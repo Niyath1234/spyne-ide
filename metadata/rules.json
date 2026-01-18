@@ -1,139 +1,42 @@
 [
   {
-    "id": "collections_mis_paid_extraction",
-    "system": "collections_mis",
-    "metric": "paid_amount",
-    "target_entity": "loan",
-    "target_grain": ["uuid"],
+    "id": "system_a_tos_rule",
+    "system": "system_a",
+    "metric": "tos",
+    "target_entity": "customer",
+    "target_grain": ["customer_id"],
+    "labels": ["tos", "outstanding", "system_a"],
     "computation": {
-      "description": "Collections MIS business rules",
-      "source_entities": ["loan"],
-      "source_table": "collections_mis",
+      "description": "TOS (Total Outstanding) for System A: Sum of account balances plus transaction amounts minus writeoff amounts, only for active accounts.",
+      "source_entities": ["customer"],
       "attributes_needed": {
-        "loan": ["uuid", "paid_date", "paid_amount"]
+        "customer": ["customer_id", "account_balance", "transaction_amount", "writeoff_amount", "account_status"]
       },
-      "formula": "paid_amount",
-      "aggregation_grain": ["uuid"],
+      "formula": "Sum of account balances plus transaction amounts minus writeoff amounts for active accounts only",
+      "aggregation_grain": ["customer_id"],
       "filter_conditions": {
-        "mis_date": "2026-01-08",
-        "paid_date": "IS NOT NULL",
-        "paid_amount": "IS NOT NULL"
-      },
-      "note": "Date snapshot: 2026-01-08. Data quality: Must have paid_date and paid_amount."
+        "account_status": "active"
+      }
     }
   },
   {
-    "id": "outstanding_daily_paid_extraction",
-    "system": "outstanding_daily",
-    "metric": "paid_amount",
-    "target_entity": "loan",
-    "target_grain": ["uuid"],
-    "computation": {
-      "description": "Outstanding daily business rules",
-      "source_entities": ["loan", "repayment"],
-      "source_table": "outstanding_daily",
-      "attributes_needed": {
-        "loan": ["uuid", "order_id"],
-        "repayment": ["order_id", "repay_id", "paid_date", "paid_amount"]
-      },
-      "formula": "paid_amount",
-      "aggregation_grain": ["uuid"],
-      "filter_conditions": {
-        "last_day": "2026-01-07",
-        "repayments.status": "SUCCESS",
-        "repayments.__is_deleted": "false",
-        "emi_payment_view.is_deleted": "false",
-        "outstanding_daily.settlement_flag": "unsettled",
-        "nbfc": "quadrillion, slicenesfb, nesfb",
-        "order_type": "NOT credin"
-      },
-      "note": "Date snapshot: 2026-01-07. Business filters: Only successful repayments, exclude deleted records, only unsettled loans, specific NBFCs only, exclude credin orders."
-    }
-  },
-  {
-    "id": "khatabook_tos_calculation",
-    "system": "khatabook",
+    "id": "system_b_tos_rule",
+    "system": "system_b",
     "metric": "tos",
     "target_entity": "loan",
     "target_grain": ["loan_id"],
+    "labels": ["tos", "outstanding", "system_b"],
     "computation": {
-      "description": "Khatabook Total Outstanding calculation from loan and transaction data",
-      "source_entities": ["loan", "transaction"],
-      "source_table": "khatabook_loans",
-      "attributes_needed": {
-        "loan": ["loan_id", "disbursement_amount", "principal_amount", "final_outstanding", "leadger_balance"],
-        "transaction": ["loan_id", "amount", "transaction_date", "type"]
-      },
-      "formula": "COALESCE(final_outstanding, leadger_balance, principal_amount - SUM(CASE WHEN transaction.type = 'repayment' THEN transaction.amount ELSE 0 END))",
-      "aggregation_grain": ["loan_id"],
-      "filter_conditions": {
-        "loan.disbursement_date": "IS NOT NULL"
-      },
-      "note": "Total Outstanding for Khatabook system. Uses final_outstanding if available, otherwise calculates from principal minus repayments. Falls back to leadger_balance if principal not available."
-    }
-  },
-  {
-    "id": "tb_tos_calculation",
-    "system": "tb",
-    "metric": "tos",
-    "target_entity": "loan",
-    "target_grain": ["loan_id"],
-    "computation": {
-      "description": "TB (TallyBook) Total Outstanding calculation from loan summary",
+      "description": "TOS (Total Outstanding) for System B: Sum of disbursed amounts minus repaid amounts plus accrued interest minus waived penalties, only for active or overdue loans.",
       "source_entities": ["loan"],
-      "source_table": "tb_loan_summary",
       "attributes_needed": {
-        "loan": ["loan_id", "final_outstanding", "principal_outstanding", "interest_outstanding", "as_of_date"]
+        "loan": ["loan_id", "disbursed_amount", "repaid_amount", "interest_accrued", "penalty_waived", "loan_status"]
       },
-      "formula": "COALESCE(final_outstanding, principal_outstanding + COALESCE(interest_outstanding, 0))",
+      "formula": "Sum of disbursed amounts minus repaid amounts plus accrued interest minus waived penalties for active or overdue loans only",
       "aggregation_grain": ["loan_id"],
       "filter_conditions": {
-        "as_of_date": "IS NOT NULL"
-      },
-      "note": "Total Outstanding for TB system. Uses final_outstanding if available, otherwise sums principal_outstanding and interest_outstanding."
-    }
-  },
-  {
-    "id": "khatabook_pos_calculation",
-    "system": "khatabook",
-    "metric": "pos",
-    "target_entity": "loan",
-    "target_grain": ["loan_id"],
-    "computation": {
-      "description": "Khatabook Principal Outstanding calculation",
-      "source_entities": ["loan"],
-      "source_table": "khatabook_loans",
-      "attributes_needed": {
-        "loan": ["loan_id", "principal_amount", "disbursement_amount"]
-      },
-      "formula": "principal_amount",
-      "aggregation_grain": ["loan_id"],
-      "filter_conditions": {
-        "disbursement_date": "IS NOT NULL"
-      },
-      "note": "Principal Outstanding for Khatabook. Uses principal_amount directly from loans table."
-    }
-  },
-  {
-    "id": "tb_pos_calculation",
-    "system": "tb",
-    "metric": "pos",
-    "target_entity": "loan",
-    "target_grain": ["loan_id"],
-    "computation": {
-      "description": "TB (TallyBook) Principal Outstanding calculation",
-      "source_entities": ["loan"],
-      "source_table": "tb_loan_summary",
-      "attributes_needed": {
-        "loan": ["loan_id", "principal_outstanding", "as_of_date"]
-      },
-      "formula": "principal_outstanding",
-      "aggregation_grain": ["loan_id"],
-      "filter_conditions": {
-        "as_of_date": "IS NOT NULL",
-        "principal_outstanding": "IS NOT NULL"
-      },
-      "note": "Principal Outstanding for TB system. Directly uses principal_outstanding field from loan summary table."
+        "loan_status": "active,overdue"
+      }
     }
   }
 ]

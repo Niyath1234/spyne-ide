@@ -40,21 +40,78 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 }
 
 async fn handle_connection(mut stream: TcpStream) {
-    let mut buffer = [0; 1024];
+    use tokio::time::{timeout, Duration};
     
-    match stream.read(&mut buffer).await {
-        Ok(size) => {
-            let request = String::from_utf8_lossy(&buffer[..size]);
+    // Read request with timeout to prevent hanging
+    let mut buffer = Vec::new();
+    let mut temp_buf = [0; 8192];
+    
+    let read_result = timeout(Duration::from_secs(5), async {
+        loop {
+            match stream.read(&mut temp_buf).await {
+                Ok(0) => break, // EOF
+                Ok(n) => {
+                    buffer.extend_from_slice(&temp_buf[..n]);
+                    // Check if we've reached the end of HTTP headers + body
+                    if let Ok(s) = std::str::from_utf8(&buffer) {
+                        if s.contains("\r\n\r\n") {
+                            // We have headers, check if we have the full body
+                            if let Some(content_length) = extract_content_length(s) {
+                                let headers_end = s.find("\r\n\r\n").unwrap() + 4;
+                                if buffer.len() >= headers_end + content_length {
+                                    break; // We have the complete request
+                                }
+                            } else if n < temp_buf.len() {
+                                // No content-length header and we got less than buffer size
+                                break;
+                            }
+                        }
+                    }
+                    // If buffer is getting too large, break to prevent memory issues
+                    if buffer.len() > 1_000_000 {
+                        break;
+                    }
+                }
+                Err(e) => {
+                    eprintln!("Failed to read from stream: {}", e);
+                    return Err(e);
+                }
+            }
+        }
+        Ok(())
+    }).await;
+    
+    if read_result.is_err() {
+        eprintln!("⚠️  Request read timeout");
+        return;
+    }
+    
+    if buffer.is_empty() {
+        return;
+    }
+    
+    match String::from_utf8(buffer) {
+        Ok(request) => {
             let response = handle_request(&request).await;
-            
             if let Err(e) = stream.write_all(response.as_bytes()).await {
                 eprintln!("Failed to write response: {}", e);
             }
         }
         Err(e) => {
-            eprintln!("Failed to read from stream: {}", e);
+            eprintln!("Failed to parse request as UTF-8: {}", e);
         }
     }
+}
+
+fn extract_content_length(request: &str) -> Option<usize> {
+    for line in request.lines() {
+        if line.to_lowercase().starts_with("content-length:") {
+            if let Some(value) = line.split(':').nth(1) {
+                return value.trim().parse().ok();
+            }
+        }
+    }
+    None
 }
 
 async fn handle_request(request: &str) -> String {
@@ -142,6 +199,16 @@ async fn handle_request(request: &str) -> String {
                 Err(e) => {
                     eprintln!("Error loading knowledge base: {}", e);
                     create_response(200, "OK", r#"{"terms":{},"tables":{},"relationships":{}}"#)
+                }
+            }
+        }
+        ("GET", "/api/graph") => {
+            // Return hypergraph visualization data (nodes, edges, stats)
+            match get_graph_data() {
+                Ok(json) => create_response(200, "OK", &json),
+                Err(e) => {
+                    eprintln!("Error loading graph data: {}", e);
+                    create_response(500, "Internal Server Error", r#"{"error":"Failed to load graph data"}"#)
                 }
             }
         }
@@ -302,12 +369,23 @@ async fn handle_request(request: &str) -> String {
         // ORIGINAL REASONING/QUERY ENDPOINT (kept for backward compatibility)
         // ====================================================================
         ("POST", "/api/reasoning/query") => {
-            // Extract query from body
+            // Extract query from body - handle both raw HTTP and JSON body formats
             let body_start = request.find("\r\n\r\n").unwrap_or(request.len());
             let body = &request[body_start..].trim();
             
-            // Parse JSON body to get query
-            let query = if let Some(json_start) = body.find('{') {
+            // Try multiple parsing strategies
+            let query = if body.starts_with('{') {
+                // Direct JSON body
+                if let Ok(json) = serde_json::from_str::<serde_json::Value>(body) {
+                    json.get("query")
+                        .and_then(|v| v.as_str())
+                        .unwrap_or("")
+                        .to_string()
+                } else {
+                    String::new()
+                }
+            } else if let Some(json_start) = body.find('{') {
+                // JSON somewhere in the body
                 let json_str = &body[json_start..];
                 if let Ok(json) = serde_json::from_str::<serde_json::Value>(json_str) {
                     json.get("query")
@@ -317,11 +395,15 @@ async fn handle_request(request: &str) -> String {
                 } else {
                     String::new()
                 }
+            } else if !body.is_empty() {
+                // Maybe it's just the query string directly?
+                body.to_string()
             } else {
                 String::new()
             };
             
             if query.is_empty() {
+                eprintln!("⚠️  Failed to parse query from request body. Body length: {}, Body preview: {}", body.len(), &body[..body.len().min(200)]);
                 return create_response(400, "Bad Request", r#"{"error":"Query is required"}"#);
             }
             
@@ -642,13 +724,42 @@ fn get_rules_from_metadata() -> Result<String, Box<dyn std::error::Error>> {
     
     let rules_json = serde_json::json!({
         "rules": metadata.rules.iter().map(|r| {
+            // Extract description from computation for frontend display
+            // Note: We don't include join information here - that's handled by the graph/lineage system
+            let description = r.computation.description.clone();
+            let note = r.computation.note.clone();
+            
+            // Build a human-readable description
+            // Only include note if it contains business logic, not join instructions
+            let display_description = if let Some(ref note_text) = note {
+                // Only include note if it's not about joins (graph handles that)
+                if !note_text.to_lowercase().contains("join") && !note_text.to_lowercase().contains("table") {
+                    format!("{}\n\nNote: {}", description, note_text)
+                } else {
+                    description.clone()
+                }
+            } else {
+                description.clone()
+            };
+            
             serde_json::json!({
                 "id": r.id,
                 "system": r.system,
                 "metric": r.metric,
                 "target_entity": r.target_entity,
                 "target_grain": r.target_grain,
-                "computation": r.computation
+                "description": display_description,
+                "note": note.unwrap_or_default(),
+                "labels": r.labels.as_ref().unwrap_or(&Vec::new()),
+                "filter_conditions": r.computation.filter_conditions.as_ref().unwrap_or(&std::collections::HashMap::new()),
+                "computation": {
+                    "description": r.computation.description,
+                    "formula": r.computation.formula,
+                    "source_entities": r.computation.source_entities,
+                    "aggregation_grain": r.computation.aggregation_grain,
+                    "filter_conditions": r.computation.filter_conditions,
+                    "note": r.computation.note
+                }
             })
         }).collect::<Vec<_>>()
     });
@@ -666,6 +777,74 @@ fn get_knowledge_base() -> Result<String, Box<dyn std::error::Error>> {
     
     let content = std::fs::read_to_string(&knowledge_base_path)?;
     Ok(content)
+}
+
+fn get_graph_data() -> Result<String, Box<dyn std::error::Error>> {
+    let metadata_dir = PathBuf::from("metadata");
+    let metadata = Metadata::load(&metadata_dir)?;
+    
+    // Create nodes from tables
+    let nodes: Vec<serde_json::Value> = metadata.tables.iter().map(|t| {
+        // Extract columns if available
+        let columns: Vec<String> = if let Some(ref cols) = t.columns {
+            cols.iter().map(|c| c.name.clone()).collect()
+        } else {
+            Vec::new()
+        };
+        
+        // Extract labels if available
+        let labels: Vec<String> = t.labels.as_ref()
+            .map(|l| l.clone())
+            .unwrap_or_default();
+        
+        serde_json::json!({
+            "id": t.name,
+            "label": t.name,
+            "type": "table",
+            "row_count": 0, // Can be populated from actual data if needed
+            "columns": columns,
+            "labels": labels,
+            "title": format!("{} - {}", t.name, t.entity)
+        })
+    }).collect();
+    
+    // Create edges from lineage
+    let edges: Vec<serde_json::Value> = metadata.lineage.edges.iter().enumerate().map(|(idx, e)| {
+        // Format join condition from keys
+        let join_conditions: Vec<String> = e.keys.iter()
+            .map(|(left, right)| format!("{}.{} = {}.{}", e.from, left, e.to, right))
+            .collect();
+        let label = join_conditions.join(" AND ");
+        
+        serde_json::json!({
+            "id": format!("edge_{}", idx),
+            "from": e.from,
+            "to": e.to,
+            "label": label,
+            "relationship": e.relationship
+        })
+    }).collect();
+    
+    // Calculate stats
+    let table_count = nodes.iter().filter(|n| n["type"] == "table").count();
+    let column_count: usize = nodes.iter()
+        .filter_map(|n| n.get("columns"))
+        .filter_map(|c| c.as_array())
+        .map(|arr| arr.len())
+        .sum();
+    
+    let graph_json = serde_json::json!({
+        "nodes": nodes,
+        "edges": edges,
+        "stats": {
+            "total_nodes": nodes.len(),
+            "total_edges": edges.len(),
+            "table_count": table_count,
+            "column_count": column_count
+        }
+    });
+    
+    Ok(serde_json::to_string(&graph_json)?)
 }
 
 // ============================================================================

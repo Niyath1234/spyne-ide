@@ -1,61 +1,14 @@
-[
-  {
-    "type": "system",
-    "label": "Khatabook",
-    "aliases": ["khatabook", "kb", "kbk"],
-    "system_id": "khatabook"
-  },
-  {
-    "type": "system",
-    "label": "TB",
-    "aliases": ["tb", "tallybook", "tally book"],
-    "system_id": "tb"
-  },
-  {
-    "type": "system",
-    "label": "Collections MIS",
-    "aliases": ["collections_mis", "collections", "mis", "current_month_collections_mis"],
-    "system_id": "collections_mis"
-  },
-  {
-    "type": "system",
-    "label": "Outstanding Daily",
-    "aliases": ["outstanding_daily", "outstanding", "oac"],
-    "system_id": "outstanding_daily"
-  },
-  {
-    "type": "metric",
-    "label": "TOS",
-    "aliases": ["tos", "total outstanding", "total outstanding amount"],
-    "metric_id": "tos"
-  },
-  {
-    "type": "metric",
-    "label": "POS",
-    "aliases": ["pos", "principal outstanding"],
-    "metric_id": "pos"
-  },
-  {
-    "type": "metric",
-    "label": "Paid Amount",
-    "aliases": ["paid_amount", "paid amount", "payment_amount", "payment amount", "recovery", "recovery_amount"],
-    "metric_id": "paid_amount"
-  },
-  {
-    "type": "metric",
-    "label": "Paid Date",
-    "aliases": ["paid_date", "paid date", "payment_date", "payment date", "recovery_date"],
-    "metric_id": "paid_date"
-  },
-  {
-    "type": "reconciliation_type",
-    "label": "reconciliation",
-    "aliases": ["recon", "reconcile", "compare", "match"]
-  },
-  {
-    "type": "reconciliation_type",
-    "label": "as of",
-    "aliases": ["as-of", "asof", "as of date", "snapshot"]
-  }
-]
+{
+  "systems": [
+    {"system_id": "system_a", "label": "system_a", "aliases": ["System A", "system A"]},
+    {"system_id": "system_b", "label": "system_b", "aliases": ["System B", "system B"]}
+  ],
+  "metrics": [
+    {"metric_id": "tos", "label": "tos", "aliases": ["TOS", "Total Outstanding", "total outstanding", "outstanding"]}
+  ],
+  "entities": [
+    {"entity_id": "customer", "label": "customer", "aliases": ["Customer", "customers"]},
+    {"entity_id": "loan", "label": "loan", "aliases": ["Loan", "loans"]}
+  ]
+}
 
