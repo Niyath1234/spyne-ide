@@ -9,6 +9,7 @@
 5. [Advanced Usage](#advanced-usage)
 6. [Troubleshooting](#troubleshooting)
 7. [Best Practices](#best-practices)
+8. [Hypergraph Visualization](#hypergraph-visualization)
 
 ---
 
@@ -813,6 +814,238 @@ Here's a complete example from start to finish:
 
 ---
 
+## Hypergraph Visualization
+
+The RCA Engine includes an **interactive hypergraph visualizer** that provides a visual representation of your data landscape, showing all tables, their relationships (joins), and metadata in an intuitive graph interface.
+
+### What is the Hypergraph Visualizer?
+
+The hypergraph visualizer is a powerful tool that helps you:
+
+- **Visualize Table Relationships**: See how all your tables are connected through join relationships
+- **Explore Schema Clustering**: Tables are automatically grouped and color-coded by schema/system
+- **Inspect Metadata**: View row counts, columns, and other metadata for each table
+- **Find Join Paths**: Discover how data flows between different tables
+- **Search and Navigate**: Quickly find specific tables and explore their connections
+
+### Accessing the Visualizer
+
+#### Option 1: Standalone Frontend
+
+The hypergraph visualizer has its own React-based frontend located in `hypergraph-visualizer/frontend/`:
+
+1. **Start the RCA Engine Server** (if not already running):
+   ```bash
+   cd /path/to/RCA-ENGINE
+   cargo run --bin server
+   ```
+   The server will run on `http://localhost:8080` and provide the `/api/graph` endpoint.
+
+2. **Start the Visualizer Frontend**:
+   ```bash
+   cd hypergraph-visualizer/frontend
+   npm install  # First time only
+   npm run dev
+   ```
+   The frontend will start on `http://localhost:5173` (or similar).
+
+3. **Open in Browser**: Navigate to the Vite dev server URL (e.g., `http://localhost:5173`)
+
+#### Option 2: Integrated UI
+
+The visualizer can also be integrated directly into the main RCA Engine UI by importing the `HypergraphVisualizer` component.
+
+### Using the Visualizer
+
+#### 1. Initial View
+
+When you open the visualizer, you'll see:
+
+- **Graph Canvas**: A dark-themed canvas showing all tables as circular nodes
+- **Color-Coded Nodes**: Each schema/system has a distinct color
+- **Join Edges**: Lines connecting tables that have join relationships
+- **Schema Legend**: A sidebar showing the color mapping for each schema
+- **Search Bar**: At the top for quick table lookup
+- **Stats Summary**: Total tables, columns, and join relationships
+
+#### 2. Interacting with the Graph
+
+**Navigation:**
+- **Zoom**: Use mouse wheel to zoom in/out
+- **Pan**: Click and drag on empty space to pan the view
+- **Drag Nodes**: Click and drag individual nodes to rearrange the layout
+
+**Node Interactions:**
+- **Hover**: Hover over a node to see a popup with table details
+  - Table name
+  - Row count
+  - List of columns
+- **Click**: Click a node to:
+  - Highlight the node and its connections
+  - Dim unrelated nodes and edges
+  - Lock the info panel open
+- **Click Empty Space**: Click on the canvas background to clear selection and restore full view
+
+**Edge Interactions:**
+- **Hover over Edges**: See the join condition (e.g., `table1.id = table2.id`)
+- **Connected Edges**: When you select a node, its edges are highlighted in bright colors
+
+#### 3. Searching for Tables
+
+Use the search bar at the top to quickly find specific tables:
+
+1. **Type** the table name (or part of it) in the search box
+2. **Partial Match**: The search works with partial names (e.g., "customer" finds "customer_master_a")
+3. **Auto-Focus**: The graph automatically zooms to the matching table and highlights it
+4. **Clear Search**: Click the 'X' icon in the search bar to clear the search and reset the view
+
+#### 4. Understanding the Visual Elements
+
+**Node Colors:**
+- Nodes are colored by schema/system (e.g., `system_a`, `system_b`)
+- Each schema gets a unique, vibrant color from a predefined palette
+- Check the **Schema Legend** panel on the right to see the color mapping
+
+**Edge Styles:**
+- **Bright Colors**: Edges use green, orange, purple, and pink for easy visibility
+- **Highlighting**: When a node is selected, its edges glow and thicken
+- **Bidirectional**: All joins are shown as bidirectional (undirected edges)
+
+**Node Size:**
+- Node size adjusts based on the label length for better readability
+- Larger labels get slightly bigger nodes
+
+#### 5. Reading the Info Panel
+
+When you hover or click on a node, an info panel appears showing:
+
+- **Table Name**: Full table name (e.g., `customer_master_a`)
+- **Row Count**: Number of rows in the table (if available)
+- **Columns**: A scrollable list of all columns in the table
+- **System/Schema**: Implicit from the node color (see legend)
+
+The panel:
+- **Auto-positions** near the node to avoid overlapping
+- **Stays visible** when you move your mouse over it
+- **Locks** when you click a node (close by clicking the X or clicking empty space)
+
+#### 6. Schema Clustering
+
+Tables are automatically clustered by schema for better organization:
+
+- **Visual Grouping**: Tables from the same schema/system are positioned close together
+- **Color Consistency**: All tables in a schema share the same color
+- **Legend Reference**: Use the schema legend to quickly identify which system each node belongs to
+
+### Example Workflow
+
+**Scenario**: You want to understand how `customer_master_a` connects to `customer_transactions_a`.
+
+1. **Open the Visualizer**: Start the frontend and open it in your browser
+2. **Search for "customer_master"**: Type in the search bar
+3. **View Highlighted Node**: The graph zooms to `customer_master_a` and highlights it
+4. **Inspect Connections**: Look at the glowing edges - you'll see connections to:
+   - `customer_accounts_a`
+   - `customer_transactions_a`
+   - `customer_summary_a`
+5. **Hover Over Edge**: Hover over the edge connecting to `customer_transactions_a` to see:
+   - Join condition: `customer_master_a.customer_id = customer_transactions_a.customer_id`
+6. **Click to Lock**: Click `customer_transactions_a` to see its columns and details
+7. **Explore Further**: Notice it also connects to other tables, showing the full data lineage
+
+### Visualizer Architecture
+
+The hypergraph visualizer is built with:
+
+- **Frontend**: React + TypeScript + Material-UI + vis-network
+- **Backend**: Rust (RCA Engine server provides `/api/graph` endpoint)
+- **Data Format**: JSON with nodes, edges, and stats
+
+#### API Endpoint: `/api/graph`
+
+The visualizer consumes data from the `/api/graph` endpoint, which returns:
+
+```json
+{
+  "nodes": [
+    {
+      "id": "table_name",
+      "label": "table_name",
+      "type": "table",
+      "row_count": 1000,
+      "columns": ["col1", "col2", "col3"],
+      "title": "table_name - entity"
+    }
+  ],
+  "edges": [
+    {
+      "id": "edge_1",
+      "from": "table_1",
+      "to": "table_2",
+      "label": "table_1.col1 = table_2.col2",
+      "relationship": "one-to-many"
+    }
+  ],
+  "stats": {
+    "total_nodes": 10,
+    "total_edges": 8,
+    "table_count": 10,
+    "column_count": 50
+  }
+}
+```
+
+This data is generated from your `metadata/tables.json` and `metadata/lineage.json` files.
+
+### Customization
+
+You can customize the visualizer by:
+
+1. **Modifying Color Palette**: Edit the `colorPalette` array in `HypergraphVisualizer.tsx`
+2. **Adjusting Layout**: Modify the `physics` settings in the vis-network options
+3. **Changing Node Styles**: Update node shape, size, or fonts in the component
+4. **Adding Metadata**: Extend the `/api/graph` endpoint to include more metadata
+
+### Troubleshooting the Visualizer
+
+**Problem: Visualizer shows "No graph data available"**
+
+- **Solution**: 
+  - Ensure `metadata/tables.json` and `metadata/lineage.json` exist
+  - Check that the RCA Engine server is running on `http://localhost:8080`
+  - Verify `/api/graph` endpoint returns valid JSON: `curl http://localhost:8080/api/graph`
+
+**Problem: Edges are not showing**
+
+- **Solution**: 
+  - Verify `metadata/lineage.json` has valid edges
+  - Check that edge `from` and `to` values match actual table names in `tables.json`
+  - Look for console errors in the browser developer tools
+
+**Problem: Frontend can't connect to backend**
+
+- **Solution**:
+  - Ensure RCA Engine server is running on port 8080
+  - Check CORS settings if running on different ports
+  - Set `VITE_API_BASE_URL` environment variable if using a custom API URL
+
+**Problem: Graph layout looks cramped**
+
+- **Solution**:
+  - Zoom out using the mouse wheel
+  - Manually drag nodes to spread them out (physics is disabled after initial layout)
+  - Adjust `springLength` and `gravitationalConstant` in the physics configuration
+
+### Benefits of the Visualizer
+
+1. **Quick Overview**: See your entire data landscape at a glance
+2. **Lineage Exploration**: Understand how tables relate to each other
+3. **Debugging Aid**: Identify missing joins or isolated tables
+4. **Documentation**: Visual representation serves as living documentation
+5. **Onboarding**: Help new team members understand the data model quickly
+
+---
+
 ## Summary
 
 Performing an RCA in the RCA Engine involves:
@@ -823,6 +1056,7 @@ Performing an RCA in the RCA Engine involves:
 4. ✅ **Interpret**: Understand root causes and mismatches
 5. ✅ **Act**: Follow recommendations and fix issues
 6. ✅ **Verify**: Re-run query to confirm resolution
+7. ✅ **Visualize**: Use the hypergraph visualizer to explore data relationships
 
 The system handles the complex work of:
 - Parsing your natural language query
@@ -844,6 +1078,6 @@ You just need to ask the right question!
 
 ---
 
-*Last Updated: 2026-01-08*
-*Version: 1.0*
+*Last Updated: 2026-01-18*
+*Version: 1.1 - Added Hypergraph Visualization Module*
 

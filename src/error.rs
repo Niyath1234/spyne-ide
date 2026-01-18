@@ -5,6 +5,9 @@ pub enum RcaError {
     #[error("Metadata error: {0}")]
     Metadata(String),
     
+    #[error("Database error: {0}")]
+    Database(String),
+    
     #[error("LLM error: {0}")]
     Llm(String),
     

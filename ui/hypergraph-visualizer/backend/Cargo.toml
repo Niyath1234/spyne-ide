@@ -1,0 +1,18 @@
+[package]
+name = "hypergraph-visualizer-backend"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+axum = { version = "0.7", features = ["multipart", "macros"] }
+tokio = { version = "1", features = ["full"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+tower = "0.4"
+tower-http = { version = "0.5", features = ["fs", "cors"] }
+anyhow = "1"
+
+[[bin]]
+name = "server"
+path = "src/main.rs"
+

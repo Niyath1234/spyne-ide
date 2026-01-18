@@ -344,6 +344,33 @@ pub struct Metadata {
 }
 
 impl Metadata {
+    /// Load metadata from PostgreSQL if USE_POSTGRES=true, otherwise from JSON files
+    pub async fn load_auto(dir: impl AsRef<Path>) -> Result<Self> {
+        use std::env;
+        
+        if env::var("USE_POSTGRES").unwrap_or_default() == "true" {
+            Self::load_from_db().await
+        } else {
+            Self::load(dir)
+        }
+    }
+    
+    /// Load metadata from PostgreSQL
+    pub async fn load_from_db() -> Result<Self> {
+        use std::env;
+        use crate::db::{init_pool, MetadataRepository};
+        
+        let database_url = env::var("DATABASE_URL")
+            .map_err(|_| RcaError::Metadata("DATABASE_URL not set. Set USE_POSTGRES=true and DATABASE_URL in .env".to_string()))?;
+        
+        let pool = init_pool(&database_url).await
+            .map_err(|e| RcaError::Database(format!("Failed to connect to database: {}", e)))?;
+        
+        let repo = MetadataRepository::new(pool);
+        repo.load_all().await
+    }
+    
+    /// Load metadata from JSON files (original method)
     pub fn load(dir: impl AsRef<Path>) -> Result<Self> {
         let dir = dir.as_ref();
         

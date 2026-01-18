@@ -56,3 +56,6 @@ pub mod world_state;
 // Re-export KnowledgeBase module
 #[path = "../KnowledgeBase/mod.rs"]
 pub mod knowledge_base;
+
+// Database module for PostgreSQL
+pub mod db;

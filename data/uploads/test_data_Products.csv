@@ -1,0 +1,5 @@
+product_id,product_name,price,category,in_stock
+P001,Widget A,99.99,widgets,True
+P002,Widget B,149.99,widgets,True
+P003,Gadget X,199.99,gadgets,False
+P004,Gadget Y,249.99,gadgets,True

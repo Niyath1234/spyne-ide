@@ -25,22 +25,53 @@ async fn test_complex_multi_table_tos_reconciliation() {
     println!("  - Each customer can have multiple loans");
     println!("\n{}", "=".repeat(80));
     
-    // Load metadata
+    // Load metadata (from PostgreSQL if USE_POSTGRES=true, otherwise from files)
     let metadata_dir = PathBuf::from("metadata/complex_multi_table_test");
     println!("\n📋 Loading metadata from: {:?}", metadata_dir);
     
-    let metadata = match Metadata::load(&metadata_dir) {
-        Ok(m) => {
-            println!("  ✅ Metadata loaded successfully");
-            println!("     - Tables: {}", m.tables.len());
-            println!("     - Rules: {}", m.rules.len());
-            println!("     - Entities: {}", m.entities.len());
-            println!("     - Lineage edges: {}", m.lineage.edges.len());
-            m
+    // Check if we should use PostgreSQL
+    dotenv::dotenv().ok();
+    let use_postgres = std::env::var("USE_POSTGRES").unwrap_or_default() == "true";
+    
+    if use_postgres {
+        println!("  🔌 Using PostgreSQL for metadata...");
+    } else {
+        println!("  📁 Using JSON files for metadata...");
+    }
+    
+    let metadata = if use_postgres {
+        match Metadata::load_from_db().await {
+            Ok(m) => {
+                println!("  ✅ Metadata loaded from PostgreSQL successfully");
+                println!("     - Tables: {}", m.tables.len());
+                println!("     - Rules: {}", m.rules.len());
+                println!("     - Entities: {}", m.entities.len());
+                println!("     - Lineage edges: {}", m.lineage.edges.len());
+                m
+            }
+            Err(e) => {
+                eprintln!("  ❌ Failed to load metadata from PostgreSQL: {}", e);
+                eprintln!("  ⚠️  Falling back to file-based metadata...");
+                Metadata::load(&metadata_dir).map_err(|e| {
+                    eprintln!("  ❌ Failed to load metadata from files: {}", e);
+                    e
+                })?
+            }
         }
-        Err(e) => {
-            eprintln!("  ❌ Failed to load metadata: {}", e);
-            return;
+    } else {
+        match Metadata::load(&metadata_dir) {
+            Ok(m) => {
+                println!("  ✅ Metadata loaded from files successfully");
+                println!("     - Tables: {}", m.tables.len());
+                println!("     - Rules: {}", m.rules.len());
+                println!("     - Entities: {}", m.entities.len());
+                println!("     - Lineage edges: {}", m.lineage.edges.len());
+                m
+            }
+            Err(e) => {
+                eprintln!("  ❌ Failed to load metadata: {}", e);
+                return;
+            }
         }
     };
     

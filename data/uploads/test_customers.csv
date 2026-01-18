@@ -1,0 +1,6 @@
+customer_id,name,balance,account_type,status,signup_date
+C001,Alice Johnson,1500.5,savings,active,2024-01-15
+C002,Bob Smith,2300.75,checking,active,2024-02-20
+C003,Charlie Brown,1800.0,savings,inactive,2024-03-10
+C004,Diana Prince,3500.25,investment,active,2024-04-05
+C005,Eve Adams,1200.0,checking,active,2024-05-12

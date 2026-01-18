@@ -163,28 +163,28 @@ async fn handle_request(request: &str) -> String {
         }
         ("GET", "/api/sources") => {
             // Return actual tables from metadata
-            match get_tables_from_metadata() {
+            match get_tables_from_metadata().await {
                 Ok(json) => create_response(200, "OK", &json),
                 Err(_) => create_response(200, "OK", r#"{"sources":[]}"#)
             }
         }
         ("GET", "/api/tables") => {
             // Return tables metadata
-            match get_tables_from_metadata() {
+            match get_tables_from_metadata().await {
                 Ok(json) => create_response(200, "OK", &json),
                 Err(_) => create_response(200, "OK", r#"{"tables":[]}"#)
             }
         }
         ("GET", "/api/pipelines") => {
             // Return pipelines (tables) from metadata
-            match get_pipelines_from_metadata() {
+            match get_pipelines_from_metadata().await {
                 Ok(json) => create_response(200, "OK", &json),
                 Err(_) => create_response(200, "OK", r#"{"pipelines":[]}"#)
             }
         }
         ("GET", "/api/rules") => {
             // Return rules from metadata
-            match get_rules_from_metadata() {
+            match get_rules_from_metadata().await {
                 Ok(json) => create_response(200, "OK", &json),
                 Err(e) => {
                     eprintln!("Error loading rules: {}", e);
@@ -204,7 +204,7 @@ async fn handle_request(request: &str) -> String {
         }
         ("GET", "/api/graph") => {
             // Return hypergraph visualization data (nodes, edges, stats)
-            match get_graph_data() {
+            match get_graph_data().await {
                 Ok(json) => create_response(200, "OK", &json),
                 Err(e) => {
                     eprintln!("Error loading graph data: {}", e);
@@ -519,8 +519,8 @@ async fn execute_rca_query(query: &str) -> Result<(String, Vec<serde_json::Value
     let metadata_dir = PathBuf::from("metadata");
     let data_dir = PathBuf::from("data");
     
-    // Load metadata
-    let metadata = Metadata::load(&metadata_dir)
+    // Load metadata (from PostgreSQL if USE_POSTGRES=true, otherwise from files)
+    let metadata = Metadata::load_auto(&metadata_dir).await
         .map_err(|e| format!("Failed to load metadata: {}", e))?;
     
     // Create LLM client (will use env var OPENAI_API_KEY if set)
@@ -634,7 +634,7 @@ async fn execute_graph_traverse(
     metadata_dir: &PathBuf,
     data_dir: &PathBuf,
 ) -> Result<rca_engine::graph_traversal::TraversalState, Box<dyn std::error::Error>> {
-    let metadata = Metadata::load(metadata_dir)
+    let metadata = Metadata::load_auto(metadata_dir).await
         .map_err(|e| format!("Failed to load metadata: {}", e))?;
     
     let api_key = std::env::var("OPENAI_API_KEY")
@@ -670,9 +670,9 @@ async fn execute_graph_traverse(
     Ok(state)
 }
 
-fn get_tables_from_metadata() -> Result<String, Box<dyn std::error::Error>> {
+async fn get_tables_from_metadata() -> Result<String, Box<dyn std::error::Error>> {
     let metadata_dir = PathBuf::from("metadata");
-    let metadata = Metadata::load(&metadata_dir)?;
+    let metadata = Metadata::load_auto(&metadata_dir).await?;
     
     let tables_json = serde_json::json!({
         "sources": metadata.tables.iter().map(|t| {
@@ -691,9 +691,9 @@ fn get_tables_from_metadata() -> Result<String, Box<dyn std::error::Error>> {
     Ok(serde_json::to_string(&tables_json)?)
 }
 
-fn get_pipelines_from_metadata() -> Result<String, Box<dyn std::error::Error>> {
+async fn get_pipelines_from_metadata() -> Result<String, Box<dyn std::error::Error>> {
     let metadata_dir = PathBuf::from("metadata");
-    let metadata = Metadata::load(&metadata_dir)?;
+    let metadata = Metadata::load_auto(&metadata_dir).await?;
     
     let pipelines_json = serde_json::json!({
         "pipelines": metadata.tables.iter().map(|t| {
@@ -718,9 +718,9 @@ fn get_pipelines_from_metadata() -> Result<String, Box<dyn std::error::Error>> {
     Ok(serde_json::to_string(&pipelines_json)?)
 }
 
-fn get_rules_from_metadata() -> Result<String, Box<dyn std::error::Error>> {
+async fn get_rules_from_metadata() -> Result<String, Box<dyn std::error::Error>> {
     let metadata_dir = PathBuf::from("metadata");
-    let metadata = Metadata::load(&metadata_dir)?;
+    let metadata = Metadata::load_auto(&metadata_dir).await?;
     
     let rules_json = serde_json::json!({
         "rules": metadata.rules.iter().map(|r| {
@@ -779,9 +779,9 @@ fn get_knowledge_base() -> Result<String, Box<dyn std::error::Error>> {
     Ok(content)
 }
 
-fn get_graph_data() -> Result<String, Box<dyn std::error::Error>> {
+async fn get_graph_data() -> Result<String, Box<dyn std::error::Error>> {
     let metadata_dir = PathBuf::from("metadata");
-    let metadata = Metadata::load(&metadata_dir)?;
+    let metadata = Metadata::load_auto(&metadata_dir).await?;
     
     // Create nodes from tables
     let nodes: Vec<serde_json::Value> = metadata.tables.iter().map(|t| {

@@ -52,7 +52,18 @@ dashmap = "7.0.0-rc2"
 # bincode = "1.3"
 # zstd = "0.13"
 
+# PostgreSQL support
+sqlx = { version = "0.7", features = ["runtime-tokio-rustls", "postgres", "chrono", "uuid"] }
+
 [[bin]]
 name = "server"
 path = "src/bin/server.rs"
+
+[[bin]]
+name = "test_db_connection"
+path = "src/bin/test_db_connection.rs"
+
+[[bin]]
+name = "migrate_metadata"
+path = "src/bin/migrate_metadata.rs"
 
