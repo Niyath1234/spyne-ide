@@ -1,0 +1,7 @@
+customer_id,as_of_date,total_outstanding,writeoff_amount,active_accounts_count
+CUST001,2024-06-30,78000.00,0.00,2
+CUST002,2024-06-30,80000.00,0.00,1
+CUST003,2024-06-30,160000.00,5000.00,1
+CUST004,2024-06-30,33000.00,0.00,1
+CUST005,2024-06-30,165000.00,0.00,1
+

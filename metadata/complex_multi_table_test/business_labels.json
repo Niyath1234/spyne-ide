@@ -1,0 +1,14 @@
+{
+  "systems": [
+    {"system_id": "system_a", "label": "system_a", "aliases": ["System A", "system A"]},
+    {"system_id": "system_b", "label": "system_b", "aliases": ["System B", "system B"]}
+  ],
+  "metrics": [
+    {"metric_id": "tos", "label": "tos", "aliases": ["TOS", "Total Outstanding", "total outstanding", "outstanding"]}
+  ],
+  "entities": [
+    {"entity_id": "customer", "label": "customer", "aliases": ["Customer", "customers"]},
+    {"entity_id": "loan", "label": "loan", "aliases": ["Loan", "loans"]}
+  ]
+}
+

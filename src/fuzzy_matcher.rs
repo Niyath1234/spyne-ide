@@ -40,18 +40,11 @@ impl FuzzyMatcher {
 
         let mut normalized = s.to_lowercase();
         
-        // Remove common titles
-        let titles = [
-            "mr", "mrs", "ms", "miss", "dr", "prof", "professor",
-            "sir", "madam", "sir", "madam", "lord", "lady",
-        ];
-        for title in &titles {
-            let pattern = format!(r"^{}\s+", title);
-            normalized = regex::Regex::new(&pattern)
-                .unwrap()
-                .replace(&normalized, "")
-                .to_string();
-        }
+        // Remove punctuation FIRST (so "Mr." becomes "mr")
+        normalized = normalized
+            .chars()
+            .filter(|c| c.is_alphanumeric() || c.is_whitespace())
+            .collect();
         
         // Normalize whitespace (multiple spaces to single space)
         normalized = regex::Regex::new(r"\s+")
@@ -62,13 +55,20 @@ impl FuzzyMatcher {
         // Trim
         normalized = normalized.trim().to_string();
         
-        // Remove punctuation (optional - can be made configurable)
-        normalized = normalized
-            .chars()
-            .filter(|c| c.is_alphanumeric() || c.is_whitespace())
-            .collect();
+        // Remove common titles (after punctuation removal so "Mr." -> "mr" matches)
+        let titles = [
+            "mr", "mrs", "ms", "miss", "dr", "prof", "professor",
+            "sir", "madam", "lord", "lady",
+        ];
+        for title in &titles {
+            let pattern = format!(r"^{}\s+", title);
+            normalized = regex::Regex::new(&pattern)
+                .unwrap()
+                .replace(&normalized, "")
+                .to_string();
+        }
         
-        // Normalize whitespace again after removing punctuation
+        // Normalize whitespace again after title removal
         normalized = regex::Regex::new(r"\s+")
             .unwrap()
             .replace_all(&normalized, " ")
@@ -248,17 +248,38 @@ impl FuzzyMatcher {
         
         for row_idx in 0..df.height() {
             let mut key = Vec::new();
+            let mut has_null = false;
+            
             for col_name in grain {
                 let col_val = df.column(col_name)?;
                 let val_str = match col_val.dtype() {
-                    DataType::String => col_val.str().unwrap().get(row_idx).unwrap().to_string(),
-                    DataType::Int64 => col_val.i64().unwrap().get(row_idx).unwrap().to_string(),
-                    DataType::Float64 => col_val.f64().unwrap().get(row_idx).unwrap().to_string(),
+                    DataType::String => {
+                        match col_val.str().unwrap().get(row_idx) {
+                            Some(s) => s.to_string(),
+                            None => { has_null = true; "NULL".to_string() }
+                        }
+                    }
+                    DataType::Int64 => {
+                        match col_val.i64().unwrap().get(row_idx) {
+                            Some(v) => v.to_string(),
+                            None => { has_null = true; "NULL".to_string() }
+                        }
+                    }
+                    DataType::Float64 => {
+                        match col_val.f64().unwrap().get(row_idx) {
+                            Some(v) => v.to_string(),
+                            None => { has_null = true; "NULL".to_string() }
+                        }
+                    }
                     _ => format!("{:?}", col_val.get(row_idx)),
                 };
                 key.push(val_str);
             }
-            keys.insert(key);
+            
+            // Skip rows with null keys (they can't be matched anyway)
+            if !has_null {
+                keys.insert(key);
+            }
         }
         
         Ok(keys)

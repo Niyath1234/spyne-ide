@@ -1,0 +1,19 @@
+{
+  "entities": [
+    {
+      "id": "customer",
+      "name": "Customer",
+      "grain": ["customer_id"],
+      "attributes": ["customer_name", "customer_type", "registration_date"],
+      "description": "Customer entity - can have multiple loans/accounts"
+    },
+    {
+      "id": "loan",
+      "name": "Loan",
+      "grain": ["loan_id"],
+      "attributes": ["loan_amount", "loan_status", "disbursement_date", "interest_rate"],
+      "description": "Loan entity - belongs to a customer, can have multiple disbursements and repayments"
+    }
+  ]
+}
+

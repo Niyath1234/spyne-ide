@@ -1,0 +1,7 @@
+customer_id,customer_name,total_outstanding,as_of_date
+CUST001,John Smith,25000.00,2024-01-15
+CUST002,Jane Doe,8000.00,2024-01-15
+CUST003,Bob Wilson,45000.00,2024-01-15
+CUST004,Alice Brown,5000.00,2024-01-15
+CUST005,Charlie Davis,30000.00,2024-01-15
+

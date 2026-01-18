@@ -42,7 +42,29 @@ impl RuleCompiler {
     fn construct_pipeline(&self, rule: &Rule) -> Result<Vec<PipelineOp>> {
         let mut steps = Vec::new();
         
-        // Step 1: Map source entities to tables for this system
+        // Step 1: Check if formula is natural language and parse it first
+        let is_natural_language = !rule.computation.formula.to_uppercase().contains("SUM(") &&
+                                  !rule.computation.formula.to_uppercase().contains("AVG(") &&
+                                  !rule.computation.formula.to_uppercase().contains("COUNT(");
+        
+        // If natural language, parse it to get structured formula, then extract columns
+        let parsed_formula = if is_natural_language {
+            self.parse_natural_language_formula(
+                &rule.computation.formula,
+                &rule.computation.description,
+                &rule.computation.attributes_needed
+            )?
+        } else {
+            rule.computation.formula.clone()
+        };
+        
+        // Step 2: Extract column names from the (possibly parsed) formula
+        let formula_columns = self.extract_formula_columns(&parsed_formula);
+        
+        // Step 3: Find all tables in this system that contain the needed columns
+        let required_tables = self.find_tables_with_columns(&formula_columns, &rule.system);
+        
+        // Step 4: Map source entities to tables for this system (for fallback)
         let entity_to_tables: HashMap<String, Vec<&Table>> = rule.computation.source_entities
             .iter()
             .map(|entity| {
@@ -64,41 +86,81 @@ impl RuleCompiler {
             }
         }
         
-        // Step 2: Determine root table (usually the target entity's table)
-        // Prefer table that has the required columns from the formula
+        // Step 5: Determine root table - prefer table that has the target grain or most formula columns
         let root_entity = &rule.target_entity;
         let root_tables = entity_to_tables.get(root_entity)
             .ok_or_else(|| RcaError::Execution(format!("No tables for root entity: {}", root_entity)))?;
         
-        // If formula is a direct column reference, prefer table that has that column
-        let root_table = if !rule.computation.formula.contains("SUM(") && 
-                             !rule.computation.formula.contains("AVG(") &&
-                             !rule.computation.formula.contains("COUNT(") {
-            // Direct column reference - find table that likely has this column
-            let formula_col = rule.computation.formula.split_whitespace().next().unwrap_or("");
-            root_tables.iter()
-                .find(|t| {
-                    // Prefer tables with names that suggest they contain summary/precomputed data
-                    // if the column name suggests it's a summary metric
-                    (formula_col.contains("total") || formula_col.contains("summary") || formula_col.contains("outstanding")) &&
-                    (t.name.contains("summary") || t.name.contains("total") || t.name.contains("outstanding") || 
-                     t.name.contains("metrics") || t.name.contains("details"))
-                })
-                .or_else(|| root_tables.first())
-                .ok_or_else(|| RcaError::Execution(format!("No root table found for entity: {}", root_entity)))?
-        } else {
-            root_tables.first()
-                .ok_or_else(|| RcaError::Execution(format!("No root table found for entity: {}", root_entity)))?
-        };
+        // Choose root table based on: has target grain columns, and ideally some formula columns
+        let root_table = root_tables.iter()
+            .max_by_key(|t| {
+                let has_grain = rule.target_grain.iter()
+                    .all(|g| t.columns.as_ref().map_or(false, |cols| cols.iter().any(|c| c.name == *g)));
+                let formula_col_count = if let Some(cols) = &t.columns {
+                    cols.iter().filter(|c| formula_columns.contains(&c.name)).count()
+                } else {
+                    0
+                };
+                (has_grain as usize * 100) + formula_col_count
+            })
+            .ok_or_else(|| RcaError::Execution(format!("No root table found for entity: {}", root_entity)))?;
         
-        // Step 3: Build join plan - find shortest paths from root to all other entity tables
+        // Step 6: Build join plan to include all required tables
         let mut visited_tables = HashSet::new();
         visited_tables.insert(root_table.name.clone());
         
         // Start with root table scan
         steps.push(PipelineOp::Scan { table: root_table.name.clone() });
         
-        // For each other entity, find join path and add joins
+        // First, join tables that have formula columns (even within the same entity)
+        for (table_name, _columns) in &required_tables {
+            if visited_tables.contains(table_name) {
+                continue;
+            }
+            
+            // Find join path from root to this table
+            match self.find_join_path_to_table(&root_table.name, table_name, &visited_tables) {
+                Ok(join_path) => {
+                    for join_step in join_path {
+                        if !visited_tables.contains(&join_step.to) {
+                            let join_type = self.determine_join_type(&join_step.from, &join_step.to)?;
+                            let join_keys: Vec<String> = join_step.keys.keys().cloned().collect();
+                            
+                            steps.push(PipelineOp::Join {
+                                table: join_step.to.clone(),
+                                on: join_keys,
+                                join_type,
+                            });
+                            
+                            visited_tables.insert(join_step.to.clone());
+                        }
+                    }
+                }
+                Err(_) => {
+                    // If no direct lineage path, try joining on common grain columns
+                    if let Some(table) = self.metadata.tables.iter().find(|t| t.name == *table_name) {
+                        // Find common grain columns between root table and this table
+                        let common_grain: Vec<String> = rule.target_grain.iter()
+                            .filter(|g| {
+                                table.columns.as_ref().map_or(false, |cols| cols.iter().any(|c| c.name == **g))
+                            })
+                            .cloned()
+                            .collect();
+                        
+                        if !common_grain.is_empty() {
+                            steps.push(PipelineOp::Join {
+                                table: table_name.clone(),
+                                on: common_grain,
+                                join_type: "left".to_string(),
+                            });
+                            visited_tables.insert(table_name.clone());
+                        }
+                    }
+                }
+            }
+        }
+        
+        // Also join tables for other entities (original logic)
         for entity in &rule.computation.source_entities {
             if *entity == *root_entity {
                 continue;
@@ -136,49 +198,120 @@ impl RuleCompiler {
             }
         }
         
-        // Step 4: Parse formula to determine if we need derive + aggregate or just select
+        // Step 7: Parse formula to determine if we need derive + aggregate or just select
         // If formula contains SUM/AVG/etc, it means: derive intermediate, then aggregate
         // If formula is just a column name, just select that column (with optional group by)
         
-        let formula_upper = rule.computation.formula.to_uppercase();
+        // Use the parsed formula (already converted from natural language if needed)
+        let formula_without_where = parsed_formula
+            .split(" WHERE ")
+            .next()
+            .unwrap_or(&parsed_formula)
+            .to_string();
+        
+        let formula_upper = formula_without_where.to_uppercase();
         let has_aggregation = formula_upper.contains("SUM(") || formula_upper.contains("AVG(") || 
                              formula_upper.contains("COUNT(") || formula_upper.contains("MAX(") || 
                              formula_upper.contains("MIN(");
         
-        if has_aggregation {
-            // Formula like "SUM(emi_amount - COALESCE(transaction_amount, 0))"
-            // Step 4a: Derive intermediate column first
-            // Extract inner expression by finding the first '(' and removing the last ')'
-            let agg_func_start = formula_upper.find('(').unwrap_or(0);
-            let mut inner_expr = rule.computation.formula[agg_func_start+1..].to_string();
-            // Remove trailing ')' if present
-            if inner_expr.ends_with(')') {
-                inner_expr.pop();
-            }
+        // Count how many aggregation functions are in the formula
+        let sum_count = formula_upper.matches("SUM(").count();
+        let avg_count = formula_upper.matches("AVG(").count();
+        let count_count = formula_upper.matches("COUNT(").count();
+        let total_agg_count = sum_count + avg_count + count_count;
+        
+        if has_aggregation && total_agg_count > 1 {
+            // Complex formula with multiple aggregations like:
+            // "SUM(account_balance) + SUM(transaction_amount) - SUM(writeoff_amount)"
+            // Strategy: 
+            // 1. Extract all column names from aggregation functions
+            // 2. Create aggregation for each column
+            // 3. Derive the final metric by combining the aggregated values
             
-            let intermediate_col = "computed_value".to_string(); // Temporary column
-            steps.push(PipelineOp::Derive {
-                expr: inner_expr.clone(),
-                r#as: intermediate_col.clone(),
-            });
-            
-            // Step 4b: Group and aggregate
             let mut agg_map = HashMap::new();
-            if formula_upper.starts_with("SUM") {
-                agg_map.insert(rule.metric.clone(), format!("SUM({})", intermediate_col));
-            } else if formula_upper.starts_with("AVG") {
-                agg_map.insert(rule.metric.clone(), format!("AVG({})", intermediate_col));
-            } else if formula_upper.starts_with("COUNT") {
-                agg_map.insert(rule.metric.clone(), format!("COUNT({})", intermediate_col));
-            } else {
-                // Default to SUM
-                agg_map.insert(rule.metric.clone(), format!("SUM({})", intermediate_col));
+            let mut derive_formula = formula_without_where.clone();
+            
+            // Use regex to extract all SUM(column), AVG(column), etc.
+            if let Ok(re) = regex::Regex::new(r"(SUM|AVG|COUNT|MAX|MIN)\((\w+)\)") {
+                for caps in re.captures_iter(&formula_without_where) {
+                    if let (Some(agg_func), Some(col_name)) = (caps.get(1), caps.get(2)) {
+                        let func = agg_func.as_str().to_uppercase();
+                        let col = col_name.as_str();
+                        let agg_alias = format!("_agg_{}", col);
+                        
+                        // Add to aggregation map
+                        agg_map.insert(agg_alias.clone(), format!("{}({})", func, col));
+                        
+                        // Replace in derive formula: SUM(col) -> _agg_col
+                        let pattern = format!("{}({})", agg_func.as_str(), col);
+                        derive_formula = derive_formula.replace(&pattern, &agg_alias);
+                        
+                        // Also handle uppercase version
+                        let pattern_upper = format!("{}({})", func, col);
+                        derive_formula = derive_formula.replace(&pattern_upper, &agg_alias);
+                    }
+                }
             }
             
+            // Step 4a: Group and aggregate all columns first
             steps.push(PipelineOp::Group {
                 by: rule.computation.aggregation_grain.clone(),
                 agg: agg_map,
             });
+            
+            // Step 4b: Derive the final metric by combining aggregated values
+            steps.push(PipelineOp::Derive {
+                expr: derive_formula.trim().to_string(),
+                r#as: rule.metric.clone(),
+            });
+        } else if has_aggregation {
+            // Single aggregation formula like "SUM(emi_amount - COALESCE(transaction_amount, 0))"
+            // Step 4a: Derive intermediate column first
+            // Extract inner expression from the single aggregation function
+            if let Ok(re) = regex::Regex::new(r"(SUM|AVG|COUNT|MAX|MIN)\((.+)\)") {
+                if let Some(caps) = re.captures(&formula_without_where) {
+                    if let (Some(agg_func), Some(inner)) = (caps.get(1), caps.get(2)) {
+                        let func = agg_func.as_str().to_uppercase();
+                        let inner_expr = inner.as_str().to_string();
+                        
+                        let intermediate_col = "computed_value".to_string();
+                        steps.push(PipelineOp::Derive {
+                            expr: inner_expr,
+                            r#as: intermediate_col.clone(),
+                        });
+                        
+                        // Step 4b: Group and aggregate
+                        let mut agg_map = HashMap::new();
+                        agg_map.insert(rule.metric.clone(), format!("{}({})", func, intermediate_col));
+                        
+                        steps.push(PipelineOp::Group {
+                            by: rule.computation.aggregation_grain.clone(),
+                            agg: agg_map,
+                        });
+                    }
+                }
+            } else {
+                // Fallback: use old parsing logic
+                let agg_func_start = formula_upper.find('(').unwrap_or(0);
+                let mut inner_expr = formula_without_where[agg_func_start+1..].to_string();
+                if inner_expr.ends_with(')') {
+                    inner_expr.pop();
+                }
+                
+                let intermediate_col = "computed_value".to_string();
+                steps.push(PipelineOp::Derive {
+                    expr: inner_expr,
+                    r#as: intermediate_col.clone(),
+                });
+                
+                let mut agg_map = HashMap::new();
+                agg_map.insert(rule.metric.clone(), format!("SUM({})", intermediate_col));
+                
+                steps.push(PipelineOp::Group {
+                    by: rule.computation.aggregation_grain.clone(),
+                    agg: agg_map,
+                });
+            }
         } else {
             // Formula is a direct column reference like "total_outstanding"
             // If we need aggregation grain, group by it, otherwise just rename in select
@@ -186,7 +319,7 @@ impl RuleCompiler {
                rule.computation.aggregation_grain != rule.target_grain {
                 // Need to group by aggregation grain
                 let mut agg_map = HashMap::new();
-                agg_map.insert(rule.metric.clone(), rule.computation.formula.clone());
+                agg_map.insert(rule.metric.clone(), formula_without_where.clone());
                 steps.push(PipelineOp::Group {
                     by: rule.computation.aggregation_grain.clone(),
                     agg: agg_map,
@@ -338,6 +471,310 @@ impl RuleCompiler {
         // For tables close to target grain (like loan_id + emi_number), don't aggregate before joining
         // They'll be joined first, then aggregated together in the final step
         false
+    }
+    
+    /// Extract column names from a formula (supports both SQL-like and natural language)
+    fn extract_formula_columns(&self, formula: &str) -> Vec<String> {
+        let mut columns = Vec::new();
+        
+        // Check if formula is SQL-like (contains SUM, AVG, etc.) or natural language
+        let is_sql_like = formula.to_uppercase().contains("SUM(") || 
+                         formula.to_uppercase().contains("AVG(") ||
+                         formula.to_uppercase().contains("COUNT(");
+        
+        if is_sql_like {
+            // SQL-like formula: Extract column names from aggregation functions
+            if let Ok(re) = regex::Regex::new(r"(SUM|AVG|COUNT|MAX|MIN)\((\w+)\)") {
+                for caps in re.captures_iter(formula) {
+                    if let Some(col_match) = caps.get(2) {
+                        columns.push(col_match.as_str().to_string());
+                    }
+                }
+            }
+        } else {
+            // Natural language formula: Extract column names from text
+            // Look for patterns like "account balance", "transaction amount", "writeoff amount"
+            // Common patterns: "X of Y", "Y amounts", "Y values", etc.
+            
+            // First, try to extract from common natural language patterns
+            let patterns = vec![
+                r"(\w+)\s+balances?",           // "account balances"
+                r"(\w+)\s+amounts?",           // "transaction amounts", "writeoff amounts"
+                r"(\w+)\s+values?",            // "interest values"
+                r"(\w+)\s+totals?",            // "disbursed totals"
+                r"(\w+)\s+interests?",         // "accrued interests"
+                r"(\w+)\s+penalties?",         // "waived penalties"
+                r"(\w+)\s+repayments?",        // "repaid repayments"
+                r"(\w+)\s+disbursements?",     // "disbursed disbursements"
+            ];
+            
+            for pattern in patterns {
+                if let Ok(re) = regex::Regex::new(pattern) {
+                    for caps in re.captures_iter(&formula.to_lowercase()) {
+                        if let Some(col_match) = caps.get(1) {
+                            let word = col_match.as_str();
+                            // Skip common stop words
+                            if !["sum", "of", "the", "all", "for", "only", "and", "or", "minus", "plus"].contains(&word) {
+                                // Convert to column name format (snake_case)
+                                let col_name = format!("{}_amount", word);
+                                // Try to find matching column in metadata
+                                if self.column_exists_in_system(&col_name) {
+                                    columns.push(col_name);
+                                } else {
+                                    // Try alternative: just the word
+                                    if self.column_exists_in_system(word) {
+                                        columns.push(word.to_string());
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            
+            // If no patterns matched, try to extract column names directly from description
+            // Look for compound words that might be column names
+            if columns.is_empty() {
+                // Extract potential column names (words that might be column names)
+                if let Ok(re) = regex::Regex::new(r"\b([a-z]+_[a-z_]+)\b") {
+                    for caps in re.captures_iter(&formula.to_lowercase()) {
+                        if let Some(col_match) = caps.get(1) {
+                            let col = col_match.as_str();
+                            // Skip common phrases
+                            if !["account_status", "loan_status", "for_all", "only_for"].contains(&col) {
+                                if self.column_exists_in_system(col) {
+                                    columns.push(col.to_string());
+                                }
+                            }
+                        }
+                    }
+                }
+                
+                // Also try single words that might be column prefixes
+                if columns.is_empty() {
+                    let words: Vec<&str> = formula.split_whitespace().collect();
+                    for word in words {
+                        let word_lower = word.to_lowercase();
+                        // Try common column name patterns
+                        let candidates = vec![
+                            format!("{}_amount", word_lower),
+                            format!("{}_balance", word_lower),
+                            format!("{}_value", word_lower),
+                            word_lower.clone(),
+                        ];
+                        
+                        for candidate in candidates {
+                            if self.column_exists_in_system(&candidate) {
+                                columns.push(candidate);
+                                break;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        
+        // Remove duplicates and return
+        let mut unique_columns: Vec<String> = columns.into_iter().collect::<std::collections::HashSet<_>>().into_iter().collect();
+        unique_columns.sort();
+        unique_columns
+    }
+    
+    /// Check if a column exists in the system's tables
+    fn column_exists_in_system(&self, column_name: &str) -> bool {
+        self.metadata.tables.iter().any(|t| {
+            t.columns.as_ref().map_or(false, |cols| {
+                cols.iter().any(|c| c.name.to_lowercase() == column_name.to_lowercase())
+            })
+        })
+    }
+    
+    /// Parse natural language formula and convert to SQL-like format
+    /// Uses attributes_needed to map natural language to actual column names
+    /// Example: "Sum of account balances plus transaction amounts minus writeoff amounts"
+    /// -> "SUM(account_balance) + SUM(transaction_amount) - SUM(writeoff_amount)"
+    fn parse_natural_language_formula(
+        &self,
+        formula: &str,
+        description: &str,
+        attributes_needed: &std::collections::HashMap<String, Vec<String>>,
+    ) -> Result<String> {
+        // Get all numeric columns from attributes_needed (exclude grain and status columns)
+        let all_columns: Vec<String> = attributes_needed.values()
+            .flat_map(|v| v.iter().cloned())
+            .filter(|c| {
+                let c_lower = c.to_lowercase();
+                !c_lower.contains("_id") && 
+                !c_lower.contains("status") && 
+                !c_lower.contains("date") &&
+                !c_lower.contains("type") &&
+                !c_lower.contains("name")
+            })
+            .collect();
+        
+        // Simple approach: parse the formula to understand operations, then map to columns
+        let formula_lower = formula.to_lowercase();
+        
+        // Count how many "plus" and "minus" operations
+        let plus_count = formula_lower.matches(" plus ").count();
+        let minus_count = formula_lower.matches(" minus ").count();
+        let total_ops = plus_count + minus_count;
+        
+        // If we have the right number of columns, map them in order
+        // Pattern: "X plus Y minus Z" -> use first 3 columns
+        if all_columns.len() >= total_ops + 1 {
+            let mut result = String::new();
+            let mut col_idx = 0;
+            
+            // Build formula based on operations found
+            for (i, part) in formula_lower.split(" plus ").enumerate() {
+                if i > 0 {
+                    result.push_str(" + ");
+                }
+                
+                // Check if this part contains "minus"
+                let subparts: Vec<&str> = part.split(" minus ").collect();
+                for (j, subpart) in subparts.iter().enumerate() {
+                    if j > 0 {
+                        result.push_str(" - ");
+                    }
+                    
+                    if col_idx < all_columns.len() {
+                        result.push_str(&format!("SUM({})", all_columns[col_idx]));
+                        col_idx += 1;
+                    }
+                }
+            }
+            
+            if !result.is_empty() {
+                return Ok(result);
+            }
+        }
+        
+        // Fallback: use description to extract column names
+        // Description usually has: "Sum of X plus Y minus Z"
+        let desc_lower = description.to_lowercase();
+        
+        // Try to extract column names from description
+        let mut extracted_cols = Vec::new();
+        for col in &all_columns {
+            let col_phrase = col.replace("_", " ");
+            if desc_lower.contains(&col_phrase) || desc_lower.contains(col) {
+                extracted_cols.push(col.clone());
+            }
+        }
+        
+        // If we found columns, build formula
+        if extracted_cols.len() >= 2 {
+            let mut result = format!("SUM({})", extracted_cols[0]);
+            for i in 1..extracted_cols.len() {
+                // Determine operator from formula
+                let op = if formula_lower.contains("minus") && i == extracted_cols.len() - 1 {
+                    " - "
+                } else {
+                    " + "
+                };
+                result.push_str(&format!("{}SUM({})", op, extracted_cols[i]));
+            }
+            return Ok(result);
+        }
+        
+        // Last resort: use first N columns from attributes_needed
+        if all_columns.len() >= 3 {
+            Ok(format!("SUM({}) + SUM({}) - SUM({})", all_columns[0], all_columns[1], all_columns[2]))
+        } else if all_columns.len() == 2 {
+            Ok(format!("SUM({}) + SUM({})", all_columns[0], all_columns[1]))
+        } else if all_columns.len() == 1 {
+            Ok(format!("SUM({})", all_columns[0]))
+        } else {
+            Err(RcaError::Execution(format!("Could not parse natural language formula: {}", formula)))
+        }
+    }
+    
+    /// Find column name that matches natural language phrase
+    fn find_column_in_natural_language(&self, phrase: &str, columns: &[String]) -> Result<String> {
+        let phrase_lower = phrase.to_lowercase();
+        
+        // Remove common words
+        let cleaned = phrase_lower
+            .replace("sum of", "")
+            .replace("total of", "")
+            .replace("all", "")
+            .replace("the", "")
+            .replace("for", "")
+            .replace("only", "")
+            .replace("amounts", "amount")
+            .replace("balances", "balance")
+            .replace("values", "value")
+            .trim()
+            .to_string();
+        
+        // Try exact match first
+        for col in columns {
+            let col_lower = col.to_lowercase();
+            if col_lower == cleaned || cleaned == col_lower {
+                return Ok(col.clone());
+            }
+        }
+        
+        // Try partial match
+        for col in columns {
+            let col_lower = col.to_lowercase();
+            let col_words: Vec<&str> = col_lower.split('_').collect();
+            let phrase_words: Vec<&str> = cleaned.split_whitespace().collect();
+            
+            // Check if all phrase words appear in column name
+            if phrase_words.iter().all(|pw| {
+                col_words.iter().any(|cw| cw.contains(pw) || pw.contains(cw))
+            }) {
+                return Ok(col.clone());
+            }
+        }
+        
+        // Try reverse: column words in phrase
+        for col in columns {
+            let col_lower = col.to_lowercase();
+            let col_words: Vec<&str> = col_lower.split('_').collect();
+            
+            if col_words.iter().all(|cw| cleaned.contains(cw)) {
+                return Ok(col.clone());
+            }
+        }
+        
+        // Fallback: construct from phrase
+        let words: Vec<&str> = cleaned.split_whitespace().collect();
+        if words.len() >= 2 {
+            Ok(words.join("_"))
+        } else if words.len() == 1 {
+            Ok(words[0].to_string())
+        } else {
+            Err(RcaError::Execution(format!("Could not find column for phrase: {}", phrase)))
+        }
+    }
+    
+    
+    /// Find all tables in the system that contain the given columns
+    fn find_tables_with_columns(&self, columns: &[String], system: &str) -> HashMap<String, Vec<String>> {
+        let mut result = HashMap::new();
+        
+        for table in &self.metadata.tables {
+            if table.system != system {
+                continue;
+            }
+            
+            if let Some(table_cols) = &table.columns {
+                let matching_cols: Vec<String> = columns.iter()
+                    .filter(|col| table_cols.iter().any(|tc| tc.name == **col))
+                    .cloned()
+                    .collect();
+                
+                if !matching_cols.is_empty() {
+                    result.insert(table.name.clone(), matching_cols);
+                }
+            }
+        }
+        
+        result
     }
     
     /// Get aggregation columns for a table when aggregating to target grain

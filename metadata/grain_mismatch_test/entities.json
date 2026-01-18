@@ -1,0 +1,15 @@
+[
+  {
+    "id": "customer",
+    "name": "Customer",
+    "description": "Customer entity with aggregated financial data",
+    "attributes": ["customer_id", "customer_name", "total_outstanding", "account_balance"]
+  },
+  {
+    "id": "loan",
+    "name": "Loan",
+    "description": "Individual loan entity with detailed loan data",
+    "attributes": ["loan_id", "customer_id", "principal", "interest", "outstanding_amount", "loan_status"]
+  }
+]
+

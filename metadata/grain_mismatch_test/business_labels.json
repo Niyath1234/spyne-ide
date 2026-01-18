@@ -1,0 +1,8 @@
+{
+  "labels": {
+    "tos": ["total_outstanding", "outstanding", "TOS"],
+    "customer": ["customer", "client", "borrower"],
+    "loan": ["loan", "facility", "credit"]
+  }
+}
+

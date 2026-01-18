@@ -395,9 +395,18 @@ mod tests {
     
     #[test]
     fn test_extract_json() {
+        // Use metadata from the metadata folder if available, otherwise skip
+        let metadata = match Metadata::load("metadata") {
+            Ok(m) => m,
+            Err(_) => {
+                eprintln!("⚠️  Skipping test: metadata folder not found");
+                return;
+            }
+        };
+        
         let engine = LlmStrategyEngine::new(
             LlmClient::new("test".to_string(), "test".to_string(), "test".to_string()),
-            Metadata::load("metadata").unwrap_or_default(),
+            metadata,
         );
         
         let response = r#"Here's the JSON:

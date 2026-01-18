@@ -1,0 +1,7 @@
+customer_id,customer_name,customer_type,registration_date
+CUST001,John Doe,Individual,2024-01-15
+CUST002,Jane Smith,Individual,2024-02-20
+CUST003,ABC Corp,Business,2024-03-10
+CUST004,Mary Johnson,Individual,2024-04-05
+CUST005,XYZ Ltd,Business,2024-05-12
+

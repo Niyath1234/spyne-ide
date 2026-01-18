@@ -320,33 +320,13 @@ impl RelationalEngine {
     }
     
     fn parse_derive_expr(&self, expr: &str, alias: &str) -> Result<Expr> {
-        // Simplified expression parsing
-        // Handle expressions like "emi_amount - COALESCE(transaction_amount, 0)"
+        // Parse arithmetic expressions with +, -, *, / operators
+        // Handle expressions like "_agg_account_balance + _agg_transaction_amount - _agg_writeoff_amount"
+        // or "emi_amount - COALESCE(transaction_amount, 0)"
         
-        // First, check if expression contains subtraction
-        if let Some((left, right)) = expr.split_once(" - ") {
-            let left_expr = col(left.trim());
-            
-            // Check if right side is a COALESCE expression
-            if right.contains("COALESCE") {
-                // Extract column name and default from COALESCE
-                if let Ok(re) = regex::Regex::new(r"COALESCE\((\w+),\s*(\d+)\)") {
-                    if let Some(caps) = re.captures(right) {
-                        if let (Some(col_match), Some(val_match)) = (caps.get(1), caps.get(2)) {
-                            let col_name = col_match.as_str();
-                            if let Ok(default_val) = val_match.as_str().parse::<f64>() {
-                                let coalesce_expr = col(col_name).fill_null(lit(default_val));
-                                return Ok((left_expr - coalesce_expr).alias(alias));
-                            }
-                        }
-                    }
-                }
-                // If COALESCE parsing fails, try simple subtraction
-                return Ok((left_expr - col(right.trim())).alias(alias));
-            } else {
-                // Simple subtraction: "a - b"
-                return Ok((left_expr - col(right.trim())).alias(alias));
-            }
+        // First, try to parse as a complex arithmetic expression
+        if expr.contains(" + ") || expr.contains(" - ") {
+            return self.parse_arithmetic_expr(expr, alias);
         }
         
         // Handle standalone COALESCE
@@ -364,7 +344,91 @@ impl RelationalEngine {
         }
         
         // Default: treat as column reference
-        Ok(col(expr).alias(alias))
+        Ok(col(expr.trim()).alias(alias))
+    }
+    
+    /// Parse arithmetic expressions with multiple +, -, operators
+    fn parse_arithmetic_expr(&self, expr: &str, alias: &str) -> Result<Expr> {
+        // Tokenize the expression: split by + and - while keeping the operators
+        let mut result_expr: Option<Expr> = None;
+        let mut current_op: Option<char> = None;
+        let mut current_token = String::new();
+        let chars: Vec<char> = expr.chars().collect();
+        let mut i = 0;
+        
+        while i < chars.len() {
+            let c = chars[i];
+            
+            // Check for operators (with spaces around them)
+            if (c == '+' || c == '-') && 
+               (i > 0 && chars[i-1] == ' ') && 
+               (i + 1 < chars.len() && chars[i+1] == ' ') {
+                // Process the current token
+                let token = current_token.trim().to_string();
+                if !token.is_empty() {
+                    let token_expr = self.parse_token(&token)?;
+                    
+                    result_expr = Some(match (result_expr, current_op) {
+                        (None, _) => token_expr,
+                        (Some(left), Some('+')) => left + token_expr,
+                        (Some(left), Some('-')) => left - token_expr,
+                        (Some(left), _) => left + token_expr, // Default to addition
+                    });
+                }
+                
+                current_op = Some(c);
+                current_token.clear();
+                i += 1; // Skip the space after operator
+            } else {
+                current_token.push(c);
+            }
+            i += 1;
+        }
+        
+        // Process the last token
+        let token = current_token.trim().to_string();
+        if !token.is_empty() {
+            let token_expr = self.parse_token(&token)?;
+            
+            result_expr = Some(match (result_expr, current_op) {
+                (None, _) => token_expr,
+                (Some(left), Some('+')) => left + token_expr,
+                (Some(left), Some('-')) => left - token_expr,
+                (Some(left), _) => left + token_expr,
+            });
+        }
+        
+        result_expr
+            .map(|e| e.alias(alias))
+            .ok_or_else(|| RcaError::Execution(format!("Failed to parse expression: {}", expr)))
+    }
+    
+    /// Parse a single token in an arithmetic expression
+    fn parse_token(&self, token: &str) -> Result<Expr> {
+        let trimmed = token.trim();
+        
+        // Check if it's a COALESCE expression
+        if trimmed.contains("COALESCE") {
+            if let Ok(re) = regex::Regex::new(r"COALESCE\((\w+),\s*(\d+)\)") {
+                if let Some(caps) = re.captures(trimmed) {
+                    if let (Some(col_match), Some(val_match)) = (caps.get(1), caps.get(2)) {
+                        let col_name = col_match.as_str();
+                        if let Ok(default_val) = val_match.as_str().parse::<f64>() {
+                            return Ok(col(col_name).fill_null(lit(default_val)));
+                        }
+                    }
+                }
+            }
+        }
+        
+        // Check if it's a number
+        if let Ok(num) = trimmed.parse::<f64>() {
+            return Ok(lit(num));
+        }
+        
+        // Otherwise, treat as column reference
+        Ok(col(trimmed))
     }
 }
+
 

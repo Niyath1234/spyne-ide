@@ -1,0 +1,441 @@
+{
+  "tables": [
+    {
+      "name": "customer_master_a",
+      "system": "system_a",
+      "entity": "customer",
+      "primary_key": [
+        "customer_id"
+      ],
+      "time_column": "registration_date",
+      "columns": [
+        {
+          "name": "customer_id",
+          "type": "string",
+          "description": "Unique customer identifier"
+        },
+        {
+          "name": "customer_name",
+          "type": "string",
+          "description": "Customer name"
+        },
+        {
+          "name": "customer_type",
+          "type": "string",
+          "description": "Type of customer"
+        },
+        {
+          "name": "registration_date",
+          "type": "date",
+          "description": "Customer registration date"
+        }
+      ],
+      "grain": [
+        "customer_id"
+      ],
+      "labels": [
+        "customer",
+        "master",
+        "system_a"
+      ],
+      "path": "customer_master_a.csv"
+    },
+    {
+      "name": "customer_accounts_a",
+      "system": "system_a",
+      "entity": "customer",
+      "primary_key": [
+        "customer_id",
+        "account_id"
+      ],
+      "columns": [
+        {
+          "name": "customer_id",
+          "type": "string",
+          "description": "Customer identifier"
+        },
+        {
+          "name": "account_id",
+          "type": "string",
+          "description": "Account identifier"
+        },
+        {
+          "name": "account_balance",
+          "type": "float",
+          "description": "Current account balance"
+        },
+        {
+          "name": "account_status",
+          "type": "string",
+          "description": "Account status (active, closed, suspended)"
+        },
+        {
+          "name": "account_type",
+          "type": "string",
+          "description": "Type of account"
+        }
+      ],
+      "grain": [
+        "customer_id",
+        "account_id"
+      ],
+      "labels": [
+        "customer",
+        "account",
+        "system_a"
+      ],
+      "path": "customer_accounts_a.csv",
+      "time_column": "account_id"
+    },
+    {
+      "name": "customer_transactions_a",
+      "system": "system_a",
+      "entity": "customer",
+      "primary_key": [
+        "customer_id",
+        "transaction_id"
+      ],
+      "time_column": "transaction_date",
+      "columns": [
+        {
+          "name": "customer_id",
+          "type": "string",
+          "description": "Customer identifier"
+        },
+        {
+          "name": "transaction_id",
+          "type": "string",
+          "description": "Transaction identifier"
+        },
+        {
+          "name": "transaction_date",
+          "type": "date",
+          "description": "Transaction date"
+        },
+        {
+          "name": "transaction_amount",
+          "type": "float",
+          "description": "Transaction amount"
+        },
+        {
+          "name": "transaction_type",
+          "type": "string",
+          "description": "Type of transaction (debit, credit)"
+        }
+      ],
+      "grain": [
+        "customer_id",
+        "transaction_id"
+      ],
+      "labels": [
+        "customer",
+        "transaction",
+        "system_a"
+      ],
+      "path": "customer_transactions_a.csv"
+    },
+    {
+      "name": "customer_balances_a",
+      "system": "system_a",
+      "entity": "customer",
+      "primary_key": [
+        "customer_id",
+        "balance_date"
+      ],
+      "time_column": "balance_date",
+      "columns": [
+        {
+          "name": "customer_id",
+          "type": "string",
+          "description": "Customer identifier"
+        },
+        {
+          "name": "balance_date",
+          "type": "date",
+          "description": "Balance snapshot date"
+        },
+        {
+          "name": "total_balance",
+          "type": "float",
+          "description": "Total balance on this date"
+        },
+        {
+          "name": "principal_balance",
+          "type": "float",
+          "description": "Principal balance"
+        },
+        {
+          "name": "interest_balance",
+          "type": "float",
+          "description": "Interest balance"
+        }
+      ],
+      "grain": [
+        "customer_id",
+        "balance_date"
+      ],
+      "labels": [
+        "customer",
+        "balance",
+        "system_a"
+      ],
+      "path": "customer_balances_a.csv"
+    },
+    {
+      "name": "customer_summary_a",
+      "system": "system_a",
+      "entity": "customer",
+      "primary_key": [
+        "customer_id"
+      ],
+      "time_column": "as_of_date",
+      "columns": [
+        {
+          "name": "customer_id",
+          "type": "string",
+          "description": "Customer identifier"
+        },
+        {
+          "name": "as_of_date",
+          "type": "date",
+          "description": "As of date for summary"
+        },
+        {
+          "name": "total_outstanding",
+          "type": "float",
+          "description": "Total outstanding amount"
+        },
+        {
+          "name": "writeoff_amount",
+          "type": "float",
+          "description": "Writeoff amount"
+        },
+        {
+          "name": "active_accounts_count",
+          "type": "integer",
+          "description": "Number of active accounts"
+        }
+      ],
+      "grain": [
+        "customer_id"
+      ],
+      "labels": [
+        "customer",
+        "summary",
+        "system_a"
+      ],
+      "path": "customer_summary_a.csv"
+    },
+    {
+      "name": "loan_master_b",
+      "system": "system_b",
+      "entity": "loan",
+      "primary_key": [
+        "loan_id"
+      ],
+      "time_column": "disbursement_date",
+      "columns": [
+        {
+          "name": "loan_id",
+          "type": "string",
+          "description": "Unique loan identifier"
+        },
+        {
+          "name": "customer_id",
+          "type": "string",
+          "description": "Customer identifier"
+        },
+        {
+          "name": "loan_amount",
+          "type": "float",
+          "description": "Original loan amount"
+        },
+        {
+          "name": "loan_status",
+          "type": "string",
+          "description": "Loan status (active, overdue, closed, written_off)"
+        },
+        {
+          "name": "disbursement_date",
+          "type": "date",
+          "description": "Loan disbursement date"
+        },
+        {
+          "name": "interest_rate",
+          "type": "float",
+          "description": "Interest rate"
+        }
+      ],
+      "grain": [
+        "loan_id"
+      ],
+      "labels": [
+        "loan",
+        "master",
+        "system_b"
+      ],
+      "path": "loan_master_b.csv"
+    },
+    {
+      "name": "loan_disbursements_b",
+      "system": "system_b",
+      "entity": "loan",
+      "primary_key": [
+        "loan_id",
+        "disbursement_id"
+      ],
+      "time_column": "disbursement_date",
+      "columns": [
+        {
+          "name": "loan_id",
+          "type": "string",
+          "description": "Loan identifier"
+        },
+        {
+          "name": "disbursement_id",
+          "type": "string",
+          "description": "Disbursement identifier"
+        },
+        {
+          "name": "disbursement_date",
+          "type": "date",
+          "description": "Disbursement date"
+        },
+        {
+          "name": "disbursed_amount",
+          "type": "float",
+          "description": "Amount disbursed"
+        },
+        {
+          "name": "disbursement_type",
+          "type": "string",
+          "description": "Type of disbursement"
+        }
+      ],
+      "grain": [
+        "loan_id",
+        "disbursement_id"
+      ],
+      "labels": [
+        "loan",
+        "disbursement",
+        "system_b"
+      ],
+      "path": "loan_disbursements_b.csv"
+    },
+    {
+      "name": "loan_repayments_b",
+      "system": "system_b",
+      "entity": "loan",
+      "primary_key": [
+        "loan_id",
+        "repayment_id"
+      ],
+      "time_column": "repayment_date",
+      "columns": [
+        {
+          "name": "loan_id",
+          "type": "string",
+          "description": "Loan identifier"
+        },
+        {
+          "name": "repayment_id",
+          "type": "string",
+          "description": "Repayment identifier"
+        },
+        {
+          "name": "repayment_date",
+          "type": "date",
+          "description": "Repayment date"
+        },
+        {
+          "name": "repaid_amount",
+          "type": "float",
+          "description": "Amount repaid"
+        },
+        {
+          "name": "principal_repaid",
+          "type": "float",
+          "description": "Principal amount repaid"
+        },
+        {
+          "name": "interest_repaid",
+          "type": "float",
+          "description": "Interest amount repaid"
+        }
+      ],
+      "grain": [
+        "loan_id",
+        "repayment_id"
+      ],
+      "labels": [
+        "loan",
+        "repayment",
+        "system_b"
+      ],
+      "path": "loan_repayments_b.csv"
+    },
+    {
+      "name": "loan_outstanding_b",
+      "system": "system_b",
+      "entity": "loan",
+      "primary_key": [
+        "loan_id",
+        "as_of_date"
+      ],
+      "time_column": "as_of_date",
+      "columns": [
+        {
+          "name": "loan_id",
+          "type": "string",
+          "description": "Loan identifier"
+        },
+        {
+          "name": "customer_id",
+          "type": "string",
+          "description": "Customer identifier"
+        },
+        {
+          "name": "as_of_date",
+          "type": "date",
+          "description": "As of date"
+        },
+        {
+          "name": "outstanding_principal",
+          "type": "float",
+          "description": "Outstanding principal"
+        },
+        {
+          "name": "outstanding_interest",
+          "type": "float",
+          "description": "Outstanding interest"
+        },
+        {
+          "name": "interest_accrued",
+          "type": "float",
+          "description": "Accrued interest"
+        },
+        {
+          "name": "penalty_waived",
+          "type": "float",
+          "description": "Penalty waived amount"
+        },
+        {
+          "name": "total_outstanding",
+          "type": "float",
+          "description": "Total outstanding"
+        }
+      ],
+      "grain": [
+        "loan_id",
+        "as_of_date"
+      ],
+      "labels": [
+        "loan",
+        "outstanding",
+        "system_b"
+      ],
+      "path": "loan_outstanding_b.csv"
+    }
+  ]
+}

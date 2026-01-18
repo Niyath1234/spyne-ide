@@ -145,13 +145,25 @@ impl RowDiffEngine {
     fn extract_value_as_string(&self, col: &Series, row_idx: usize) -> Result<String> {
         let val_str = match col.dtype() {
             DataType::String => col.str()?.get(row_idx).unwrap_or("").to_string(),
+            DataType::Int32 => col.i32()?.get(row_idx).map(|v| v.to_string()).unwrap_or_default(),
             DataType::Int64 => col.i64()?.get(row_idx).map(|v| v.to_string()).unwrap_or_default(),
+            DataType::UInt32 => col.u32()?.get(row_idx).map(|v| v.to_string()).unwrap_or_default(),
+            DataType::UInt64 => col.u64()?.get(row_idx).map(|v| v.to_string()).unwrap_or_default(),
+            DataType::Float32 => col.f32()?.get(row_idx).map(|v| v.to_string()).unwrap_or_default(),
             DataType::Float64 => col.f64()?.get(row_idx).map(|v| v.to_string()).unwrap_or_default(),
             DataType::Date => col.date()?.get(row_idx).map(|v| v.to_string()).unwrap_or_default(),
             DataType::Datetime(_, _) => {
                 col.datetime()?.get(row_idx).map(|v| v.to_string()).unwrap_or_default()
             }
-            _ => format!("{:?}", col.get(row_idx)),
+            // Fallback: cast to string column and extract
+            _ => {
+                let string_col = col.cast(&DataType::String).ok();
+                if let Some(str_col) = string_col {
+                    str_col.str()?.get(row_idx).unwrap_or("").to_string()
+                } else {
+                    format!("{:?}", col.get(row_idx))
+                }
+            }
         };
         Ok(val_str)
     }
@@ -175,7 +187,8 @@ impl RowDiffEngine {
             let mut key_conditions = Vec::new();
             for (idx, key_col) in keys.iter().enumerate() {
                 if let Some(key_val) = key_vec.get(idx) {
-                    key_conditions.push(col(key_col).eq(lit(key_val.clone())));
+                    // Cast column to string for comparison (handles int/float columns)
+                    key_conditions.push(col(key_col).cast(DataType::String).eq(lit(key_val.clone())));
                 }
             }
             

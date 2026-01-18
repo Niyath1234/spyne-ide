@@ -1,0 +1,43 @@
+[
+  {
+    "id": "system_a_tos_rule",
+    "system": "system_a",
+    "metric": "tos",
+    "target_entity": "customer",
+    "target_grain": ["customer_id"],
+    "labels": ["tos", "outstanding", "system_a", "customer_level"],
+    "computation": {
+      "description": "TOS (Total Outstanding) for System A: Total outstanding amount at customer level directly from customer_outstanding table.",
+      "source_entities": ["customer"],
+      "attributes_needed": {
+        "customer": ["customer_id", "total_outstanding"]
+      },
+      "formula": "Total outstanding amount for each customer",
+      "aggregation_grain": ["customer_id"],
+      "filter_conditions": {},
+      "note": "System A stores TOS already aggregated at customer level"
+    }
+  },
+  {
+    "id": "system_b_tos_rule",
+    "system": "system_b",
+    "metric": "tos",
+    "target_entity": "loan",
+    "target_grain": ["loan_id"],
+    "labels": ["tos", "outstanding", "system_b", "loan_level"],
+    "computation": {
+      "description": "TOS (Total Outstanding) for System B: Sum of principal plus interest plus penalty minus payments for each loan. Loan level data needs to be aggregated to customer level using loan_customer_mapping table.",
+      "source_entities": ["loan"],
+      "attributes_needed": {
+        "loan": ["loan_id", "principal_amount", "interest_amount", "penalty_amount", "payment_amount"]
+      },
+      "formula": "Sum of principal amount plus interest amount plus penalty amount minus payment amounts for active loans",
+      "aggregation_grain": ["loan_id"],
+      "filter_conditions": {
+        "loan_status": "active"
+      },
+      "note": "Loan level TOS needs mapping to customer_id via loan_customer_mapping table for comparison with System A"
+    }
+  }
+]
+

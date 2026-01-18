@@ -475,9 +475,19 @@ Provide 3-5 specific insights as bullet points.
                         continue;
                     }
                     
-                    let df = LazyFrame::scan_parquet(&table_path, ScanArgsParquet::default())
-                        .map_err(|e| RcaError::Execution(format!("Failed to load {}: {}", table.name, e)))?
-                        .collect()?;
+                    // Load based on file extension
+                    let df = if table_path.extension().and_then(|s| s.to_str()) == Some("csv") {
+                        LazyCsvReader::new(&table_path)
+                            .with_try_parse_dates(true)
+                            .with_infer_schema_length(Some(1000))
+                            .finish()
+                            .map_err(|e| RcaError::Execution(format!("Failed to load CSV {}: {}", table.name, e)))?
+                            .collect()?
+                    } else {
+                        LazyFrame::scan_parquet(&table_path, ScanArgsParquet::default())
+                            .map_err(|e| RcaError::Execution(format!("Failed to load {}: {}", table.name, e)))?
+                            .collect()?
+                    };
                     
                     // Filter to this loan
                     let loan_df = df.clone()
@@ -502,10 +512,22 @@ Provide 3-5 specific insights as bullet points.
                 .ok_or_else(|| RcaError::Execution("System B table not found".to_string()))?;
             
             let system_b_path = self.data_dir.join(&system_b_table.path);
-            let system_b_df = LazyFrame::scan_parquet(&system_b_path, ScanArgsParquet::default())
-                .map_err(|e| RcaError::Execution(format!("Failed to load {}: {}", system_b_table.name, e)))?
-                .filter(col(grain_col).eq(lit(loan_id.as_str())))
-                .collect()?;
+            
+            // Load based on file extension
+            let system_b_df = if system_b_path.extension().and_then(|s| s.to_str()) == Some("csv") {
+                LazyCsvReader::new(&system_b_path)
+                    .with_try_parse_dates(true)
+                    .with_infer_schema_length(Some(1000))
+                    .finish()
+                    .map_err(|e| RcaError::Execution(format!("Failed to load CSV {}: {}", system_b_table.name, e)))?
+                    .filter(col(grain_col).eq(lit(loan_id.as_str())))
+                    .collect()?
+            } else {
+                LazyFrame::scan_parquet(&system_b_path, ScanArgsParquet::default())
+                    .map_err(|e| RcaError::Execution(format!("Failed to load {}: {}", system_b_table.name, e)))?
+                    .filter(col(grain_col).eq(lit(loan_id.as_str())))
+                    .collect()?
+            };
             
             let system_b_value = if system_b_df.height() > 0 {
                 // Get the metric column (usually total_outstanding or similar)

@@ -1,0 +1,61 @@
+[
+  {
+    "name": "customer_outstanding_a",
+    "system": "system_a",
+    "entity": "customer",
+    "primary_key": ["customer_id"],
+    "columns": [
+      {"name": "customer_id", "type": "string", "description": "Unique customer identifier"},
+      {"name": "customer_name", "type": "string", "description": "Customer name"},
+      {"name": "total_outstanding", "type": "float", "description": "Total outstanding amount at customer level"},
+      {"name": "as_of_date", "type": "string", "description": "Date of the record"}
+    ],
+    "path": "customer_outstanding_a.csv",
+    "time_column": "as_of_date"
+  },
+  {
+    "name": "loan_details_b",
+    "system": "system_b",
+    "entity": "loan",
+    "primary_key": ["loan_id"],
+    "columns": [
+      {"name": "loan_id", "type": "string", "description": "Unique loan identifier"},
+      {"name": "principal_amount", "type": "float", "description": "Principal amount of the loan"},
+      {"name": "interest_amount", "type": "float", "description": "Interest amount accrued"},
+      {"name": "penalty_amount", "type": "float", "description": "Penalty amount if any"},
+      {"name": "loan_status", "type": "string", "description": "Status of the loan (active, closed, defaulted)"},
+      {"name": "as_of_date", "type": "string", "description": "Date of the record"}
+    ],
+    "path": "loan_details_b.csv",
+    "time_column": "as_of_date"
+  },
+  {
+    "name": "loan_payments_b",
+    "system": "system_b",
+    "entity": "loan",
+    "primary_key": ["loan_id", "payment_id"],
+    "columns": [
+      {"name": "loan_id", "type": "string", "description": "Loan identifier"},
+      {"name": "payment_id", "type": "string", "description": "Payment identifier"},
+      {"name": "payment_amount", "type": "float", "description": "Amount paid"},
+      {"name": "payment_date", "type": "string", "description": "Date of payment"}
+    ],
+    "path": "loan_payments_b.csv",
+    "time_column": "payment_date"
+  },
+  {
+    "name": "loan_customer_mapping",
+    "system": "system_b",
+    "entity": "loan",
+    "primary_key": ["loan_id"],
+    "columns": [
+      {"name": "loan_id", "type": "string", "description": "Unique loan identifier"},
+      {"name": "customer_id", "type": "string", "description": "Customer who owns this loan"},
+      {"name": "loan_type", "type": "string", "description": "Type of loan (personal, home, auto)"},
+      {"name": "created_date", "type": "string", "description": "Date loan was created"}
+    ],
+    "path": "loan_customer_mapping.csv",
+    "time_column": "created_date"
+  }
+]
+

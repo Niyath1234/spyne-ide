@@ -1,0 +1,44 @@
+[
+  {
+    "id": "system_a_tos_rule",
+    "system": "system_a",
+    "metric": "tos",
+    "target_entity": "customer",
+    "target_grain": ["customer_id"],
+    "labels": ["tos", "outstanding", "system_a"],
+    "computation": {
+      "description": "TOS (Total Outstanding) for System A: Sum of account balances plus transaction amounts minus writeoff amounts, only for active accounts. Requires joining customer_accounts, customer_transactions, and customer_summary tables.",
+      "source_entities": ["customer"],
+      "attributes_needed": {
+        "customer": ["customer_id", "account_balance", "transaction_amount", "writeoff_amount", "account_status"]
+      },
+      "formula": "Sum of account balances plus transaction amounts minus writeoff amounts for active accounts only",
+      "aggregation_grain": ["customer_id"],
+      "filter_conditions": {
+        "account_status": "active"
+      },
+      "note": "Requires joining customer_accounts_a, customer_transactions_a, and customer_summary_a tables"
+    }
+  },
+  {
+    "id": "system_b_tos_rule",
+    "system": "system_b",
+    "metric": "tos",
+    "target_entity": "loan",
+    "target_grain": ["loan_id"],
+    "labels": ["tos", "outstanding", "system_b"],
+    "computation": {
+      "description": "TOS (Total Outstanding) for System B: Sum of disbursed amounts minus repaid amounts plus accrued interest minus waived penalties, only for active or overdue loans. Requires joining loan_disbursements, loan_repayments, and loan_outstanding tables.",
+      "source_entities": ["loan"],
+      "attributes_needed": {
+        "loan": ["loan_id", "disbursed_amount", "repaid_amount", "interest_accrued", "penalty_waived", "loan_status"]
+      },
+      "formula": "Sum of disbursed amounts minus repaid amounts plus accrued interest minus waived penalties for active or overdue loans only",
+      "aggregation_grain": ["loan_id"],
+      "filter_conditions": {
+        "loan_status": "active,overdue"
+      },
+      "note": "Requires joining loan_disbursements_b, loan_repayments_b, and loan_outstanding_b tables"
+    }
+  }
+]

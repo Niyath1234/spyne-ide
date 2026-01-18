@@ -1,0 +1,40 @@
+{
+  "edges": [
+    {
+      "from": "loan_details_b",
+      "to": "loan_payments_b",
+      "join_type": "left",
+      "join_keys": [
+        {"left": "loan_id", "right": "loan_id"}
+      ],
+      "description": "Loan details linked to loan payments"
+    },
+    {
+      "from": "loan_details_b",
+      "to": "loan_customer_mapping",
+      "join_type": "left",
+      "join_keys": [
+        {"left": "loan_id", "right": "loan_id"}
+      ],
+      "description": "Loan details linked to customer mapping"
+    },
+    {
+      "from": "loan_customer_mapping",
+      "to": "customer_outstanding_a",
+      "join_type": "left",
+      "join_keys": [
+        {"left": "customer_id", "right": "customer_id"}
+      ],
+      "description": "GRAIN MAPPING: Maps loan_id to customer_id for grain alignment between systems"
+    },
+    {
+      "from": "loan_payments_b",
+      "to": "loan_customer_mapping",
+      "join_type": "left",
+      "join_keys": [
+        {"left": "loan_id", "right": "loan_id"}
+      ],
+      "description": "Loan payments can be aggregated by customer using mapping"
+    }
+  ]
+}

@@ -1,0 +1,9 @@
+customer_id,account_id,account_balance,account_status,account_type
+CUST001,ACC001,50000.00,active,checking
+CUST001,ACC002,25000.00,active,savings
+CUST002,ACC003,75000.00,active,checking
+CUST003,ACC004,100000.00,active,business
+CUST003,ACC005,50000.00,closed,business
+CUST004,ACC006,30000.00,active,checking
+CUST005,ACC007,150000.00,active,business
+

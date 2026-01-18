@@ -64,21 +64,31 @@ impl GrainResolver {
             .get(root_entity)
             .ok_or_else(|| RcaError::Graph(format!("Entity not found: {}", root_entity)))?;
 
+        // Get actual columns in the root table (not just entity attributes)
+        let root_table_obj = self.metadata
+            .get_table(root_table)
+            .ok_or_else(|| RcaError::Graph(format!("Root table not found: {}", root_table)))?;
+        
+        let root_table_columns: HashSet<String> = root_table_obj.columns
+            .as_ref()
+            .map(|cols| cols.iter().map(|c| c.name.clone()).collect())
+            .unwrap_or_default();
+        
         let mut missing_columns = Vec::new();
         for target_col in target_grain {
             if !source_grain.contains(target_col) {
-                // Check if column exists in root entity attributes
-                if !root_entity_obj.attributes.contains(target_col) {
+                // Check if column actually exists in the root table (not just entity attributes)
+                if !root_table_columns.contains(target_col) {
                     missing_columns.push(target_col.clone());
                 }
             }
         }
 
-        // If all target columns exist in entity attributes (no joins needed)
-        // Check if aggregation is still required (e.g., loan_id → customer_id)
+        // Check if aggregation is required (e.g., loan_id → customer_id)
         let aggregation_needed = source_grain != target_grain && 
             !target_grain.iter().all(|col| source_grain.contains(col));
         
+        // If all target columns exist in root table (no joins needed for columns)
         if missing_columns.is_empty() {
             if aggregation_needed {
                 return Ok(Some(GrainResolutionPlan {
@@ -86,7 +96,7 @@ impl GrainResolver {
                     target_grain: target_grain.to_vec(),
                     join_path: vec![],
                     aggregation_required: true,
-                    description: format!("All target grain columns available in source. Aggregate from {:?} to {:?}", source_grain, target_grain),
+                    description: format!("All target grain columns available in root table. Aggregate from {:?} to {:?}", source_grain, target_grain),
                 }));
             } else {
                 return Ok(Some(GrainResolutionPlan {
@@ -94,7 +104,7 @@ impl GrainResolver {
                     target_grain: target_grain.to_vec(),
                     join_path: vec![],
                     aggregation_required: false,
-                    description: format!("All target grain columns available in source. Just select: {:?}", target_grain),
+                    description: format!("All target grain columns available in root table. Just select: {:?}", target_grain),
                 }));
             }
         }
@@ -109,24 +119,85 @@ impl GrainResolver {
         found_columns.extend(source_grain.iter().cloned());
 
         for missing_col in &missing_columns {
-            // Find which entity has this column
-            let target_entity = self.find_entity_with_column(missing_col, system)?;
+            println!("   🔍 Looking for column '{}' in system '{}'", missing_col, system);
             
-            if let Some(entity) = target_entity {
-                // Find tables for this entity in the system
-                let target_tables: Vec<&crate::metadata::Table> = self.metadata.tables
-                    .iter()
-                    .filter(|t| t.entity == entity && t.system == system)
-                    .collect();
-
-                // Try to find join path from current table to target table
-                for target_table in target_tables {
+            // First: Find tables that actually have this column in their column metadata
+            let tables_with_column: Vec<&crate::metadata::Table> = self.metadata.tables
+                .iter()
+                .filter(|t| {
+                    t.system == system && 
+                    t.columns.as_ref().map_or(false, |cols| {
+                        cols.iter().any(|c| c.name == *missing_col)
+                    })
+                })
+                .collect();
+            
+            if !tables_with_column.is_empty() {
+                println!("      Found column in tables: {:?}", 
+                    tables_with_column.iter().map(|t| &t.name).collect::<Vec<_>>());
+                
+                // Try to find join path from current table to any of these tables
+                for target_table in &tables_with_column {
+                    println!("      Trying join path from {} to {}", current_table, target_table.name);
+                    
                     if let Ok(Some(path)) = self.graph.find_join_path(&current_table, &target_table.name) {
-                        // Convert path to JoinStep (already in correct format)
+                        println!("      ✅ Found join path with {} steps", path.len());
                         join_path.extend(path);
                         current_table = target_table.name.clone();
                         found_columns.insert(missing_col.clone());
                         break;
+                    } else {
+                        // Try direct join using common keys (like loan_id)
+                        // Check if both tables share a common key column
+                        let current_table_obj = self.metadata.get_table(&current_table);
+                        if let Some(curr) = current_table_obj {
+                            if let (Some(curr_cols), Some(target_cols)) = (&curr.columns, &target_table.columns) {
+                                let curr_col_names: HashSet<String> = curr_cols.iter().map(|c| c.name.clone()).collect();
+                                let target_col_names: HashSet<String> = target_cols.iter().map(|c| c.name.clone()).collect();
+                                
+                                let common_cols: Vec<String> = curr_col_names.intersection(&target_col_names)
+                                    .filter(|c| **c != *missing_col) // Don't use the column we're looking for
+                                    .cloned()
+                                    .collect();
+                                
+                                if !common_cols.is_empty() {
+                                    println!("      🔗 Found common columns for direct join: {:?}", common_cols);
+                                    let mut keys = std::collections::HashMap::new();
+                                    for key in &common_cols {
+                                        keys.insert(key.clone(), key.clone());
+                                    }
+                                    join_path.push(crate::graph::JoinStep {
+                                        from: current_table.clone(),
+                                        to: target_table.name.clone(),
+                                        keys,
+                                    });
+                                    current_table = target_table.name.clone();
+                                    found_columns.insert(missing_col.clone());
+                                    break;
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            
+            // Fallback: Find which entity has this column (old approach)
+            if !found_columns.contains(missing_col) {
+                let target_entity = self.find_entity_with_column(missing_col, system)?;
+                
+                if let Some(entity) = target_entity {
+                    let target_tables: Vec<&crate::metadata::Table> = self.metadata.tables
+                        .iter()
+                        .filter(|t| t.entity == entity && t.system == system)
+                        .collect();
+
+                    for target_table in target_tables {
+                        if let Ok(Some(path)) = self.graph.find_join_path(&current_table, &target_table.name) {
+                            join_path.extend(path);
+                            current_table = target_table.name.clone();
+                            found_columns.insert(missing_col.clone());
+                            break;
+                        }
                     }
                 }
             }
@@ -248,21 +319,85 @@ impl GrainResolver {
                 .collect();
 
             if !missing_cols.is_empty() {
-                // Target grain columns are missing - we need to get them from the root table
-                // Check if we have source grain columns to join back
+                // Target grain columns are missing - we need to get them via joins
+                // Check if we have source grain columns to join
                 let has_source_grain = plan.source_grain.iter().all(|col| existing_cols.contains(col));
                 
-                if has_source_grain && plan.join_path.is_empty() {
+                if has_source_grain && !plan.join_path.is_empty() {
+                    // Use the join path to get the missing columns
+                    println!("   🔗 Executing join path to get target grain columns:");
+                    
+                    for (idx, join_step) in plan.join_path.iter().enumerate() {
+                        println!("      {}. {} → {} on {:?}", 
+                            idx + 1, join_step.from, join_step.to, join_step.keys);
+                        
+                        // Load the target table
+                        let join_table = self.metadata
+                            .get_table(&join_step.to)
+                            .ok_or_else(|| RcaError::Graph(format!("Join table not found: {}", join_step.to)))?;
+                        
+                        let join_table_path = data_dir.join(&join_table.path);
+                        
+                        // Load based on file extension
+                        let join_df = if join_table_path.extension().and_then(|s| s.to_str()) == Some("csv") {
+                            LazyCsvReader::new(&join_table_path)
+                                .with_try_parse_dates(true)
+                                .with_infer_schema_length(Some(1000))
+                                .finish()
+                                .map_err(|e| RcaError::Graph(format!("Failed to load CSV join table {}: {}", join_step.to, e)))?
+                                .collect()
+                                .map_err(|e| RcaError::Graph(format!("Failed to collect CSV join table {}: {}", join_step.to, e)))?
+                        } else {
+                            LazyFrame::scan_parquet(&join_table_path, ScanArgsParquet::default())
+                                .map_err(|e| RcaError::Graph(format!("Failed to load join table {}: {}", join_step.to, e)))?
+                                .collect()
+                                .map_err(|e| RcaError::Graph(format!("Failed to collect join table {}: {}", join_step.to, e)))?
+                        };
+                        let join_df = data_utils::convert_scientific_notation_columns(join_df)
+                            .map_err(|e| RcaError::Graph(format!("Failed to convert scientific notation in join table {}: {}", join_step.to, e)))?;
+                        
+                        // Build join expressions from key mapping
+                        let left_cols: Vec<Expr> = join_step.keys.keys().map(|c| col(c)).collect();
+                        let right_cols: Vec<Expr> = join_step.keys.values().map(|c| col(c)).collect();
+                        
+                        result = result
+                            .lazy()
+                            .join(
+                                join_df.lazy(),
+                                left_cols,
+                                right_cols,
+                                JoinArgs::new(JoinType::Left)
+                            )
+                            .collect()?;
+                        
+                        println!("      ✅ Joined to {} successfully", join_step.to);
+                    }
+                    
+                    println!("   ✅ Join path completed - target grain columns should now be available");
+                    
+                } else if has_source_grain && plan.join_path.is_empty() {
                     // Columns should be available in the root table - load it and join
                     let root_table_obj = self.metadata
                         .get_table(root_table)
                         .ok_or_else(|| RcaError::Graph(format!("Table not found: {}", root_table)))?;
                     
                     let root_table_path = data_dir.join(&root_table_obj.path);
-                    let root_df = LazyFrame::scan_parquet(root_table_path, ScanArgsParquet::default())
-                        .map_err(|e| RcaError::Graph(format!("Failed to load root table {}: {}", root_table, e)))?
-                        .collect()
-                        .map_err(|e| RcaError::Graph(format!("Failed to collect root table {}: {}", root_table, e)))?;
+                    
+                    // Load based on file extension
+                    let root_df = if root_table_path.extension().and_then(|s| s.to_str()) == Some("csv") {
+                        LazyCsvReader::new(&root_table_path)
+                            .with_try_parse_dates(true)
+                            .with_infer_schema_length(Some(1000))
+                            .finish()
+                            .map_err(|e| RcaError::Graph(format!("Failed to load CSV root table {}: {}", root_table, e)))?
+                            .collect()
+                            .map_err(|e| RcaError::Graph(format!("Failed to collect CSV root table {}: {}", root_table, e)))?
+                    } else {
+                        LazyFrame::scan_parquet(&root_table_path, ScanArgsParquet::default())
+                            .map_err(|e| RcaError::Graph(format!("Failed to load root table {}: {}", root_table, e)))?
+                            .collect()
+                            .map_err(|e| RcaError::Graph(format!("Failed to collect root table {}: {}", root_table, e)))?
+                    };
                     let root_df = data_utils::convert_scientific_notation_columns(root_df)
                         .map_err(|e| RcaError::Graph(format!("Failed to convert scientific notation in root table {}: {}", root_table, e)))?;
                     
@@ -281,11 +416,65 @@ impl GrainResolver {
                     
                     println!("   🔗 Joined back to {} to get target grain columns", root_table);
                 } else {
-                    return Err(RcaError::Graph(format!(
-                        "Cannot aggregate: target grain columns {:?} are missing from dataframe. \
-                        Need to join to get these columns, but join path is not implemented yet.",
-                        missing_cols
-                    )));
+                    // Try to find a mapping table that can provide the missing columns
+                    println!("   🔍 Looking for mapping table to provide missing columns: {:?}", missing_cols);
+                    
+                    // Search for a table in the same system that has both the source grain and target grain columns
+                    let mut mapping_table_found = false;
+                    for table in &self.metadata.tables {
+                        if let Some(ref cols) = table.columns {
+                            let table_col_names: HashSet<String> = cols.iter().map(|c| c.name.clone()).collect();
+                            let has_source = plan.source_grain.iter().all(|c| table_col_names.contains(c));
+                            let has_target = plan.target_grain.iter().all(|c| table_col_names.contains(c));
+                            
+                            if has_source && has_target {
+                                println!("   ✅ Found mapping table: {}", table.name);
+                                
+                                let mapping_table_path = data_dir.join(&table.path);
+                                let mapping_df = if mapping_table_path.extension().and_then(|s| s.to_str()) == Some("csv") {
+                                    LazyCsvReader::new(&mapping_table_path)
+                                        .with_try_parse_dates(true)
+                                        .with_infer_schema_length(Some(1000))
+                                        .finish()
+                                        .map_err(|e| RcaError::Graph(format!("Failed to load CSV mapping table {}: {}", table.name, e)))?
+                                        .collect()
+                                        .map_err(|e| RcaError::Graph(format!("Failed to collect CSV mapping table {}: {}", table.name, e)))?
+                                } else {
+                                    LazyFrame::scan_parquet(&mapping_table_path, ScanArgsParquet::default())
+                                        .map_err(|e| RcaError::Graph(format!("Failed to load mapping table {}: {}", table.name, e)))?
+                                        .collect()
+                                        .map_err(|e| RcaError::Graph(format!("Failed to collect mapping table {}: {}", table.name, e)))?
+                                };
+                                let mapping_df = data_utils::convert_scientific_notation_columns(mapping_df)
+                                    .map_err(|e| RcaError::Graph(format!("Failed to convert scientific notation in mapping table {}: {}", table.name, e)))?;
+                                
+                                // Join on source grain columns
+                                let left_cols: Vec<Expr> = plan.source_grain.iter().map(|c| col(c)).collect();
+                                let right_cols: Vec<Expr> = plan.source_grain.iter().map(|c| col(c)).collect();
+                                result = result
+                                    .lazy()
+                                    .join(
+                                        mapping_df.lazy(),
+                                        left_cols,
+                                        right_cols,
+                                        JoinArgs::new(JoinType::Left)
+                                    )
+                                    .collect()?;
+                                
+                                println!("   🔗 Joined to mapping table {} to get target grain columns", table.name);
+                                mapping_table_found = true;
+                                break;
+                            }
+                        }
+                    }
+                    
+                    if !mapping_table_found {
+                        return Err(RcaError::Graph(format!(
+                            "Cannot aggregate: target grain columns {:?} are missing from dataframe and no mapping table found. \
+                            Available columns: {:?}",
+                            missing_cols, existing_cols
+                        )));
+                    }
                 }
             }
 
