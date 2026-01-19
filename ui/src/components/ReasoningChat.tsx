@@ -47,8 +47,12 @@ const parseTableData = (content: string): { headers: string[], rows: string[][] 
       continue;
     }
     
-    // Check if this line looks like CSV
-    if (csvPattern.test(trimmed)) {
+    // Check if this line looks like CSV (including quoted CSV)
+    // Pattern for quoted CSV: starts with quote and has commas
+    const quotedCSVPattern = /^"[^"]*"(,\s*[^,]*)+/;
+    const hasCommas = trimmed.includes(',');
+    
+    if (csvPattern.test(trimmed) || quotedCSVPattern.test(trimmed) || (hasCommas && trimmed.split(',').length >= 3)) {
       if (!inCSVSection) {
         // Starting new CSV section
         csvLines.length = 0; // Clear previous if any
@@ -71,20 +75,81 @@ const parseTableData = (content: string): { headers: string[], rows: string[][] 
   
   if (csvLines.length === 0) return null;
   
-  // Parse CSV data
+  // Parse CSV data with proper handling of quoted values
+  const parseCSVLine = (line: string, delimiter: string): string[] => {
+    const cells: string[] = [];
+    let currentCell = '';
+    let inQuotes = false;
+    
+    for (let i = 0; i < line.length; i++) {
+      const char = line[i];
+      const nextChar = line[i + 1];
+      
+      if (char === '"') {
+        if (inQuotes && nextChar === '"') {
+          // Escaped quote
+          currentCell += '"';
+          i++; // Skip next quote
+        } else {
+          // Toggle quote state
+          inQuotes = !inQuotes;
+        }
+      } else if (char === delimiter && !inQuotes) {
+        // End of cell
+        cells.push(currentCell.trim());
+        currentCell = '';
+      } else {
+        currentCell += char;
+      }
+    }
+    
+    // Add last cell
+    cells.push(currentCell.trim());
+    return cells;
+  };
+  
   const rows: string[][] = [];
   for (const line of csvLines) {
     if (!line.trim()) continue;
-    const cells = line.split(delimiter).map(cell => cell.trim());
-    if (cells.length > 1) {
-      rows.push(cells);
+    
+    // Skip markdown table separator rows (e.g., |---|---|)
+    const trimmed = line.trim();
+    if (delimiter === '|' && /^\|[\s\-:]+\|$/.test(trimmed)) {
+      continue; // Skip separator row
+    }
+    
+    const cells = parseCSVLine(line, delimiter);
+    // Remove quotes from cell values
+    const cleanedCells = cells.map(cell => {
+      // Remove surrounding quotes if present
+      if ((cell.startsWith('"') && cell.endsWith('"')) || 
+          (cell.startsWith("'") && cell.endsWith("'"))) {
+        return cell.slice(1, -1);
+      }
+      return cell;
+    });
+    
+    // Filter out empty cells at start/end (for markdown tables with leading/trailing pipes)
+    let filteredCells = cleanedCells;
+    if (delimiter === '|') {
+      // Remove empty first and last cells if they exist (from leading/trailing pipes)
+      if (filteredCells.length > 0 && filteredCells[0].trim() === '') {
+        filteredCells = filteredCells.slice(1);
+      }
+      if (filteredCells.length > 0 && filteredCells[filteredCells.length - 1].trim() === '') {
+        filteredCells = filteredCells.slice(0, filteredCells.length - 1);
+      }
+    }
+    
+    if (filteredCells.length > 1) {
+      rows.push(filteredCells);
     }
   }
   
   if (rows.length < 2) return null; // Need at least header + 1 data row
   
   // First row as headers, rest as data
-  const headers = rows[0];
+  const headers = rows[0].map(h => h.trim());
   const dataRows = rows.slice(1);
   
   return { headers, rows: dataRows };
@@ -154,7 +219,7 @@ export const ReasoningChat: React.FC = () => {
         addReasoningStep({
           id: `clarified-${Date.now()}`,
           type: 'thought',
-          content: '✅ Query understood with clarification. Executing analysis...',
+          content: '[OK] Query understood with clarification. Executing analysis...',
           timestamp: new Date().toISOString(),
         });
 
@@ -171,7 +236,7 @@ export const ReasoningChat: React.FC = () => {
         addReasoningStep({
           id: `still-needs-${Date.now()}`,
           type: 'thought',
-          content: `🤔 Still need more information: ${clarifyResponse.data.question}`,
+          content: `[CLARIFY] Still need more information: ${clarifyResponse.data.question}`,
           timestamp: new Date().toISOString(),
         });
       } else {
@@ -289,7 +354,7 @@ export const ReasoningChat: React.FC = () => {
     addReasoningStep({
       id: `cancel-${Date.now()}`,
       type: 'thought',
-      content: '❌ Clarification cancelled. You can ask a new question.',
+      content: '[CANCELLED] Clarification cancelled. You can ask a new question.',
       timestamp: new Date().toISOString(),
     });
   };
@@ -321,7 +386,7 @@ export const ReasoningChat: React.FC = () => {
         addReasoningStep({
           id: `assess-${Date.now()}`,
           type: 'thought',
-          content: '🔍 Assessing query confidence...',
+          content: '[ASSESSING] Assessing query confidence...',
           timestamp: new Date().toISOString(),
         });
 
@@ -340,7 +405,7 @@ export const ReasoningChat: React.FC = () => {
             addReasoningStep({
               id: `confidence-${Date.now()}`,
               type: 'thought',
-              content: `📊 Confidence: ${Math.round(clarification.confidence * 100)}% (below threshold)`,
+              content: `[CONFIDENCE] Confidence: ${Math.round(clarification.confidence * 100)}% (below threshold)`,
               timestamp: new Date().toISOString(),
             });
             
@@ -355,7 +420,7 @@ export const ReasoningChat: React.FC = () => {
               addReasoningStep({
                 id: `partial-${Date.now()}`,
                 type: 'thought',
-                content: `✅ Understood: ${understood.join(' | ')}`,
+                content: `[OK] Understood: ${understood.join(' | ')}`,
                 timestamp: new Date().toISOString(),
               });
             }
@@ -364,7 +429,7 @@ export const ReasoningChat: React.FC = () => {
             addReasoningStep({
               id: `question-${Date.now()}`,
               type: 'result',
-              content: `🤔 **Clarification Needed**\n\n${clarification.question}\n\n${
+              content: `[CLARIFY] **Clarification Needed**\n\n${clarification.question}\n\n${
                 clarification.missing_pieces.length > 0 
                   ? `**Missing information:**\n${clarification.missing_pieces.map(p => 
                       `• ${p.field} (${p.importance}): ${p.description}${
@@ -384,7 +449,7 @@ export const ReasoningChat: React.FC = () => {
           addReasoningStep({
             id: `assess-ok-${Date.now()}`,
             type: 'thought',
-            content: '✅ Query understood. Proceeding with analysis...',
+            content: '[OK] Query understood. Proceeding with analysis...',
             timestamp: new Date().toISOString(),
           });
           
@@ -394,7 +459,7 @@ export const ReasoningChat: React.FC = () => {
           addReasoningStep({
             id: `assess-fallback-${Date.now()}`,
             type: 'thought',
-            content: '⚠️ Assessment unavailable. Proceeding with direct execution...',
+            content: '[WARN] Assessment unavailable. Proceeding with direct execution...',
             timestamp: new Date().toISOString(),
           });
         }
@@ -464,11 +529,11 @@ export const ReasoningChat: React.FC = () => {
 Query: ${userQuery}
 
 Analysis Steps:
-1. ✅ Identified systems: ${systemA} and ${systemB}
-2. ✅ Detected metric: ${hasBalance ? 'ledger balance' : 'metric comparison'}
-3. ✅ Found mismatch: Significant difference detected
-4. ✅ Analyzed data sources
-5. ✅ Identified root causes
+1. [OK] Identified systems: ${systemA} and ${systemB}
+2. [OK] Detected metric: ${hasBalance ? 'ledger balance' : 'metric comparison'}
+3. [OK] Found mismatch: Significant difference detected
+4. [OK] Analyzed data sources
+5. [OK] Identified root causes
 
 Root Causes Found:
 - Data synchronization delay between systems
@@ -512,11 +577,11 @@ ${systemB}, Transaction Count, 145, Mismatch, -5`;
 Query: ${userQuery}
 
 Analysis Steps:
-1. ✅ Identified systems: ${systemA} and ${systemB}
-2. ✅ Detected metric: ${hasBalance ? 'ledger balance' : 'metric comparison'}
-3. ✅ Found mismatch: Significant difference detected
-4. ✅ Analyzed data sources
-5. ✅ Identified root causes
+1. [OK] Identified systems: ${systemA} and ${systemB}
+2. [OK] Detected metric: ${hasBalance ? 'ledger balance' : 'metric comparison'}
+3. [OK] Found mismatch: Significant difference detected
+4. [OK] Analyzed data sources
+5. [OK] Identified root causes
 
 Root Causes Found:
 - Data synchronization delay between systems
@@ -611,11 +676,11 @@ cargo run --bin rca-engine run "${userQuery}" --metadata-dir ./metadata --data-d
 Query: ${userQuery}
 
 Analysis Steps:
-1. ✅ Identified systems: ${systemA} and ${systemB}
-2. ✅ Detected metric: ${hasBalance ? 'ledger balance' : 'metric comparison'}
-3. ✅ Found mismatch: Significant difference detected
-4. ✅ Analyzed data sources
-5. ✅ Identified root causes
+1. [OK] Identified systems: ${systemA} and ${systemB}
+2. [OK] Detected metric: ${hasBalance ? 'ledger balance' : 'metric comparison'}
+3. [OK] Found mismatch: Significant difference detected
+4. [OK] Analyzed data sources
+5. [OK] Identified root causes
 
 Root Causes Found:
 - Data synchronization delay between systems
@@ -801,7 +866,7 @@ cargo run --bin rca-engine run "${userQuery}" --metadata-dir ./metadata --data-d
                       lineHeight: 1.4,
                     }}
                   >
-                    💭 {step.content}
+                    [THOUGHT] {step.content}
                   </Typography>
                 )}
                 {isAction && (
@@ -816,7 +881,7 @@ cargo run --bin rca-engine run "${userQuery}" --metadata-dir ./metadata --data-d
                       lineHeight: 1.4,
                     }}
                   >
-                    ⚙️ {step.content}
+                    [ACTION] {step.content}
                     </Typography>
                 )}
                 {(isResult || isError) && (() => {
@@ -867,93 +932,300 @@ cargo run --bin rca-engine run "${userQuery}" --metadata-dir ./metadata --data-d
                       }}
                     >
                       {/* Text content (excluding CLI commands if table data exists) */}
-                      {textContent && (!tableData || !hasCLICommand) && (
-                        <Typography
-                          variant="body2"
-                          sx={{
-                            color: isError ? '#FF6B35' : '#E6EDF3',
-                            whiteSpace: 'pre-wrap',
-                            lineHeight: 1.6,
-                            fontSize: '0.875rem',
-                            mb: tableData ? 2 : 0,
-                          }}
-                        >
-                          {textContent}
-                        </Typography>
-                      )}
+                      {textContent && (!tableData || !hasCLICommand) && (() => {
+                        // Format text content with better styling
+                        const formatTextContent = (text: string): React.ReactNode => {
+                          const lines = text.split('\n');
+                          const formattedLines: React.ReactNode[] = [];
+                          
+                          lines.forEach((line, idx) => {
+                            const trimmed = line.trim();
+                            if (!trimmed) {
+                              formattedLines.push(<Box key={idx} sx={{ height: '0.5rem' }} />);
+                              return;
+                            }
+                            
+                            // Check for section headers (lines ending with colon or all caps)
+                            const isHeader = trimmed.endsWith(':') || (trimmed.length < 50 && trimmed === trimmed.toUpperCase() && !trimmed.includes(','));
+                            const isListItem = trimmed.startsWith('- ') || trimmed.match(/^\d+\./);
+                            const isBoldSection = trimmed.includes('Root Cause') || trimmed.includes('Population Comparison') || trimmed.includes('Query:');
+                            
+                            if (isHeader || isBoldSection) {
+                              formattedLines.push(
+                                <Typography
+                                  key={idx}
+                                  variant="subtitle2"
+                                  sx={{
+                                    color: '#FF6B35',
+                                    fontWeight: 600,
+                                    fontSize: '0.9rem',
+                                    mt: idx > 0 ? 2 : 0,
+                                    mb: 0.5,
+                                    letterSpacing: '0.3px',
+                                  }}
+                                >
+                                  {trimmed}
+                                </Typography>
+                              );
+                            } else if (isListItem) {
+                              formattedLines.push(
+                                <Box key={idx} sx={{ display: 'flex', alignItems: 'flex-start', mb: 0.75, pl: 1 }}>
+                                  <Typography
+                                    component="span"
+                                    sx={{
+                                      color: '#8B949E',
+                                      mr: 1,
+                                      fontSize: '0.75rem',
+                                      mt: '2px',
+                                    }}
+                                  >
+                                    •
+                                  </Typography>
+                                  <Typography
+                                    variant="body2"
+                                    sx={{
+                                      color: '#E6EDF3',
+                                      fontSize: '0.875rem',
+                                      lineHeight: 1.6,
+                                      flex: 1,
+                                    }}
+                                  >
+                                    {trimmed.replace(/^[-•]\s*/, '').replace(/^\d+\.\s*/, '')}
+                                  </Typography>
+                                </Box>
+                              );
+                            } else {
+                              // Regular text line
+                              formattedLines.push(
+                                <Typography
+                                  key={idx}
+                                  variant="body2"
+                                  sx={{
+                                    color: '#C9D1D9',
+                                    fontSize: '0.875rem',
+                                    lineHeight: 1.7,
+                                    mb: 0.5,
+                                  }}
+                                >
+                                  {trimmed}
+                                </Typography>
+                              );
+                            }
+                          });
+                          
+                          return <Box>{formattedLines}</Box>;
+                        };
+                        
+                        return (
+                          <Box
+                            sx={{
+                              backgroundColor: 'rgba(255, 107, 53, 0.03)',
+                              borderRadius: 2,
+                              p: 2,
+                              border: '1px solid rgba(255, 107, 53, 0.1)',
+                              mb: tableData ? 3 : 0,
+                            }}
+                          >
+                            {formatTextContent(textContent)}
+                          </Box>
+                        );
+                      })()}
                       
                       {/* Table display */}
-                      {tableData && (
-                        <Box sx={{ mt: 2 }}>
-                          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
-                            <Typography variant="caption" sx={{ color: '#8B949E', fontWeight: 500 }}>
-                              Data Results
-                            </Typography>
-                            <Button
-                              size="small"
-                              startIcon={<DownloadIcon />}
-                              onClick={() => downloadCSV(csvContent, 'rca-results.csv')}
-                              sx={{
-                                color: '#FF6B35',
-                                fontSize: '0.75rem',
-                                textTransform: 'none',
-                                '&:hover': {
-                                  backgroundColor: 'rgba(255, 107, 53, 0.1)',
+                      {tableData && (() => {
+                        // Helper to format numbers
+                        const formatNumber = (value: string): string => {
+                          const num = parseFloat(value);
+                          if (isNaN(num)) return value;
+                          // Check if it's a whole number or has decimals
+                          if (num % 1 === 0) {
+                            return num.toLocaleString('en-US');
+                          }
+                          return num.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+                        };
+
+                        // Check if a cell is numeric
+                        const isNumeric = (value: string): boolean => {
+                          return !isNaN(parseFloat(value)) && isFinite(parseFloat(value));
+                        };
+
+                        // Check if column is likely a difference/diff column
+                        const isDiffColumn = (header: string): boolean => {
+                          const lower = header.toLowerCase();
+                          return lower.includes('diff') || lower.includes('difference') || lower === 'abs_diff';
+                        };
+
+                        // Check if column is likely a status/match column
+                        const isStatusColumn = (header: string): boolean => {
+                          const lower = header.toLowerCase();
+                          return lower === 'status' || lower.includes('match');
+                        };
+
+                        return (
+                          <Box sx={{ mt: 3 }}>
+                            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+                              <Typography 
+                                variant="subtitle2" 
+                                sx={{ 
+                                  color: '#E6EDF3', 
+                                  fontWeight: 600,
+                                  fontSize: '0.9rem',
+                                  letterSpacing: '0.5px',
+                                }}
+                              >
+                                Mismatch Details
+                              </Typography>
+                              <Button
+                                size="small"
+                                startIcon={<DownloadIcon />}
+                                onClick={() => downloadCSV(csvContent, 'rca-results.csv')}
+                                sx={{
+                                  color: '#FF6B35',
+                                  fontSize: '0.75rem',
+                                  textTransform: 'none',
+                                  border: '1px solid rgba(255, 107, 53, 0.3)',
+                                  borderRadius: 1,
+                                  px: 1.5,
+                                  py: 0.5,
+                                  '&:hover': {
+                                    backgroundColor: 'rgba(255, 107, 53, 0.1)',
+                                    borderColor: '#FF6B35',
+                                  },
+                                }}
+                              >
+                                Download CSV
+                              </Button>
+                            </Box>
+                            <TableContainer 
+                              component={Paper} 
+                              sx={{ 
+                                backgroundColor: '#0D1117',
+                                border: '1px solid #30363D',
+                                borderRadius: 2,
+                                maxHeight: 500,
+                                overflow: 'auto',
+                                boxShadow: '0 4px 6px rgba(0, 0, 0, 0.3)',
+                                '&::-webkit-scrollbar': {
+                                  width: '8px',
+                                  height: '8px',
+                                },
+                                '&::-webkit-scrollbar-track': {
+                                  backgroundColor: '#161B22',
+                                },
+                                '&::-webkit-scrollbar-thumb': {
+                                  backgroundColor: '#30363D',
+                                  borderRadius: '4px',
+                                  '&:hover': {
+                                    backgroundColor: '#484F58',
+                                  },
                                 },
                               }}
                             >
-                              Download CSV
-                            </Button>
-                          </Box>
-                          <TableContainer 
-                            component={Paper} 
-                            sx={{ 
-                              backgroundColor: '#161B22',
-                              border: '1px solid #30363D',
-                              maxHeight: 400,
-                              overflow: 'auto',
-                            }}
-                          >
-                            <Table size="small" stickyHeader>
-                              <TableHead>
-                                <TableRow>
-                                  {tableData.headers.map((header, idx) => (
-                                    <TableCell
-                                      key={idx}
-                                      sx={{
-                                        color: '#FF6B35',
-                                        borderColor: '#30363D',
-                                        fontWeight: 600,
-                                        backgroundColor: '#0D1117',
-                                      }}
-                                    >
-                                      {header}
-                                    </TableCell>
-                                  ))}
-                                </TableRow>
-                              </TableHead>
-                              <TableBody>
-                                {tableData.rows.map((row, rowIdx) => (
-                                  <TableRow key={rowIdx}>
-                                    {row.map((cell, cellIdx) => (
+                              <Table size="small" stickyHeader>
+                                <TableHead>
+                                  <TableRow>
+                                    {tableData.headers.map((header, idx) => (
                                       <TableCell
-                                        key={cellIdx}
+                                        key={idx}
                                         sx={{
-                                          color: '#E6EDF3',
+                                          color: '#FF6B35',
                                           borderColor: '#30363D',
+                                          fontWeight: 600,
+                                          backgroundColor: '#0D1117',
                                           fontSize: '0.8rem',
+                                          textTransform: 'uppercase',
+                                          letterSpacing: '0.5px',
+                                          py: 1.5,
+                                          whiteSpace: 'nowrap',
                                         }}
                                       >
-                                        {cell}
+                                        {header.replace(/_/g, ' ')}
                                       </TableCell>
                                     ))}
                                   </TableRow>
-                                ))}
-                              </TableBody>
-                            </Table>
-                          </TableContainer>
-                        </Box>
-                      )}
+                                </TableHead>
+                                <TableBody>
+                                  {tableData.rows.map((row, rowIdx) => {
+                                    return (
+                                      <TableRow 
+                                        key={rowIdx}
+                                        sx={{
+                                          backgroundColor: rowIdx % 2 === 0 ? '#161B22' : '#0D1117',
+                                          '&:hover': {
+                                            backgroundColor: '#1C2128',
+                                          },
+                                          transition: 'background-color 0.2s',
+                                        }}
+                                      >
+                                        {row.map((cell, cellIdx) => {
+                                          const header = tableData.headers[cellIdx];
+                                          const isNumericCell = isNumeric(cell);
+                                          const isDiff = isDiffColumn(header);
+                                          const isStatus = isStatusColumn(header);
+                                          
+                                          // Determine cell color based on content
+                                          let cellColor = '#E6EDF3';
+                                          let cellBg = 'transparent';
+                                          
+                                          if (isDiff) {
+                                            const numValue = parseFloat(cell);
+                                            if (numValue > 0) {
+                                              cellColor = '#10B981'; // Green for positive
+                                            } else if (numValue < 0) {
+                                              cellColor = '#EF4444'; // Red for negative
+                                            } else {
+                                              cellColor = '#8B949E'; // Gray for zero
+                                            }
+                                          } else if (isStatus) {
+                                            const lower = cell.toLowerCase();
+                                            if (lower.includes('match')) {
+                                              cellColor = '#10B981';
+                                            } else if (lower.includes('mismatch')) {
+                                              cellColor = '#EF4444';
+                                            }
+                                          } else if (isNumericCell && Math.abs(parseFloat(cell)) > 1000) {
+                                            // Highlight large numbers
+                                            cellColor = '#F59E0B';
+                                          }
+                                          
+                                          return (
+                                            <TableCell
+                                              key={cellIdx}
+                                              sx={{
+                                                color: cellColor,
+                                                backgroundColor: cellBg,
+                                                borderColor: '#30363D',
+                                                fontSize: '0.85rem',
+                                                py: 1.25,
+                                                fontFamily: isNumericCell ? 'monospace' : 'inherit',
+                                                fontWeight: isDiff ? 600 : 400,
+                                              }}
+                                            >
+                                              {isNumericCell ? formatNumber(cell) : cell}
+                                            </TableCell>
+                                          );
+                                        })}
+                                      </TableRow>
+                                    );
+                                  })}
+                                </TableBody>
+                              </Table>
+                            </TableContainer>
+                            <Typography 
+                              variant="caption" 
+                              sx={{ 
+                                color: '#6E7681', 
+                                fontSize: '0.7rem',
+                                mt: 1,
+                                display: 'block',
+                                fontStyle: 'italic',
+                              }}
+                            >
+                              Showing {tableData.rows.length} row{tableData.rows.length !== 1 ? 's' : ''}
+                            </Typography>
+                          </Box>
+                        );
+                      })()}
                     </Box>
                   );
                 })()}
@@ -974,7 +1246,7 @@ cargo run --bin rca-engine run "${userQuery}" --metadata-dir ./metadata --data-d
               lineHeight: 1.4,
             }}
           >
-            💭 Analyzing...
+            [THOUGHT] Analyzing...
             </Typography>
         )}
         <div ref={messagesEndRef} />

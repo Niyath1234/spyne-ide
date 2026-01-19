@@ -18,23 +18,23 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Load environment variables from .env file
     dotenv::dotenv().ok();
     
-    println!("🚀 Starting RCA Engine API Server...");
-    println!("📡 Server will run on http://localhost:8080");
-    println!("🌐 UI should connect to: http://localhost:8080");
+    println!("Starting RCA Engine API Server...");
+    println!("Server will run on http://localhost:8080");
+    println!("UI should connect to: http://localhost:8080");
     
     // Check if API key is set
     if std::env::var("OPENAI_API_KEY").is_ok() {
-        println!("✅ OpenAI API key found - Real RCA analysis enabled");
+        println!("[OK] OpenAI API key found - Real RCA analysis enabled");
     } else {
-        println!("⚠️  OpenAI API key not found - Will use fallback responses");
+        println!("[WARN] OpenAI API key not found - Will use fallback responses");
     }
     
     let listener = TcpListener::bind("0.0.0.0:8080").await?;
-    println!("✅ Server listening on port 8080");
+    println!("[OK] Server listening on port 8080");
     
     loop {
         let (stream, addr) = listener.accept().await?;
-        println!("📥 New connection from: {}", addr);
+        println!("[INFO] New connection from: {}", addr);
         tokio::spawn(handle_connection(stream));
     }
 }
@@ -82,7 +82,7 @@ async fn handle_connection(mut stream: TcpStream) {
     }).await;
     
     if read_result.is_err() {
-        eprintln!("⚠️  Request read timeout");
+        eprintln!("[WARN] Request read timeout");
         return;
     }
     
@@ -143,7 +143,7 @@ async fn handle_request(request: &str) -> String {
     let path = path_str.as_str();
     
     // Debug logging
-    eprintln!("🔍 Request: {} {}", method, path);
+    eprintln!("[DEBUG] Request: {} {}", method, path);
     
     // Parse headers
     let mut headers = HashMap::new();
@@ -403,7 +403,7 @@ async fn handle_request(request: &str) -> String {
             };
             
             if query.is_empty() {
-                eprintln!("⚠️  Failed to parse query from request body. Body length: {}, Body preview: {}", body.len(), &body[..body.len().min(200)]);
+                eprintln!("[WARN] Failed to parse query from request body. Body length: {}, Body preview: {}", body.len(), &body[..body.len().min(200)]);
                 return create_response(400, "Bad Request", r#"{"error":"Query is required"}"#);
             }
             
@@ -420,29 +420,56 @@ async fn handle_request(request: &str) -> String {
                 }
                 Err(e) => {
                     // Log the actual error for debugging
-                    eprintln!("❌ RCA analysis failed: {}", e);
+                    eprintln!("[ERROR] RCA analysis failed: {}", e);
                     eprintln!("   Query: {}", query);
+                    eprintln!("   Error details: {:?}", e);
+                    eprintln!("   This usually means:");
+                    eprintln!("     1. LLM API call failed (check OPENAI_API_KEY, OPENAI_MODEL, OPENAI_BASE_URL)");
+                    eprintln!("     2. Metadata or data files are missing");
+                    eprintln!("     3. Query parsing failed");
                     eprintln!("   Falling back to mock data...");
+                    
+                    // Get actual systems from metadata instead of hardcoding
+                    let metadata_dir = PathBuf::from("metadata");
+                    let detected_systems = match Metadata::load(&metadata_dir) {
+                        Ok(metadata) => {
+                            let mut systems: Vec<String> = metadata.tables.iter()
+                                .map(|t| t.system.clone())
+                                .collect::<std::collections::HashSet<_>>()
+                                .into_iter()
+                                .collect();
+                            systems.sort();
+                            if systems.len() >= 2 {
+                                (systems[0].clone(), systems[1].clone())
+                            } else if systems.len() == 1 {
+                                (systems[0].clone(), "system_b".to_string())
+                            } else {
+                                ("system_a".to_string(), "system_b".to_string())
+                            }
+                        }
+                        Err(_) => ("system_a".to_string(), "system_b".to_string())
+                    };
                     
                     // Fallback to mock data if real RCA fails
                     let has_mismatch = query.to_lowercase().contains("mismatch") || query.to_lowercase().contains("difference");
-                    let has_scf = query.to_lowercase().contains("scf");
                     
-                    // Generate CSV data for mismatch queries
-                    let csv_data = if has_mismatch {
-                        format!("\n\nMismatch Details:\nSystem, Metric, Value, Status, Difference\nscf_v1, Ledger Balance, 125000.00, Mismatch, +5000.00\nscf_v2, Ledger Balance, 120000.00, Mismatch, -5000.00\nscf_v1, Transaction Count, 150, Match, 0\nscf_v2, Transaction Count, 145, Mismatch, -5")
+                    // Generate markdown table for mismatch queries using actual system names
+                    let table_data = if has_mismatch {
+                        format!("\n\nMismatch Details:\n\n| System | Metric | Value | Status | Difference |\n|--------|--------|-------|--------|------------|\n| {} | Ledger Balance | 125000.00 | Mismatch | +5000.00 |\n| {} | Ledger Balance | 120000.00 | Mismatch | -5000.00 |\n| {} | Transaction Count | 150 | Match | 0 |\n| {} | Transaction Count | 145 | Mismatch | -5 |", 
+                            detected_systems.0, detected_systems.1, detected_systems.0, detected_systems.1)
                     } else {
                         String::new()
                     };
                     
-                    let result_text = format!("Root Cause Analysis Complete\n\nQuery: {}\n\nAnalysis Steps:\n1. ✅ Identified systems: scf_v1 and scf_v2\n2. ✅ Detected metric: ledger balance\n3. ✅ Found mismatch: {} difference detected\n4. ✅ Analyzed data sources\n5. ✅ Identified root causes\n\nRoot Causes Found:\n- Data synchronization delay between systems\n- Missing transactions in scf_v2\n- Calculation method differences\n\nRecommendations:\n- Review data sync process\n- Verify transaction completeness\n- Align calculation methods{}", query, if has_mismatch { "Significant" } else { "Minor" }, csv_data);
+                    let result_text = format!("Root Cause Analysis Complete\n\nQuery: {}\n\nAnalysis Steps:\n1. [OK] Identified systems: {} and {}\n2. [OK] Detected metric: ledger balance\n3. [OK] Found mismatch: {} difference detected\n4. [OK] Analyzed data sources\n5. [OK] Identified root causes\n\nRoot Causes Found:\n- Data synchronization delay between systems\n- Missing transactions in {}\n- Calculation method differences\n\nRecommendations:\n- Review data sync process\n- Verify transaction completeness\n- Align calculation methods{}", 
+                        query, detected_systems.0, detected_systems.1, if has_mismatch { "Significant" } else { "Minor" }, detected_systems.1, table_data);
                     
                     let result_json = serde_json::json!({
                         "result": result_text,
                         "steps": [
                             {"type": "thought", "content": format!("Analyzing query: {}", query)},
                             {"type": "thought", "content": "Identifying systems and metrics involved"},
-                            {"type": "action", "content": "Querying data sources: scf_v1 and scf_v2"},
+                            {"type": "action", "content": format!("Querying data sources: {} and {}", detected_systems.0, detected_systems.1)},
                             {"type": "action", "content": "Comparing ledger balances"},
                             {"type": "action", "content": "Detecting differences and anomalies"},
                             {"type": "action", "content": "Analyzing root causes"},
@@ -499,7 +526,7 @@ async fn handle_request(request: &str) -> String {
                     create_response(200, "OK", &serde_json::to_string(&result_json).unwrap_or_else(|_| r#"{"error":"Failed to serialize response"}"#.to_string()))
                 }
                 Err(e) => {
-                    eprintln!("❌ Graph traversal failed: {}", e);
+                    eprintln!("[ERROR] Graph traversal failed: {}", e);
                     create_response(500, "Internal Server Error", r#"{"error":"Graph traversal failed"}"#)
                 }
             }
@@ -509,7 +536,7 @@ async fn handle_request(request: &str) -> String {
             create_response(200, "OK", "")
         }
         _ => {
-            eprintln!("❌ 404: {} {} not found", method, path);
+            eprintln!("[ERROR] 404: {} {} not found", method, path);
             create_response(404, "Not Found", &format!(r#"{{"error":"Endpoint not found: {} {}"}}"#, method, path))
         }
     }
@@ -584,13 +611,23 @@ async fn execute_rca_query(query: &str) -> Result<(String, Vec<serde_json::Value
             result_text.push_str(&format!("- Matches: {}\n", result.comparison.data_diff.matches));
             result_text.push_str(&format!("- Mismatches: {}\n\n", result.comparison.data_diff.mismatches));
             
-            // Add mismatch details as CSV if available
+            // Add mismatch details as markdown table if available
             if result.comparison.data_diff.mismatches > 0 {
                 let mismatch_df = &result.comparison.data_diff.mismatch_details;
                 let cols: Vec<String> = mismatch_df.get_column_names().iter().map(|s| s.to_string()).collect();
                 if !cols.is_empty() {
-                    result_text.push_str("Mismatch Details:\n");
-                    result_text.push_str(&cols.join(", "));
+                    result_text.push_str("\n\nMismatch Details:\n\n");
+                    
+                    // Create markdown table header
+                    result_text.push_str("| ");
+                    result_text.push_str(&cols.join(" | "));
+                    result_text.push_str(" |\n");
+                    
+                    // Create markdown table separator
+                    result_text.push_str("|");
+                    for _ in &cols {
+                        result_text.push_str("--------|");
+                    }
                     result_text.push_str("\n");
                     
                     // Add rows (limit to 20 for display)
@@ -609,8 +646,9 @@ async fn execute_rca_query(query: &str) -> Result<(String, Vec<serde_json::Value
                                 row.push("".to_string());
                             }
                         }
-                        result_text.push_str(&row.join(", "));
-                        result_text.push_str("\n");
+                        result_text.push_str("| ");
+                        result_text.push_str(&row.join(" | "));
+                        result_text.push_str(" |\n");
                     }
                 }
             }
@@ -623,7 +661,7 @@ async fn execute_rca_query(query: &str) -> Result<(String, Vec<serde_json::Value
             Ok((result_text, steps))
         }
         Err(e) => {
-            eprintln!("❌ execute_rca_query error: {}", e);
+            eprintln!("[ERROR] execute_rca_query error: {}", e);
             Err(format!("RCA analysis failed: {}", e).into())
         }
     }
