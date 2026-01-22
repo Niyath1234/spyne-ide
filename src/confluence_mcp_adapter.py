@@ -38,7 +38,10 @@ class ConfluenceMCPAdapter:
             raw_dir: Directory to save downloaded files
             processed_dir: Directory for processed files
         """
-        self.space_key = space_key or os.getenv("CONFLUENCE_SPACE_KEY", "HOR")
+        # Import Config to ensure .env is loaded
+        from src.config import Config
+        
+        self.space_key = space_key or Config.get_confluence_space_key()
         self.raw_dir = Path(raw_dir)
         self.processed_dir = Path(processed_dir)
         self.raw_dir.mkdir(parents=True, exist_ok=True)

@@ -78,11 +78,14 @@ class ConfluenceKnowledgeBaseIntegrator:
             knowledge_base_path: Path to knowledge base JSON
             knowledge_register_path: Path to knowledge register JSON
         """
+        # Import Config to ensure .env is loaded
+        from src.config import Config
+        
         # Initialize Confluence ingester
         self.confluence_ingester = ConfluenceIngester(
-            url=confluence_url or os.getenv("CONFLUENCE_URL"),
-            username=confluence_username or os.getenv("CONFLUENCE_USERNAME"),
-            api_token=confluence_api_token or os.getenv("CONFLUENCE_API_TOKEN")
+            url=confluence_url or Config.get_confluence_url(),
+            username=confluence_username or Config.get_confluence_username(),
+            api_token=confluence_api_token or Config.get_confluence_api_token()
         )
         
         # Initialize Knowledge Base Enricher

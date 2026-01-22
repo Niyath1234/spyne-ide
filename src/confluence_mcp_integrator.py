@@ -48,12 +48,15 @@ class ConfluenceMCPKnowledgeBaseIntegrator:
         Initialize the MCP-based integrator.
         
         Args:
-            space_key: Confluence space key (defaults to HOR)
+            space_key: Confluence space key (defaults to HOR from .env)
             knowledge_base_path: Path to knowledge base JSON
             knowledge_register_path: Path to knowledge register JSON
         """
+        # Import Config to ensure .env is loaded
+        from src.config import Config
+        
         # Initialize MCP adapter
-        self.mcp_adapter = ConfluenceMCPAdapter(space_key=space_key)
+        self.mcp_adapter = ConfluenceMCPAdapter(space_key=space_key or Config.get_confluence_space_key())
         
         # Initialize Knowledge Base Enricher
         self.kb_enricher = KnowledgeBaseEnricher(knowledge_base_path=knowledge_base_path)

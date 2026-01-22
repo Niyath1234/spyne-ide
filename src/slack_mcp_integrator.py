@@ -41,8 +41,11 @@ class SlackMCPIntegrator:
             default_channel: Default Slack channel for notifications
             workspace_name: Slack workspace name
         """
+        # Import Config to ensure .env is loaded
+        from src.config import Config
+        
         self.mcp_adapter = SlackMCPAdapter(workspace_name=workspace_name)
-        self.default_channel = default_channel or os.getenv("SLACK_DEFAULT_CHANNEL")
+        self.default_channel = default_channel or Config.get_slack_default_channel()
     
     def notify_knowledge_extracted(
         self,

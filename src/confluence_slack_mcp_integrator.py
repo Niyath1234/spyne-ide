@@ -41,20 +41,25 @@ class ConfluenceSlackMCPIntegrator:
         Initialize combined integrator.
         
         Args:
-            confluence_space_key: Confluence space key (defaults to HOR)
-            slack_channel: Default Slack channel for notifications
+            confluence_space_key: Confluence space key (defaults to HOR from .env)
+            slack_channel: Default Slack channel for notifications (from .env)
             knowledge_base_path: Path to knowledge base JSON
             knowledge_register_path: Path to knowledge register JSON
         """
+        # Import Config to ensure .env is loaded
+        from src.config import Config
+        
         # Initialize Confluence integrator
         self.confluence_integrator = ConfluenceMCPKnowledgeBaseIntegrator(
-            space_key=confluence_space_key,
+            space_key=confluence_space_key or Config.get_confluence_space_key(),
             knowledge_base_path=knowledge_base_path,
             knowledge_register_path=knowledge_register_path
         )
         
         # Initialize Slack integrator
-        self.slack_integrator = SlackMCPIntegrator(default_channel=slack_channel)
+        self.slack_integrator = SlackMCPIntegrator(
+            default_channel=slack_channel or Config.get_slack_default_channel()
+        )
     
     def process_page_with_notifications(
         self,
