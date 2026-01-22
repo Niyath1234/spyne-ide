@@ -2,58 +2,113 @@
   "terms": {
     "paid_date": {
       "definition": "The date when a payment was made or received",
-      "aliases": ["payment_date", "paid date", "payment date", "recovery_date"],
+      "aliases": [
+        "payment_date",
+        "paid date",
+        "payment date",
+        "recovery_date"
+      ],
       "business_meaning": "Date on which the customer made a payment towards their loan",
-      "related_tables": ["collections_mis", "emi_payment_view"],
+      "related_tables": [
+        "collections_mis",
+        "emi_payment_view"
+      ],
       "data_type": "date"
     },
     "paid_amount": {
       "definition": "The amount of money that was paid",
-      "aliases": ["payment_amount", "paid amount", "payment amount", "recovery_amount", "recovery"],
+      "aliases": [
+        "payment_amount",
+        "paid amount",
+        "payment amount",
+        "recovery_amount",
+        "recovery"
+      ],
       "business_meaning": "Amount paid by the customer towards their loan repayment",
-      "related_tables": ["collections_mis", "emi_payment_view"],
+      "related_tables": [
+        "collections_mis",
+        "emi_payment_view"
+      ],
       "data_type": "currency"
     },
     "reconciliation": {
       "definition": "The process of comparing data from two or more systems to identify differences",
-      "aliases": ["recon", "reconcile", "compare", "match"],
+      "aliases": [
+        "recon",
+        "reconcile",
+        "compare",
+        "match"
+      ],
       "business_meaning": "Compare paid dates and amounts between different systems to find discrepancies",
-      "use_cases": ["Find missing payments", "Identify date mismatches", "Find amount differences"]
+      "use_cases": [
+        "Find missing payments",
+        "Identify date mismatches",
+        "Find amount differences"
+      ]
     },
     "uuid": {
       "definition": "Unique identifier for a loan or customer",
-      "aliases": ["user_uuid", "loan_uuid", "customer_id"],
+      "aliases": [
+        "user_uuid",
+        "loan_uuid",
+        "customer_id"
+      ],
       "business_meaning": "Primary key to match records between systems",
-      "related_tables": ["collections_mis", "outstanding_daily"]
+      "related_tables": [
+        "collections_mis",
+        "outstanding_daily"
+      ]
     },
     "successful_repayment": {
       "definition": "A repayment transaction that completed successfully",
-      "aliases": ["successful payment", "completed repayment"],
+      "aliases": [
+        "successful payment",
+        "completed repayment"
+      ],
       "business_meaning": "Payment that was processed and confirmed",
       "filter": "status = 'SUCCESS'"
     },
     "deleted_record": {
       "definition": "A record that has been marked as deleted",
-      "aliases": ["deleted", "removed", "soft deleted"],
+      "aliases": [
+        "deleted",
+        "removed",
+        "soft deleted"
+      ],
       "business_meaning": "Record that should be excluded from analysis",
-      "filters": ["__is_deleted = false", "is_deleted = 'false'"]
+      "filters": [
+        "__is_deleted = false",
+        "is_deleted = 'false'"
+      ]
     },
     "unsettled_loan": {
       "definition": "A loan that has not been fully paid off or closed",
-      "aliases": ["active loan", "open loan"],
+      "aliases": [
+        "active loan",
+        "open loan"
+      ],
       "business_meaning": "Loan that is still active and requires payment tracking",
       "filter": "settlement_flag = 'unsettled'"
     },
     "nbfc": {
       "definition": "Non-Banking Financial Company",
-      "aliases": ["financial company", "lender"],
+      "aliases": [
+        "financial company",
+        "lender"
+      ],
       "business_meaning": "The company that provided the loan",
-      "valid_values": ["quadrillion", "slicenesfb", "nesfb"],
+      "valid_values": [
+        "quadrillion",
+        "slicenesfb",
+        "nesfb"
+      ],
       "filter": "nbfc_name_colending IN ('quadrillion', 'slicenesfb', 'nesfb') OR parent_nbfc_name IN ('quadrillion', 'slicenesfb', 'nesfb')"
     },
     "credin": {
       "definition": "A specific type of loan order",
-      "aliases": ["credin order"],
+      "aliases": [
+        "credin order"
+      ],
       "business_meaning": "A type of loan that should be excluded from certain analyses",
       "filter": "order_type != 'credin'"
     }
@@ -61,31 +116,90 @@
   "tables": {
     "collections_mis": {
       "description": "Collections Management Information System table",
-      "contains": ["loan information", "payment dates", "payment amounts", "bucket information"],
-      "key_fields": ["uuid", "mis_date", "paid_date", "paid_amount", "pos", "current_bucket"],
+      "contains": [
+        "loan information",
+        "payment dates",
+        "payment amounts",
+        "bucket information"
+      ],
+      "key_fields": [
+        "uuid",
+        "mis_date",
+        "paid_date",
+        "paid_amount",
+        "pos",
+        "current_bucket"
+      ],
       "time_field": "mis_date",
-      "primary_key": ["uuid", "mis_date"]
+      "primary_key": [
+        "uuid",
+        "mis_date"
+      ]
     },
     "outstanding_daily": {
       "description": "Daily snapshot of outstanding loan balances",
-      "contains": ["loan balances", "order information", "asset classification"],
-      "key_fields": ["uuid", "order_id", "last_day", "principal_outstanding", "asset_class"],
+      "contains": [
+        "loan balances",
+        "order information",
+        "asset classification"
+      ],
+      "key_fields": [
+        "uuid",
+        "order_id",
+        "last_day",
+        "principal_outstanding",
+        "asset_class"
+      ],
       "time_field": "last_day",
-      "primary_key": ["order_id", "last_day"]
+      "primary_key": [
+        "order_id",
+        "last_day"
+      ]
     },
     "repayments": {
       "description": "Repayment transaction records",
-      "contains": ["repayment transactions", "payment status", "order links"],
-      "key_fields": ["repay_id", "order_id", "user_uuid", "status", "__is_deleted"],
+      "contains": [
+        "repayment transactions",
+        "payment status",
+        "order links"
+      ],
+      "key_fields": [
+        "repay_id",
+        "order_id",
+        "user_uuid",
+        "status",
+        "__is_deleted"
+      ],
       "time_field": "created_at",
-      "primary_key": ["repay_id"]
+      "primary_key": [
+        "repay_id"
+      ]
     },
     "emi_payment_view": {
       "description": "EMI payment details view",
-      "contains": ["payment dates", "payment amounts", "transaction details"],
-      "key_fields": ["repayment_txn_id", "paid_date", "paid_amount", "is_deleted"],
+      "contains": [
+        "payment dates",
+        "payment amounts",
+        "transaction details"
+      ],
+      "key_fields": [
+        "repayment_txn_id",
+        "paid_date",
+        "paid_amount",
+        "is_deleted"
+      ],
       "time_field": "created_at",
-      "primary_key": ["repayment_txn_id"]
+      "primary_key": [
+        "repayment_txn_id"
+      ]
+    },
+    "passbook": {
+      "name": "passbook",
+      "description": "Table mentioned in ARD document",
+      "type": "table",
+      "source": "ARD",
+      "product": "slice mini passbook",
+      "ref_id": "PROD-3649-2898362610"
     }
   },
   "relationships": {
@@ -99,6 +213,133 @@
       "join_key": "repay_id to repayment_txn_id",
       "relationship": "one-to-one"
     }
+  },
+  "events": {
+    "mini_passbook_opened": {
+      "name": "mini_passbook_opened",
+      "type": "PAGE OPEN",
+      "description": "Captures the opening of passbook page",
+      "properties": "v1.1.1;<in ms>;page open;Payment method, Timeline, Transaction type",
+      "source": "ARD",
+      "product": "slice mini passbook",
+      "ref_id": "PROD-3649-2898362610"
+    },
+    "mini_passbook_error_page_opened": {
+      "name": "mini_passbook_error_page_opened",
+      "type": "page_opened",
+      "description": "",
+      "properties": "v1.1.1;page open;Payment method, Timeline, Transaction type<error message>",
+      "source": "ARD",
+      "product": "slice mini passbook",
+      "ref_id": "PROD-3649-2898362610"
+    },
+    "back_clicked": {
+      "name": "back_clicked",
+      "type": "CTA",
+      "description": "Takes user back to passbook page",
+      "properties": "v1.1.1;cta<current screen>",
+      "source": "ARD",
+      "product": "slice mini passbook",
+      "ref_id": "PROD-3649-2898362610"
+    },
+    "mini_passbook_search_clicked": {
+      "name": "mini_passbook_search_clicked",
+      "type": "CTA",
+      "description": "",
+      "properties": "v1.1.1;cta",
+      "source": "ARD",
+      "product": "slice mini passbook",
+      "ref_id": "PROD-3649-2898362610"
+    },
+    "mini_passbook_search_entered": {
+      "name": "mini_passbook_search_entered",
+      "type": "entered",
+      "description": "",
+      "properties": "v1.1.1;entered;<search text>",
+      "source": "ARD",
+      "product": "slice mini passbook",
+      "ref_id": "PROD-3649-2898362610"
+    },
+    "mini_passbook_search_delete_clicked": {
+      "name": "mini_passbook_search_delete_clicked",
+      "type": "CTA",
+      "description": "Removes text typed by user",
+      "properties": "v1.1.1;cta;",
+      "source": "ARD",
+      "product": "slice mini passbook",
+      "ref_id": "PROD-3649-2898362610"
+    },
+    "mini_passbook_search_no_results_opened": {
+      "name": "mini_passbook_search_no_results_opened",
+      "type": "PAGE OPEN",
+      "description": "",
+      "properties": "v1.1.1;page_open<search text>",
+      "source": "ARD",
+      "product": "slice mini passbook",
+      "ref_id": "PROD-3649-2898362610"
+    },
+    "mini_passbook_search_no_results_check_all_transactions_clicked": {
+      "name": "mini_passbook_search_no_results_check_all_transactions_clicked",
+      "type": "CTA",
+      "description": "Takes user back to passbook home page",
+      "properties": "v1.1.1;cta",
+      "source": "ARD",
+      "product": "slice mini passbook",
+      "ref_id": "PROD-3649-2898362610"
+    },
+    "mini_passbook_filter_clicked": {
+      "name": "mini_passbook_filter_clicked",
+      "type": "CTA",
+      "description": "",
+      "properties": "v1.1.1;cta;Payment method, Timeline, Transaction type",
+      "source": "ARD",
+      "product": "slice mini passbook",
+      "ref_id": "PROD-3649-2898362610"
+    },
+    "mini_passbook_filter_bottomsheet_opened": {
+      "name": "mini_passbook_filter_bottomsheet_opened",
+      "type": "Bottomsheet open",
+      "description": "",
+      "properties": "v1.1.1;bottomsheet open;Payment method, Timeline, Transaction type",
+      "source": "ARD",
+      "product": "slice mini passbook",
+      "ref_id": "PROD-3649-2898362610"
+    },
+    "mini_passbook_filter_bottomsheet_filter_selected": {
+      "name": "mini_passbook_filter_bottomsheet_filter_selected",
+      "type": "CTA",
+      "description": "",
+      "properties": "v1.1.1;ctaPayment method, Timeline, Transaction type<filter name>",
+      "source": "ARD",
+      "product": "slice mini passbook",
+      "ref_id": "PROD-3649-2898362610"
+    },
+    "mini_passbook_filter_bottomsheet_apply_clicked": {
+      "name": "mini_passbook_filter_bottomsheet_apply_clicked",
+      "type": "CTA",
+      "description": "",
+      "properties": "v1.1.1;ctaPayment method, Timeline, Transaction type<filter name>",
+      "source": "ARD",
+      "product": "slice mini passbook",
+      "ref_id": "PROD-3649-2898362610"
+    },
+    "mini_passbook_filter_bottomsheet_clear_all_clicked": {
+      "name": "mini_passbook_filter_bottomsheet_clear_all_clicked",
+      "type": "CTA",
+      "description": "",
+      "properties": "v1.1.1;ctaPayment method, Timeline, Transaction type<filter name>",
+      "source": "ARD",
+      "product": "slice mini passbook",
+      "ref_id": "PROD-3649-2898362610"
+    },
+    "mini_passbook_transaction_clicked": {
+      "name": "mini_passbook_transaction_clicked",
+      "type": "cta",
+      "description": "",
+      "properties": "v1.1.1;cta<credit/debit/refund/reversal><add_money/auto_load/withdraw_money/upi_ppi/card/spark/monies>",
+      "source": "ARD",
+      "product": "slice mini passbook",
+      "ref_id": "PROD-3649-2898362610"
+    }
   }
 }
-
