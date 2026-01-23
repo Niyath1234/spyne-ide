@@ -1,4 +1,5 @@
 use crate::error::{RcaError, Result};
+use crate::intent::function_schema::{ChatMessage, FunctionCall, FunctionDefinition};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use tracing::{info, warn};
@@ -7,20 +8,10 @@ use tracing::{info, warn};
 pub struct QueryInterpretation {
     pub system_a: String,
     pub system_b: String,
-    // For same-metric comparison (backward compatibility)
-    #[serde(default)]
-    pub metric: Option<String>,
-    // For cross-metric comparison (new)
-    #[serde(default)]
-    pub metric_a: Option<String>,
-    #[serde(default)]
-    pub metric_b: Option<String>,
+    pub metric: String,
     pub as_of_date: Option<String>,
     #[serde(default = "default_confidence")]
     pub confidence: f64,
-    // Indicates if this is a cross-metric comparison
-    #[serde(default)]
-    pub is_cross_metric: bool,
 }
 
 fn default_confidence() -> f64 {
@@ -184,65 +175,21 @@ Format: {{"system_a":"id","system_b":"id","metric":"id","as_of_date":"YYYY-MM-DD
             info!("Fixed system_b to: {}", interpretation.system_b);
         }
         
-        // Validate metrics - handle both same-metric and cross-metric cases
+        // Validate metric as well
         let valid_metric_ids: std::collections::HashSet<String> = business_labels.metrics.iter()
             .map(|m| m.metric_id.clone())
             .collect();
         
-        // Handle cross-metric case
-        if interpretation.is_cross_metric {
-            if let Some(ref metric_a) = interpretation.metric_a {
-                if !valid_metric_ids.contains(metric_a) {
-                    let matched = business_labels.metrics.iter().find(|m| {
-                        m.aliases.iter().any(|a| a.to_lowercase() == metric_a.to_lowercase()) ||
-                        m.metric_id.to_lowercase().contains(&metric_a.to_lowercase()) ||
-                        metric_a.to_lowercase().contains(&m.metric_id.to_lowercase())
-                    });
-                    if let Some(m) = matched {
-                        interpretation.metric_a = Some(m.metric_id.clone());
-                        info!("Fixed metric_a to: {}", m.metric_id);
-                    }
-                }
-            }
-            
-            if let Some(ref metric_b) = interpretation.metric_b {
-                if !valid_metric_ids.contains(metric_b) {
-                    let matched = business_labels.metrics.iter().find(|m| {
-                        m.aliases.iter().any(|a| a.to_lowercase() == metric_b.to_lowercase()) ||
-                        m.metric_id.to_lowercase().contains(&metric_b.to_lowercase()) ||
-                        metric_b.to_lowercase().contains(&m.metric_id.to_lowercase())
-                    });
-                    if let Some(m) = matched {
-                        interpretation.metric_b = Some(m.metric_id.clone());
-                        info!("Fixed metric_b to: {}", m.metric_id);
-                    }
-                }
-            }
-        } else {
-            // Handle same-metric case (backward compatibility)
-            if let Some(ref metric) = interpretation.metric {
-                if !valid_metric_ids.contains(metric) {
-                    let matched = business_labels.metrics.iter().find(|m| {
-                        m.aliases.iter().any(|a| a.to_lowercase() == metric.to_lowercase()) ||
-                        m.metric_id.to_lowercase().contains(&metric.to_lowercase()) ||
-                        metric.to_lowercase().contains(&m.metric_id.to_lowercase())
-                    });
-                    interpretation.metric = matched.map(|m| m.metric_id.clone());
-                    if let Some(ref m) = interpretation.metric {
-                        info!("Fixed metric to: {}", m);
-                    }
-                }
-            } else {
-                // If no metric specified, try to infer from metric_a/metric_b
-                if let (Some(ref ma), Some(ref mb)) = (&interpretation.metric_a, &interpretation.metric_b) {
-                    if ma == mb {
-                        interpretation.metric = Some(ma.clone());
-                        interpretation.is_cross_metric = false;
-                    } else {
-                        interpretation.is_cross_metric = true;
-                    }
-                }
-            }
+        if !valid_metric_ids.contains(&interpretation.metric) {
+            warn!("LLM returned invalid metric '{}', available: {:?}", interpretation.metric, valid_metric_ids);
+            // Try to match by alias
+            let matched = business_labels.metrics.iter().find(|m| {
+                m.aliases.iter().any(|a| a.to_lowercase() == interpretation.metric.to_lowercase()) ||
+                m.metric_id.to_lowercase().contains(&interpretation.metric.to_lowercase()) ||
+                interpretation.metric.to_lowercase().contains(&m.metric_id.to_lowercase())
+            });
+            interpretation.metric = matched.map(|m| m.metric_id.clone()).unwrap_or_else(|| "tos".to_string());
+            info!("Fixed metric to: {}", interpretation.metric);
         }
         
         Ok(interpretation)
@@ -731,6 +678,142 @@ Examples:
         
         // Use existing call_llm which handles mock mode
         self.call_llm(&combined_prompt).await
+    }
+    
+    /// Call LLM with function calling support
+    pub async fn call_llm_with_functions(
+        &self,
+        messages: &[ChatMessage],
+        functions: &[FunctionDefinition],
+    ) -> Result<FunctionCall> {
+        // Handle dummy mode
+        if self.api_key == "dummy-api-key" {
+            // Return a dummy function call for testing
+            return Ok(FunctionCall {
+                name: "generate_sql_intent".to_string(),
+                arguments: r#"{"metrics": ["tos"], "dimensions": [], "filters": [], "limit": null}"#.to_string(),
+            });
+        }
+        
+        let client = reqwest::Client::new();
+        
+        // Build messages for API
+        let api_messages: Vec<serde_json::Value> = messages
+            .iter()
+            .map(|m| {
+                let mut msg = serde_json::json!({
+                    "role": m.role,
+                });
+                
+                if let Some(ref content) = m.content {
+                    msg["content"] = serde_json::json!(content);
+                }
+                
+                if let Some(ref function_call) = m.function_call {
+                    msg["function_call"] = serde_json::json!({
+                        "name": function_call.name,
+                        "arguments": function_call.arguments,
+                    });
+                }
+                
+                if let Some(ref name) = m.name {
+                    msg["name"] = serde_json::json!(name);
+                }
+                
+                msg
+            })
+            .collect();
+        
+        // Build functions array
+        let api_functions: Vec<serde_json::Value> = functions
+            .iter()
+            .map(|f| {
+                serde_json::json!({
+                    "name": f.name,
+                    "description": f.description,
+                    "parameters": f.parameters,
+                })
+            })
+            .collect();
+        
+        let mut body = serde_json::json!({
+            "model": self.model,
+            "messages": api_messages,
+            "functions": api_functions,
+            "function_call": "auto", // Let model decide when to call functions
+            "temperature": 0.1,
+        });
+        
+        // Set token limits
+        if self.model.starts_with("gpt-5") || self.model.contains("o1") {
+            body["max_completion_tokens"] = serde_json::json!(2000);
+        } else if self.model.starts_with("gpt-4") {
+            body["max_completion_tokens"] = serde_json::json!(500);
+        } else {
+            body["max_tokens"] = serde_json::json!(500);
+        }
+        
+        let response = client
+            .post(&format!("{}/chat/completions", self.base_url))
+            .header("Authorization", format!("Bearer {}", self.api_key))
+            .header("Content-Type", "application/json")
+            .json(&body)
+            .send()
+            .await
+            .map_err(|e| RcaError::Llm(format!("LLM API call failed: {}", e)))?;
+        
+        // Check HTTP status
+        let status = response.status();
+        if !status.is_success() {
+            let error_text = response.text().await.unwrap_or_else(|_| "Unknown error".to_string());
+            return Err(RcaError::Llm(format!("LLM API error ({}): {}", status, error_text)));
+        }
+        
+        let response_json: serde_json::Value = response
+            .json()
+            .await
+            .map_err(|e| RcaError::Llm(format!("Failed to parse LLM response: {}", e)))?;
+        
+        // Check for error
+        if let Some(error) = response_json.get("error") {
+            return Err(RcaError::Llm(format!("LLM API error: {}", serde_json::to_string(error).unwrap_or_else(|_| "Unknown error".to_string()))));
+        }
+        
+        // Extract function call from response
+        let choices = response_json.get("choices")
+            .and_then(|c| c.as_array())
+            .ok_or_else(|| RcaError::Llm("No choices array in LLM response".to_string()))?;
+        
+        if choices.is_empty() {
+            return Err(RcaError::Llm("Empty choices array in LLM response".to_string()));
+        }
+        
+        let message = &choices[0]["message"];
+        
+        // Check if there's a function call
+        if let Some(function_call_json) = message.get("function_call") {
+            let name = function_call_json["name"]
+                .as_str()
+                .ok_or_else(|| RcaError::Llm("No function name in function_call".to_string()))?
+                .to_string();
+            
+            let arguments = function_call_json["arguments"]
+                .as_str()
+                .ok_or_else(|| RcaError::Llm("No arguments in function_call".to_string()))?
+                .to_string();
+            
+            Ok(FunctionCall { name, arguments })
+        } else {
+            // If no function call, check if there's content (model chose not to call function)
+            let content = message.get("content")
+                .and_then(|c| c.as_str())
+                .unwrap_or("");
+            
+            Err(RcaError::Llm(format!(
+                "LLM did not call a function. Response: {}",
+                content
+            )))
+        }
     }
 }
 

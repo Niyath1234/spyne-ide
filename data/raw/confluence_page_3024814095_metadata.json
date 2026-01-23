@@ -1,0 +1,186 @@
+{
+  "id": "3024814095",
+  "type": "page",
+  "ari": "ari:cloud:confluence:adeba97b-6326-4a84-8a07-efafb97be347:page/3024814095",
+  "base64EncodedAri": "YXJpOmNsb3VkOmNvbmZsdWVuY2U6YWRlYmE5N2ItNjMyNi00YTg0LThhMDctZWZhZmI5N2JlMzQ3OmNvbnRlbnQvMzAyNDgxNDA5NQ==",
+  "status": "current",
+  "title": "UPI Lite - ARD",
+  "space": {
+    "id": 2643853407,
+    "ari": "ari:cloud:confluence:adeba97b-6326-4a84-8a07-efafb97be347:space/2643853407",
+    "key": "HOR",
+    "alias": "HOR",
+    "name": "Horizontal-Analytics",
+    "type": "global",
+    "status": "current",
+    "_expandable": {
+      "settings": "/rest/api/space/HOR/settings",
+      "metadata": "",
+      "operations": "",
+      "lookAndFeel": "/rest/api/settings/lookandfeel?spaceKey=HOR",
+      "identifiers": "",
+      "permissions": "",
+      "roles": "",
+      "icon": "",
+      "typeSettings": "",
+      "description": "",
+      "theme": "/rest/api/space/HOR/theme",
+      "history": ""
+    },
+    "_links": {
+      "webui": "/spaces/HOR",
+      "self": "https://slicepay.atlassian.net/wiki/rest/api/space/HOR"
+    }
+  },
+  "version": {
+    "by": {
+      "type": "known",
+      "accountId": "62e9145d25abc07e51c5826d",
+      "accountType": "atlassian",
+      "email": "jacob.siju@slicebank.com",
+      "publicName": "Jacob Siju (Unlicensed)",
+      "profilePicture": {
+        "path": "/wiki/aa-avatar/62e9145d25abc07e51c5826d",
+        "width": 48,
+        "height": 48,
+        "isDefault": false
+      },
+      "displayName": "Jacob Siju (Unlicensed)",
+      "isExternalCollaborator": false,
+      "isGuest": false,
+      "locale": "en_GB",
+      "accountStatus": "active",
+      "_expandable": {
+        "operations": "",
+        "personalSpace": ""
+      },
+      "_links": {
+        "self": "https://slicepay.atlassian.net/wiki/rest/api/user?accountId=62e9145d25abc07e51c5826d"
+      }
+    },
+    "when": "2023-08-07T05:46:41.703Z",
+    "friendlyWhen": "Aug 07, 2023",
+    "message": "",
+    "number": 6,
+    "minorEdit": false,
+    "ncsStepVersion": "1",
+    "ncsStepVersionSource": "ncs-ack",
+    "confRev": "confluence$content$3024814095.187",
+    "contentTypeModified": false,
+    "_expandable": {
+      "collaborators": "",
+      "content": "/rest/api/content/3024814095"
+    },
+    "_links": {
+      "self": "https://slicepay.atlassian.net/wiki/rest/api/content/3024814095/version/6"
+    }
+  },
+  "ancestors": [
+    {
+      "id": "2883059807",
+      "type": "page",
+      "ari": "ari:cloud:confluence:adeba97b-6326-4a84-8a07-efafb97be347:page/2883059807",
+      "base64EncodedAri": "YXJpOmNsb3VkOmNvbmZsdWVuY2U6YWRlYmE5N2ItNjMyNi00YTg0LThhMDctZWZhZmI5N2JlMzQ3OmNvbnRlbnQvMjg4MzA1OTgwNw==",
+      "status": "current",
+      "title": "ARD Repository",
+      "macroRenderedOutput": {},
+      "extensions": {
+        "position": 529377872
+      },
+      "_expandable": {
+        "container": "/rest/api/space/HOR",
+        "metadata": "",
+        "restrictions": "/rest/api/content/2883059807/restriction/byOperation",
+        "history": "/rest/api/content/2883059807/history",
+        "body": "",
+        "version": "",
+        "descendants": "/rest/api/content/2883059807/descendant",
+        "space": "/rest/api/space/HOR",
+        "childTypes": "",
+        "schedulePublishInfo": "",
+        "operations": "",
+        "schedulePublishDate": "",
+        "children": "/rest/api/content/2883059807/child",
+        "ancestors": "",
+        "draftVersion": ""
+      },
+      "_links": {
+        "self": "https://slicepay.atlassian.net/wiki/rest/api/content/2883059807",
+        "tinyui": "/x/XwDYqw",
+        "editui": "/pages/resumedraft.action?draftId=2883059807",
+        "webui": "/spaces/HOR/pages/2883059807/ARD+Repository",
+        "edituiv2": "/spaces/HOR/pages/edit-v2/2883059807"
+      }
+    }
+  ],
+  "macroRenderedOutput": {},
+  "body": {
+    "storage": {
+      "value": "<table data-layout=\"default\" ac:local-id=\"c0aa6956-970d-4e76-a8e2-e264a41ddef9\"><colgroup><col style=\"width: 156.0px;\" /><col style=\"width: 604.0px;\" /></colgroup><tbody><tr><th data-highlight-colour=\"var(--ds-background-neutral, #F4F5F7)\"><h4><strong>Tl;DR</strong></h4></th><td data-highlight-colour=\"#f4f5f7\"><p>UPI Lite will allow the system to scale massively and also improve the overall SRs and speed of payments</p></td></tr></tbody></table><p><strong>Context:-</strong></p><ul><li><p>NPCI has recently launched UPI Lite framework to achieve the below-</p><ul><li><p>Enhanced customer experience by bypassing UPI PIN for transactions under ₹200</p></li><li><p>Increased success rate for under ₹200 transactions by reducing a leg in transaction process</p></li><li><p>Decluttering customer bank account and reducing load on emitter bank infra for scalability</p></li></ul></li><li><p>We need to implement this because -</p><ul><li><p>Better customer experience with improved success rate &amp; transaction speed</p></li><li><p>Be among the first to hit market- this will help in +ve marketing and increasing market share</p></li><li><p>Implementing this is mandatory from NPCI perspective</p></li></ul></li></ul><h3><strong>PRD/Figma Link:-</strong></h3><ol start=\"1\"><li><p><ac:link ac:card-appearance=\"inline\"><ri:page ri:space-key=\"PROD\" ri:content-title=\"UPI Lite\" ri:version-at-save=\"40\" /><ac:link-body>UPI Lite</ac:link-body></ac:link> </p></li></ol><h3><strong>Metrics to track:-</strong></h3><ol start=\"1\"><li><p>% of active customers who transact for under ₹200 transactions adopting UPI Lite</p></li><li><p>Success rate of UPI lite transactions</p></li></ol><h3><strong>Owner:-</strong></h3><ol start=\"1\"><li><p>ARD Owners - <ac:link><ri:user ri:account-id=\"62e9145d25abc07e51c5826d\" /></ac:link> </p></li><li><p>Peer QC Owner - <ac:link><ri:user ri:account-id=\"61e00cca68926d0068d15fc5\" /></ac:link> </p></li><li><p>Product Owner - <ac:link><ri:user ri:account-id=\"624be2701da0e100713cec88\" /></ac:link> </p></li></ol><p><strong>ARD Events:</strong></p><table data-layout=\"full-width\" ac:local-id=\"5b44d6d3-2036-4332-83f8-65b64552e986\"><colgroup><col style=\"width: 75.56px;\" /><col style=\"width: 75.56px;\" /><col style=\"width: 75.56px;\" /><col style=\"width: 75.56px;\" /><col style=\"width: 75.56px;\" /><col style=\"width: 75.56px;\" /><col style=\"width: 75.56px;\" /><col style=\"width: 75.56px;\" /><col style=\"width: 75.56px;\" /><col style=\"width: 140.0px;\" /><col style=\"width: 75.56px;\" /><col style=\"width: 140.0px;\" /><col style=\"width: 140.0px;\" /></colgroup><tbody><tr><td><p>EVENT NAME (lowercase)</p></td><td><p>EVENT TYPE</p></td><td><p>FE/BE</p></td><td><p>POD OWNER</p></td><td><p>EVENT TRIGGER</p></td><td><p>EVENT DESCRIPTION</p></td><td><p>SCREENSHOT</p></td><td><p>EVENT PROPERTY (lowercase)</p></td><td><p>EVENT PROPERTY VALUE</p></td><td><p>EVENT PROPERTY DESCRIPTION</p></td><td><p>AMPLITUDE</p></td><td><p>CLEVERTAP</p></td><td><p>COMMENTS</p></td></tr><tr><td><p>bank_account_linked_page_opened</p></td><td><p>page_open</p></td><td><p>FE</p></td><td><p>UPI</p></td><td><p>When the user successfully links a bank account to slice UPI</p></td><td><p>This window opens up right after account link in the UPI onboarding flow</p></td><td><ac:image ac:align=\"center\" ac:layout=\"center\" ac:original-height=\"1080\" ac:original-width=\"540\"><ri:attachment ri:filename=\"image-20230410-203831.png\" ri:version-at-save=\"1\" /></ac:image></td><td><p>event_type</p><p /><p>app_version</p><p /><p><ac:inline-comment-marker ac:ref=\"9e728762-2543-403a-81ac-bbd1ea922460\">auto_link_available</ac:inline-comment-marker></p><p /><p><ac:inline-comment-marker ac:ref=\"0d8ecb03-2330-41b0-b390-7b60de1e38f3\">link_type</ac:inline-comment-marker></p><p /><p>&nbsp;</p><p /><p /></td><td><p>page_open</p><p /><p>v1.1.1</p><p /><p>&lt;yes/no&gt;</p><p /><p /><p>&lt;auto/manual&gt;</p></td><td><p>auto_link_available: Checks if we were able to auto-pick banks for the user</p><p /><p>link_type: Checks if user selected a bank we suggested(auto) or if they selected a bank manually(manual)</p></td><td><p>T</p></td><td><p>F</p></td><td><p /></td></tr><tr><td><p>bank_account_linked_page_button_clicked</p></td><td><p>cta</p></td><td><p>FE</p></td><td><p>UPI</p></td><td><p>When user clicks on &lsquo;Add money&rsquo; or &lsquo;Maybe later&rsquo; option</p></td><td><p>Takes the user to the UPI lite setup flow or the MPIN setup flow</p></td><td><ac:image ac:align=\"center\" ac:layout=\"center\" ac:original-height=\"1080\" ac:original-width=\"540\"><ri:attachment ri:filename=\"image-20230410-203831.png\" ri:version-at-save=\"1\" /></ac:image></td><td><p>event_type</p><p /><p>app_version</p><p /><p>option</p></td><td><p>cta</p><p /><p>v1.1.1</p><p /><p>&lt;Add Money/Maybe later&gt;</p></td><td><p /></td><td><p>T</p></td><td><p>F</p></td><td><p /></td></tr><tr><td><p><ac:inline-comment-marker ac:ref=\"097c863a-73c4-47c0-9519-9ab9015fc46e\">linked_account_page_opened</ac:inline-comment-marker></p></td><td><p>page_open</p></td><td><p>FE</p></td><td><p>UPI</p></td><td><p>User lands on this page after clicking on the &lsquo;Add money&rsquo; option</p></td><td><p /></td><td><ac:image ac:align=\"center\" ac:layout=\"center\" ac:original-height=\"360\" ac:original-width=\"180\" ac:width=\"113\"><ri:attachment ri:filename=\"image-20230411-142455.png\" ri:version-at-save=\"1\" /></ac:image></td><td><p>event_type</p><p /><p>app_version</p><p /><p><ac:inline-comment-marker ac:ref=\"386d8477-4d03-4f9a-93a6-ee1e25b1516b\">lite_supported_account_present</ac:inline-comment-marker></p><p /><p /><p /><p /></td><td><p>page_open</p><p /><p>v1.1.1</p><p /><p>&lt;yes/no&gt;</p></td><td><p>lite_supported_account: Returns &ldquo;yes&rdquo; if a lite supported account is present</p></td><td><p>T</p></td><td><p>F</p></td><td><p /></td></tr><tr><td><p><ac:inline-comment-marker ac:ref=\"8300b478-9f9f-4889-895d-67c64f4252e7\">linked_account_page_link_another_bank_clicked</ac:inline-comment-marker></p></td><td><p>cta</p></td><td><p>FE</p></td><td><p>UPI</p></td><td><p><ac:inline-comment-marker ac:ref=\"0152233a-65b3-42ed-a918-75ed502ae32a\">User clicks on the &lsquo;Link another bank account&rsquo; option in the window</ac:inline-comment-marker></p></td><td><p>Takes the user to the select bank flow</p></td><td><ac:image ac:align=\"center\" ac:layout=\"center\" ac:original-height=\"360\" ac:original-width=\"180\"><ri:attachment ri:filename=\"image-20230411-142455.png\" ri:version-at-save=\"1\" /></ac:image></td><td><p>event_type</p><p /><p>app_version</p><p /><p>&nbsp;</p><p /><p /></td><td><p>cta</p><p /><p>v1.1.1</p><p /><p /></td><td><p /></td><td><p>T</p></td><td><p>F</p></td><td><p /></td></tr><tr><td><p><ac:inline-comment-marker ac:ref=\"bfc54f06-43e5-4e74-b441-ebddcbecb736\">linked_account_page_continue_clicked</ac:inline-comment-marker></p></td><td><p>cta</p></td><td><p>FE</p></td><td><p>UPI</p></td><td><p>User clicks on the &lsquo;Continue&rsquo; option in the window</p></td><td><p>Links the account and takes the user to the MPIN flow</p></td><td><ac:image ac:align=\"center\" ac:layout=\"center\" ac:original-height=\"360\" ac:original-width=\"180\"><ri:attachment ri:filename=\"image-20230411-142455.png\" ri:version-at-save=\"1\" /></ac:image></td><td><p>event_type</p><p /><p>app_version</p><p /><p /><p /><p /></td><td><p>cta</p><p /><p>v1.1.1</p><p /><p /></td><td><p /></td><td><p>T</p></td><td><p>F</p></td><td><p /></td></tr><tr><td><p>upi_lite_add_money_clicked</p></td><td><p>cta</p></td><td><p>FE</p></td><td><p>UPI</p></td><td><p>When the user clicks on the &lsquo;Add money&rsquo; option in any of the shown windows</p></td><td><p>There are multiple sources from where users can trigger this event</p></td><td><ac:image ac:align=\"center\" ac:layout=\"center\" ac:original-height=\"720\" ac:original-width=\"360\"><ri:attachment ri:filename=\"image-20230410-210229.png\" ri:version-at-save=\"1\" /></ac:image><ac:image ac:align=\"center\" ac:layout=\"center\" ac:original-height=\"1080\" ac:original-width=\"540\"><ri:attachment ri:filename=\"image-20230410-210127.png\" ri:version-at-save=\"1\" /></ac:image><ac:image ac:align=\"center\" ac:layout=\"center\" ac:original-height=\"1080\" ac:original-width=\"540\"><ri:attachment ri:filename=\"image-20230316-181615.png\" ri:version-at-save=\"1\" /></ac:image><ac:image ac:align=\"center\" ac:layout=\"center\" ac:original-height=\"720\" ac:original-width=\"360\"><ri:attachment ri:filename=\"image-20230404-152546.png\" ri:version-at-save=\"1\" /></ac:image><ac:image ac:align=\"center\" ac:layout=\"center\" ac:original-height=\"1080\" ac:original-width=\"540\" ac:width=\"102\"><ri:attachment ri:filename=\"image-20230410-203831.png\" ri:version-at-save=\"1\" /></ac:image><ac:image ac:align=\"center\" ac:layout=\"center\" ac:original-height=\"540\" ac:original-width=\"270\"><ri:attachment ri:filename=\"image-20230316-203122.png\" ri:version-at-save=\"1\" /></ac:image></td><td><p>event_type</p><p /><p>app_version</p><p /><p>source</p><p /><p /><p /><p /><p /><p /><p>upi_lite_enabled</p><p /><p /><p /><p>&nbsp;</p><p /><p /></td><td><p>cta</p><p /><p>v1.1.1</p><p /><p>&lt;<ac:inline-comment-marker ac:ref=\"76ab27ac-628c-4048-a286-0569f0cc6a69\">purple_screen_bottomsheet/upi_transaction_status_screen/upi_lite_transaction_status_screen/action_center/onboarding/linked_accounts</ac:inline-comment-marker>&gt;</p><p /><p>&lt;yes/no&gt;</p></td><td><p>The sources &lsquo;upi_transaction_status_screen' and 'upi_lite_transaction_status_screen&rsquo; will have different UIs hence these must be treated as two different sources</p></td><td><p>T</p></td><td><p>F</p></td><td><p /></td></tr><tr><td><p><ac:inline-comment-marker ac:ref=\"3c2c42ea-f442-4e0a-9fc2-cb647cc337f7\">upi_source_sheet</ac:inline-comment-marker></p></td><td><p>cta</p></td><td><p>FE</p></td><td><p>UPI</p></td><td><p>Bottomsheet opens when the user clicks on the &lsquo;Add money&rsquo; option in any of the shown windows and the user has multiple bank accounts linked which support UPI Lite</p></td><td><p /></td><td><ac:image ac:align=\"center\" ac:layout=\"center\" ac:original-height=\"720\" ac:original-width=\"360\"><ri:attachment ri:filename=\"image-20230410-203729.png\" ri:version-at-save=\"1\" /></ac:image></td><td><p>event_type</p><p /><p>app_version</p><p /><p>flow</p></td><td><p>page_open</p><p /><p>v1.1.1</p><p /><p>&lt;lite&gt;</p></td><td><p /></td><td><p>T</p></td><td><p>F</p></td><td><p>This is an existing event. We would just have to add the value &lsquo;lite&rsquo; to the 'flow' property and keep the value null for all the other entries </p></td></tr><tr><td><p><ac:inline-comment-marker ac:ref=\"386cc9a4-e55d-428d-bda0-9041508dc331\">upi_source_sheet_continue_clicked</ac:inline-comment-marker></p></td><td><p>cta</p></td><td><p>FE</p></td><td><p>UPI</p></td><td><p>When the user clicks on the &lsquo;Continue&rsquo; option in the bottomsheet</p></td><td><p /></td><td><ac:image ac:align=\"center\" ac:layout=\"center\" ac:original-height=\"720\" ac:original-width=\"360\"><ri:attachment ri:filename=\"image-20230410-203729.png\" ri:version-at-save=\"1\" /></ac:image></td><td><p>event_type</p><p /><p>app_version</p><p /><p>default_bank_selected</p></td><td><p>cta</p><p /><p>v1.1.1</p><p /><p>&lt;yes/no&gt;</p></td><td><p>default_bank_selected: To check if the bank selected by the user when they select on continue is same as the default UPI Lite bank account </p></td><td><p>T</p></td><td><p>F</p></td><td><p /></td></tr><tr><td><p>upi_lite_add_money_page_opened</p></td><td><p>page_open</p></td><td><p>FE</p></td><td><p>UPI</p></td><td><p>When the user enters the &lsquo;Add money&rsquo; window</p></td><td><p /></td><td><ac:image ac:align=\"center\" ac:layout=\"center\" ac:original-height=\"1080\" ac:original-width=\"540\"><ri:attachment ri:filename=\"image-20230404-150036.png\" ri:version-at-save=\"2\" /></ac:image></td><td><p>event_type</p><p /><p>app_version</p><p /><p>balance_bucket</p><p /><p /><p /><p>recommendation_shown</p></td><td><p>page_open</p><p /><p>v1.1.1</p><p /><p>&lt;0-500/500-1000/1000-1500/1500-2000&gt;</p><p /><p>&lt;yes/no&gt;</p></td><td><p>balance_bucket: Checks which bucket the user&rsquo;s balance is lying in before the user adds money</p></td><td><p>T</p></td><td><p>F</p></td><td><p /></td></tr><tr><td><p>upi_lite_add_money_amount_entered</p></td><td><p>cta</p></td><td><p>FE</p></td><td><p>UPI</p></td><td><p>When the user starts entering an amount </p></td><td><p /></td><td><ac:image ac:align=\"center\" ac:layout=\"center\" ac:original-height=\"1080\" ac:original-width=\"540\"><ri:attachment ri:filename=\"image-20230404-150036.png\" ri:version-at-save=\"2\" /></ac:image></td><td><p>event_type</p><p /><p>app_version</p></td><td><p>cta</p><p /><p>v1.1.1</p></td><td><p /></td><td><p>T</p></td><td><p>F</p></td><td><p /></td></tr><tr><td><p>upi_lite_add_money_reco_selected</p></td><td><p>cta</p></td><td><p>FE</p></td><td><p>UPI</p></td><td><p>When the user selects a recommended amount</p></td><td><p /></td><td><ac:image ac:align=\"center\" ac:layout=\"center\" ac:original-height=\"1080\" ac:original-width=\"540\"><ri:attachment ri:filename=\"image-20230404-150036.png\" ri:version-at-save=\"2\" /></ac:image></td><td><p>event_type</p><p /><p>app_version</p><p /><p>tile_rank</p></td><td><p>cta</p><p /><p>v1.1.1</p><p /><p>&lt;1/2/3&gt;</p></td><td><p /></td><td><p>T</p></td><td><p>F</p></td><td><p /></td></tr><tr><td><p>upi_lite_add_money_continue_clicked</p></td><td><p>cta</p></td><td><p>FE</p></td><td><p>UPI</p></td><td><p>When the user clicks on &lsquo;Continue&rsquo;</p></td><td><p /></td><td><ac:image ac:align=\"center\" ac:layout=\"center\" ac:original-height=\"1080\" ac:original-width=\"540\"><ri:attachment ri:filename=\"image-20230404-150036.png\" ri:version-at-save=\"2\" /></ac:image></td><td><p>event_type</p><p /><p>app_version</p><p /><p>reco_selected</p><p /><p /></td><td><p>cta</p><p /><p>v1.1.1</p><p /><p>&lt;yes/no&gt;</p></td><td><p /></td><td><p>T</p></td><td><p>F</p></td><td><p /></td></tr><tr><td><p><a href=\"https://slicepay.atlassian.net/wiki/spaces/HOR/pages/2901508109\"><u>back_clicked</u></a></p></td><td><p>cta</p></td><td><p>FE</p></td><td><p>UPI</p></td><td><p>when user clicks on top left back arrow</p></td><td><p>this event will take user back to the previous page</p></td><td><ac:image ac:align=\"center\" ac:layout=\"center\" ac:original-height=\"1080\" ac:original-width=\"540\"><ri:attachment ri:filename=\"image-20230404-150036.png\" ri:version-at-save=\"2\" /></ac:image></td><td><p>event_type</p><p><br />app_version</p><p><br />current_screen</p></td><td><p>cta</p><p /><p>v1.1.1</p><p /><p>&lt;current screen&gt;</p></td><td><p /></td><td><p>T</p></td><td><p>F</p></td><td><p /></td></tr><tr><td><p><ac:inline-comment-marker ac:ref=\"d8ef060e-3d24-4185-bbfd-b32f3531bbba\">upi_lite_add_money_t_c_clicked</ac:inline-comment-marker></p></td><td><p>cta</p></td><td><p>FE</p></td><td><p>UPI</p></td><td><p>when the user clicks on the T&amp;C option in the &lsquo;Add money&rsquo; window</p></td><td><p /></td><td><ac:image ac:align=\"center\" ac:layout=\"center\" ac:original-height=\"722\" ac:original-width=\"802\"><ri:attachment ri:filename=\"image-20230404-150312.png\" ri:version-at-save=\"1\" /></ac:image></td><td><p>event_type</p><p /><p>app_version</p></td><td><p>cta</p><p /><p>v1.1.1</p></td><td><p /></td><td><p>T</p></td><td><p>F</p></td><td><p /></td></tr><tr><td><p>upi_lite_disable_bottomsheet_opened</p></td><td><p>bottomsheet_open</p></td><td><p>FE</p></td><td><p>UPI</p></td><td><p>when the user clicks on the disable UPI Lite option in the UPI Lite account details page</p></td><td><p>Provides a confirmation prompt to the user to disable UPI Lite</p></td><td><ac:image ac:align=\"center\" ac:layout=\"center\" ac:original-height=\"720\" ac:original-width=\"360\"><ri:attachment ri:filename=\"image-20230316-204139.png\" ri:version-at-save=\"2\" /></ac:image></td><td><p>event_type</p><p /><p>app_version</p></td><td><p><ac:inline-comment-marker ac:ref=\"ae45861f-85c2-4b8c-a2c4-24b8bbb238ba\">bottomsheet_open</ac:inline-comment-marker></p><p /><p>v1.1.1</p></td><td><p /></td><td><p>T</p></td><td><p>F</p></td><td><p /></td></tr><tr><td><p>upi_lite_disable_button_clicked</p></td><td><p>cta</p></td><td><p>FE</p></td><td><p>UPI</p></td><td><p>when the user clicks on the &lsquo;Disable/Cancel&rsquo; button in the bottomsheet</p></td><td><p>Either cancels the prompt or disables UPI lite depending on the button clicked</p></td><td><ac:image ac:align=\"center\" ac:layout=\"center\" ac:original-height=\"720\" ac:original-width=\"360\"><ri:attachment ri:filename=\"image-20230316-204139.png\" ri:version-at-save=\"2\" /></ac:image></td><td><p>event_type</p><p /><p>app_version</p><p /><p>type</p></td><td><p>cta</p><p /><p>v1.1.1</p><p /><p>&lt;Cancel/Disable&gt;</p></td><td><p /></td><td><p>T</p></td><td><p>F</p></td><td><p /></td></tr><tr><td><p>toast_message</p></td><td><p>toast</p></td><td><p>FE</p></td><td><p>UPI</p></td><td><p>when the user receives a toast message after disabling UPI Lite</p></td><td><p /></td><td><ac:image ac:align=\"center\" ac:layout=\"center\" ac:original-height=\"720\" ac:original-width=\"360\"><ri:attachment ri:filename=\"image-20230404-144820.png\" ri:version-at-save=\"1\" /></ac:image></td><td><p>event_type</p><p /><p>app_version</p><p /><p>screen</p><p /><p>message_displayed</p><p /><p>flow</p></td><td><p>toast</p><p /><p>v1.1.1</p><p /><p>&lt;<ac:inline-comment-marker ac:ref=\"c1b04ef6-32ce-4735-9ab6-7e91a4b929de\">current_screen</ac:inline-comment-marker>&gt;</p><p /><p>&lt;message_displayed&gt;</p><p /><p>&lt;UPI Lite&gt;</p></td><td><p /></td><td><p>T</p></td><td><p>F</p></td><td><p /></td></tr></tbody></table><p>T</p><p /><p />",
+      "representation": "storage",
+      "embeddedContent": [],
+      "_expandable": {
+        "content": "/rest/api/content/3024814095"
+      }
+    },
+    "_expandable": {
+      "editor": "",
+      "atlas_doc_format": "",
+      "view": "",
+      "export_view": "",
+      "styled_view": "",
+      "dynamic": "",
+      "editor2": "",
+      "anonymous_export_view": ""
+    }
+  },
+  "metadata": {
+    "labels": {
+      "results": [],
+      "start": 0,
+      "limit": 200,
+      "size": 0,
+      "_links": {
+        "next": "/rest/api/content/3024814095/label?next=true&limit=200&start=200",
+        "self": "https://slicepay.atlassian.net/wiki/rest/api/content/3024814095/label"
+      }
+    },
+    "_expandable": {
+      "lastEditedTime": "",
+      "currentuser": "",
+      "comments": "",
+      "createdBySpaceBlueprint": "",
+      "isActiveLiveEditSession": "",
+      "sourceTemplateEntityId": "",
+      "simple": "",
+      "properties": "",
+      "frontend": "",
+      "likes": ""
+    }
+  },
+  "extensions": {
+    "position": 374599530
+  },
+  "_expandable": {
+    "childTypes": "",
+    "container": "/rest/api/space/HOR",
+    "schedulePublishInfo": "",
+    "operations": "",
+    "schedulePublishDate": "",
+    "children": "/rest/api/content/3024814095/child",
+    "restrictions": "/rest/api/content/3024814095/restriction/byOperation",
+    "history": "/rest/api/content/3024814095/history",
+    "draftVersion": "",
+    "descendants": "/rest/api/content/3024814095/descendant"
+  },
+  "_links": {
+    "editui": "/pages/resumedraft.action?draftId=3024814095",
+    "webui": "/spaces/HOR/pages/3024814095/UPI+Lite+-+ARD",
+    "edituiv2": "/spaces/HOR/pages/edit-v2/3024814095",
+    "context": "/wiki",
+    "self": "https://slicepay.atlassian.net/wiki/rest/api/content/3024814095",
+    "tinyui": "/x/DwBLt",
+    "collection": "/rest/api/content",
+    "base": "https://slicepay.atlassian.net/wiki"
+  }
+}

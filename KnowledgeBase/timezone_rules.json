@@ -1,0 +1,48 @@
+{
+  "business_rules": [
+    {
+      "id": "timezone_rule_001",
+      "description": "All date/time columns in customer_accounts_er and transactions_er tables are stored in UTC timezone",
+      "condition": "table IN ('customer_accounts_er', 'transactions_er') AND column_type = 'date' OR column_type = 'timestamp'",
+      "applies_to": [
+        "customer_accounts_er",
+        "transactions_er"
+      ],
+      "priority": "high",
+      "rule_type": "timezone",
+      "source_timezone": "UTC",
+      "target_timezone": "IST",
+      "offset_hours": 5.5
+    },
+    {
+      "id": "timezone_rule_002",
+      "description": "System operates in IST (Indian Standard Time, UTC+5:30)",
+      "condition": "system_default = true",
+      "applies_to": [
+        "all_tables"
+      ],
+      "priority": "high",
+      "rule_type": "system_timezone",
+      "timezone": "IST",
+      "offset_from_utc": 5.5
+    }
+  ],
+  "table_timezone_mappings": {
+    "customer_accounts_er": {
+      "timezone": "UTC",
+      "date_columns": [
+        "registration_date"
+      ],
+      "conversion_required": true,
+      "target_timezone": "IST"
+    },
+    "transactions_er": {
+      "timezone": "UTC",
+      "date_columns": [
+        "transaction_date"
+      ],
+      "conversion_required": true,
+      "target_timezone": "IST"
+    }
+  }
+}

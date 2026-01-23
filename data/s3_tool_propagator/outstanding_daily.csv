@@ -1,0 +1,17 @@
+order_id,order_type,principal_outstanding,settlement_flag,last_day,nbfc_name_colending,parent_nbfc_name
+ORD001,credin,10000.50,unsettled,2024-12-20,quadrillion,quadrillion
+ORD002,Digital,15000.75,unsettled,2024-12-20,slicenesfb,slicenesfb
+ORD003,credit_card,20000.00,settled,2024-12-20,nesfb,nesfb
+ORD004,credin,12000.25,unsettled,2024-12-20,quadrillion,quadrillion
+ORD005,Digital,18000.50,unsettled,2024-12-20,,slicenesfb
+ORD006,no_cost_emi,25000.00,unsettled,2024-12-20,nesfb,nesfb
+ORD007,credin,9000.75,unsettled,2024-12-20,quadrillion,quadrillion
+ORD008,Digital,16000.00,unsettled,2024-12-20,slicenesfb,slicenesfb
+ORD009,credin,11000.25,settled,2024-12-20,nesfb,nesfb
+ORD010,Digital,14000.50,unsettled,2024-12-20,quadrillion,quadrillion
+ORD011,credin,13000.75,unsettled,2024-12-20,slicenesfb,slicenesfb
+ORD012,Digital,17000.00,unsettled,2024-12-20,nesfb,nesfb
+ORD013,credin,10500.25,unsettled,2024-12-20,quadrillion,quadrillion
+ORD014,Digital,19000.50,unsettled,2024-12-20,slicenesfb,slicenesfb
+ORD015,credin,12500.75,unsettled,2024-12-20,nesfb,nesfb
+

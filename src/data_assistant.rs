@@ -14,7 +14,18 @@ use crate::intent_compiler::{IntentCompiler, IntentCompilationResult, TaskType};
 use crate::query_engine::QueryEngine;
 use crate::sql_engine::SqlEngine;
 use crate::sql_compiler::{SqlCompiler, SqlIntent};
+use crate::semantic::loader::load_from_file;
+use crate::semantic::registry::SemanticRegistry;
+use crate::schema_rag::embedder::SchemaEmbedder;
+use crate::schema_rag::retriever::SchemaRAG;
+use crate::execution_loop::loop::{ExecutionContext, ExecutionLoop};
+use crate::security::policy::UserContext;
+use crate::security::access_control::AccessController;
+use crate::security::query_guards::QueryGuards;
+use crate::observability::execution_log::ExecutionLogStore;
+use crate::observability::metrics::SystemMetrics;
 use std::path::PathBuf;
+use std::sync::Arc;
 use serde::{Deserialize, Serialize};
 use tracing::info;
 
@@ -76,6 +87,14 @@ pub struct DataAssistant {
     node_registry: NodeRegistry,
     metadata: Metadata,
     data_dir: PathBuf,
+    // New agentic components (optional - initialized on first use)
+    semantic_registry: Option<Arc<dyn SemanticRegistry>>,
+    schema_rag: Option<Arc<SchemaRAG>>,
+    execution_loop: Option<ExecutionLoop>,
+    access_controller: Option<AccessController>,
+    query_guards: QueryGuards,
+    log_store: ExecutionLogStore,
+    system_metrics: SystemMetrics,
 }
 
 impl DataAssistant {
@@ -91,6 +110,229 @@ impl DataAssistant {
             node_registry,
             metadata,
             data_dir,
+            semantic_registry: None,
+            schema_rag: None,
+            execution_loop: None,
+            access_controller: None,
+            query_guards: QueryGuards::new(),
+            log_store: ExecutionLogStore::new(),
+            system_metrics: SystemMetrics::new(),
+        }
+    }
+
+    /// Initialize the agentic execution system (lazy initialization)
+    pub async fn initialize_agentic_system(&mut self) -> Result<()> {
+        if self.semantic_registry.is_some() {
+            return Ok(()); // Already initialized
+        }
+
+        info!("🚀 Initializing agentic SQL execution system...");
+
+        // Load semantic registry
+        let registry_path = self.data_dir.join("../metadata/semantic_registry.json");
+        let semantic_registry = load_from_file(registry_path.to_str().unwrap_or("metadata/semantic_registry.json"))?;
+        info!("✅ Loaded semantic registry with {} metrics and {} dimensions", 
+            semantic_registry.list_metrics().len(),
+            semantic_registry.list_dimensions().len());
+
+        // Initialize schema embedder
+        let api_key = std::env::var("OPENAI_API_KEY").unwrap_or_else(|_| "dummy-api-key".to_string());
+        let base_url = std::env::var("OPENAI_BASE_URL").unwrap_or_else(|_| "https://api.openai.com/v1".to_string());
+        let embedder = SchemaEmbedder::new(api_key.clone(), base_url.clone(), "text-embedding-3-small".to_string());
+
+        // Initialize schema RAG
+        let mut schema_rag = SchemaRAG::new(
+            embedder,
+            self.metadata.clone(),
+            Arc::clone(&semantic_registry),
+        );
+        schema_rag.initialize().await?;
+        info!("✅ Initialized schema RAG with {} documents", schema_rag.vector_store_len());
+
+        // Initialize execution loop
+        let execution_loop = ExecutionLoop::new(3, true); // Max 3 attempts, abort on repeat error
+
+        // Initialize access controller (default to public for now)
+        let access_controller = AccessController::new(UserContext::public());
+
+        self.semantic_registry = Some(semantic_registry);
+        self.schema_rag = Some(Arc::new(schema_rag));
+        self.execution_loop = Some(execution_loop);
+        self.access_controller = Some(access_controller);
+
+        info!("✅ Agentic system initialized successfully");
+        Ok(())
+    }
+
+    /// Execute a data query using the new agentic execution loop
+    pub async fn execute_data_query_agentic(
+        &mut self,
+        question: &str,
+        knowledge_context: &str,
+        mut reasoning_steps: Vec<String>,
+    ) -> Result<AssistantResponse> {
+        // Initialize if needed
+        self.initialize_agentic_system().await?;
+
+        let query_id = uuid::Uuid::new_v4().to_string();
+        let start_time = std::time::Instant::now();
+
+        info!("🔍 Executing data query with agentic system...");
+        reasoning_steps.push("Using agentic execution loop with semantic metrics".to_string());
+
+        // Get required components
+        let semantic_registry = self.semantic_registry.as_ref().unwrap();
+        let schema_rag = self.schema_rag.as_ref().unwrap();
+        let execution_loop = self.execution_loop.as_ref().unwrap();
+        let access_controller = self.access_controller.as_ref().unwrap();
+
+        // Create execution context
+        // Clone LLM client (it's marked as Clone)
+        let context = ExecutionContext {
+            schema_rag: Arc::clone(schema_rag),
+            semantic_registry: Arc::clone(semantic_registry),
+            llm: self.llm.clone(),
+        };
+
+        // Execute with retry loop
+        match execution_loop.execute_with_retry(question, &context).await {
+            Ok(result) => {
+                let execution_time_ms = start_time.elapsed().as_millis() as u64;
+                reasoning_steps.push(format!("Generated intent after {} attempts", result.attempts));
+                reasoning_steps.push(format!("Compiled SQL: {}", result.sql));
+
+                // Validate intent against guards
+                if let Err(e) = self.query_guards.validate_intent(&result.intent, semantic_registry.as_ref()) {
+                    reasoning_steps.push(format!("Query guard validation failed: {}", e));
+                    return Ok(AssistantResponse {
+                        response_type: ResponseType::Error,
+                        answer: format!("Query validation failed: {}", e),
+                        clarification: None,
+                        query_result: None,
+                        relevant_knowledge: vec![],
+                        confidence: 0.0,
+                        reasoning_steps,
+                    });
+                }
+
+                // Authorize metric access
+                for metric_name in &result.intent.metrics {
+                    if let Some(metric) = semantic_registry.metric(metric_name) {
+                        if let Err(e) = access_controller.authorize_metric(metric.as_ref()) {
+                            reasoning_steps.push(format!("Access denied: {}", e));
+                            return Ok(AssistantResponse {
+                                response_type: ResponseType::Error,
+                                answer: format!("Access denied: {}", e),
+                                clarification: None,
+                                query_result: None,
+                                relevant_knowledge: vec![],
+                                confidence: 0.0,
+                                reasoning_steps,
+                            });
+                        }
+                    }
+                }
+
+                // Compile to SQL using semantic compiler
+                let compiler = SqlCompiler::new(self.metadata.clone());
+                let sql = compiler.compile_semantic(&result.intent, Arc::clone(semantic_registry))?;
+                reasoning_steps.push(format!("Compiled semantic SQL: {}", sql));
+
+                // Execute SQL
+                let sql_engine = SqlEngine::new(self.metadata.clone(), self.data_dir.clone());
+                match sql_engine.execute_sql(&sql).await {
+                    Ok(query_result) => {
+                        reasoning_steps.push(format!("Query executed successfully, returned {} rows", query_result.rows.len()));
+
+                        // Generate answer
+                        let answer = self.generate_answer_from_results(question, &sql, &query_result).await?;
+
+                        // Log success
+                        let log = crate::observability::execution_log::ExecutionLog::new(query_id.clone(), question.to_string())
+                            .with_attempt(result.attempts)
+                            .with_intent(result.intent.clone())
+                            .with_success(sql.clone(), execution_time_ms);
+                        self.log_store.add_log(log);
+
+                        // Track metrics
+                        for metric_name in &result.intent.metrics {
+                            self.system_metrics.record_metric_usage(metric_name);
+                        }
+                        for dimension_name in &result.intent.dimensions {
+                            self.system_metrics.record_dimension_usage(dimension_name);
+                        }
+                        self.system_metrics.record_execution_time("semantic_query", execution_time_ms);
+
+                        let result_json = serde_json::json!({
+                            "sql": sql,
+                            "columns": query_result.columns,
+                            "rows": query_result.rows,
+                            "row_count": query_result.rows.len(),
+                            "attempts": result.attempts,
+                            "execution_time_ms": execution_time_ms
+                        });
+
+                        Ok(AssistantResponse {
+                            response_type: ResponseType::QueryResult,
+                            answer,
+                            clarification: None,
+                            query_result: Some(result_json),
+                            relevant_knowledge: vec![],
+                            confidence: 0.95,
+                            reasoning_steps,
+                        })
+                    }
+                    Err(e) => {
+                        reasoning_steps.push(format!("SQL execution failed: {}", e));
+
+                        // Log failure
+                        let log = crate::observability::execution_log::ExecutionLog::new(query_id.clone(), question.to_string())
+                            .with_attempt(result.attempts)
+                            .with_intent(result.intent.clone())
+                            .with_error(
+                                crate::execution_loop::error_classifier::SqlErrorClass::ExecutionError(e.to_string()),
+                                e.to_string()
+                            );
+                        self.log_store.add_log(log);
+
+                        Ok(AssistantResponse {
+                            response_type: ResponseType::Error,
+                            answer: format!("Failed to execute query: {}", e),
+                            clarification: None,
+                            query_result: Some(serde_json::json!({
+                                "sql": sql,
+                                "error": e.to_string()
+                            })),
+                            relevant_knowledge: vec![],
+                            confidence: 0.0,
+                            reasoning_steps,
+                        })
+                    }
+                }
+            }
+            Err(e) => {
+                let execution_time_ms = start_time.elapsed().as_millis() as u64;
+                reasoning_steps.push(format!("Execution loop failed after max retries: {}", e));
+
+                // Log failure
+                let log = crate::observability::execution_log::ExecutionLog::new(query_id.clone(), question.to_string())
+                    .with_error(
+                        crate::execution_loop::error_classifier::SqlErrorClass::ExecutionError(e.to_string()),
+                        e.to_string()
+                    );
+                self.log_store.add_log(log);
+                self.system_metrics.record_error("execution_loop_failed");
+
+                Ok(AssistantResponse {
+                    response_type: ResponseType::Error,
+                    answer: format!("Failed to generate query after multiple attempts: {}", e),
+                    clarification: None,
+                    query_result: None,
+                    relevant_knowledge: vec![],
+                    confidence: 0.0,
+                    reasoning_steps,
+                })
+            }
         }
     }
     
@@ -125,10 +367,17 @@ impl DataAssistant {
                 Ok(response)
             }
             QueryType::DataQuery => {
-                // Execute as a data query
-                let mut response = self.execute_data_query(question, &knowledge_context, reasoning_steps).await?;
-                response.relevant_knowledge = self.build_knowledge_references(nodes_ref, knowledge_pages_ref);
-                Ok(response)
+                // Try agentic execution first, fallback to legacy if not initialized
+                if self.semantic_registry.is_some() {
+                    let mut response = self.execute_data_query_agentic(question, &knowledge_context, reasoning_steps).await?;
+                    response.relevant_knowledge = self.build_knowledge_references(nodes_ref, knowledge_pages_ref);
+                    Ok(response)
+                } else {
+                    // Fallback to legacy JSON-based approach
+                    let mut response = self.execute_data_query(question, &knowledge_context, reasoning_steps).await?;
+                    response.relevant_knowledge = self.build_knowledge_references(nodes_ref, knowledge_pages_ref);
+                    Ok(response)
+                }
             }
             QueryType::NeedsClarification(clarification) => {
                 Ok(AssistantResponse {
@@ -470,40 +719,150 @@ INSTRUCTIONS:
   "tables": ["table_name_or_pattern"],
   "columns": [{{"name": "column_pattern", "table": "optional_table", "alias": "optional_alias"}}],
   "aggregations": [{{"function": "sum|avg|count|min|max", "column": "column_pattern", "table": "optional", "alias": "optional"}}],
-  "filters": [{{"column": "column_pattern", "table": "optional", "operator": "=|!=|>|<|>=|<=|IN|LIKE|IS NULL", "value": "value_or_array"}}],
+  "filters": [{{"column": "column_pattern", "table": "optional", "operator": "=|!=|>|<|>=|<=|IN|LIKE|IS NULL|IS NOT NULL", "value": "value_or_array"}}],
   "group_by": ["column_pattern"],
   "order_by": [{{"column": "column_pattern", "table": "optional", "direction": "ASC|DESC"}}],
-  "limit": number,
+  "limit": number_or_null,
   "joins": [{{"left_table": "table1", "right_table": "table2", "join_type": "INNER|LEFT|RIGHT|FULL", "condition": [{{"left_column": "col1", "right_column": "col2"}}]}}],
-  "date_constraint": {{"column": "optional_date_column", "value": "2024-12-31" | {{"start": "...", "end": "..."}} | "end_of_year|start_of_year|today"}}
+  "date_constraint": null_or_{{ "column": "optional_date_column", "value": "2024-12-31" | {{"start": "...", "end": "..."}} | "end_of_year|start_of_year|today" }}
 }}
 
-2. Use partial/pattern matching for table and column names (e.g., "outstanding" will match "total_outstanding_balance")
-3. For "end of year", use {{"value": "end_of_year"}}
-4. For aggregations like "total", use {{"function": "sum"}}
-5. Return ONLY valid JSON, no markdown, no explanations
+CRITICAL RULES:
+- ALL filter objects MUST have a "value" field (except for "IS NULL" and "IS NOT NULL" operators)
+- If date_constraint is not needed, set it to null (not an empty object {{}})
+- If date_constraint is used, it MUST have a "value" field
+- Use partial/pattern matching for table and column names (e.g., "outstanding" will match "total_outstanding_balance")
+- For "end of year", use {{"value": "end_of_year"}}
+- For aggregations like "total", use {{"function": "sum"}}
+- Return ONLY valid JSON, no markdown, no explanations, no code blocks
 
 JSON:"#,
             question, schema_info, knowledge_context
         );
         
-        let json_str = self.llm.call_llm(&prompt).await?;
+        // Try up to 3 times with improved prompts
+        let mut last_error = None;
+        let mut current_prompt = prompt.clone();
         
-        // Clean up JSON - remove markdown code blocks
-        let cleaned_json = json_str
-            .trim()
-            .trim_start_matches("```json")
-            .trim_start_matches("```")
-            .trim_end_matches("```")
-            .trim()
-            .trim_start_matches("JSON:")
-            .trim();
+        for attempt in 1..=3 {
+            let json_str = self.llm.call_llm(&current_prompt).await?;
+            
+            // Clean up JSON - remove markdown code blocks
+            let cleaned_json = json_str
+                .trim()
+                .trim_start_matches("```json")
+                .trim_start_matches("```")
+                .trim_end_matches("```")
+                .trim()
+                .trim_start_matches("JSON:")
+                .trim();
+            
+            // Validate and fix JSON before parsing
+            let fixed_json = match self.validate_and_fix_json(&cleaned_json) {
+                Ok(fixed) => fixed,
+                Err(e) => {
+                    last_error = Some((e, cleaned_json.clone()));
+                    if attempt < 3 {
+                        // Improve prompt for retry
+                        current_prompt = format!(
+                            "{}\n\n⚠️ RETRY ATTEMPT {}: The previous JSON was invalid. Error: {}\n\
+                            CRITICAL FIXES NEEDED:\n\
+                            1. All filter objects MUST have 'value' field (except IS NULL/IS NOT NULL)\n\
+                            2. date_constraint must be null OR have a 'value' field (never empty object {{}})\n\
+                            3. All required fields must be present\n\
+                            4. Return ONLY valid JSON, no markdown, no explanations, no code blocks\n\
+                            5. Double-check JSON syntax (matching braces, quotes, commas)\n\n\
+                            Please regenerate the JSON with these fixes:",
+                            prompt, attempt, e
+                        );
+                        continue;
+                    } else {
+                        return Err(e);
+                    }
+                }
+            };
+            
+            // Parse JSON intent
+            match serde_json::from_str::<SqlIntent>(&fixed_json) {
+                Ok(intent) => return Ok(intent),
+                Err(e) => {
+                    last_error = Some((e, fixed_json.clone()));
+                    if attempt < 3 {
+                        // Improve prompt for retry with parsing error
+                        current_prompt = format!(
+                            "{}\n\n⚠️ RETRY ATTEMPT {}: JSON parsing failed. Error: {}\n\
+                            The JSON you generated:\n{}\n\n\
+                            CRITICAL FIXES NEEDED:\n\
+                            1. All filter objects MUST have 'value' field (except IS NULL/IS NOT NULL)\n\
+                            2. date_constraint must be null OR have a 'value' field (never empty object {{}})\n\
+                            3. All required fields must be present\n\
+                            4. Return ONLY valid JSON, no markdown, no explanations, no code blocks\n\
+                            5. Double-check JSON syntax (matching braces, quotes, commas)\n\n\
+                            Please regenerate the JSON with these fixes:",
+                            prompt, attempt, e, fixed_json
+                        );
+                    }
+                }
+            }
+        }
         
-        // Parse JSON intent
-        let intent: SqlIntent = serde_json::from_str(cleaned_json)
-            .map_err(|e| RcaError::Llm(format!("Failed to parse SQL intent JSON: {}. Response: {}", e, cleaned_json)))?;
+        // If all attempts failed, return the last error
+        if let Some((e, json)) = last_error {
+            return Err(RcaError::Llm(format!(
+                "Failed to parse SQL intent JSON after 3 attempts: {}. Last JSON response: {}",
+                e, json
+            )));
+        }
         
-        Ok(intent)
+        Err(RcaError::Llm("Failed to generate SQL intent".to_string()))
+    }
+    
+    /// Validate and fix JSON before parsing
+    fn validate_and_fix_json(&self, json_str: &str) -> Result<String> {
+        // Parse as JSON value to validate structure
+        let mut json_value: serde_json::Value = serde_json::from_str(json_str)
+            .map_err(|e| RcaError::Llm(format!("Invalid JSON structure: {}", e)))?;
+        
+        // Fix common issues
+        
+        // 1. Fix empty date_constraint objects
+        if let Some(obj) = json_value.as_object_mut() {
+            if let Some(date_constraint) = obj.get_mut("date_constraint") {
+                if let Some(dc_obj) = date_constraint.as_object_mut() {
+                    // If date_constraint is empty or has no value, set it to null
+                    if dc_obj.is_empty() || !dc_obj.contains_key("value") {
+                        *date_constraint = serde_json::Value::Null;
+                    }
+                }
+            }
+            
+            // 2. Fix filters missing value field (except for IS NULL/IS NOT NULL)
+            if let Some(filters) = obj.get_mut("filters") {
+                if let Some(filters_arr) = filters.as_array_mut() {
+                    for filter in filters_arr {
+                        if let Some(filter_obj) = filter.as_object_mut() {
+                            let operator = filter_obj.get("operator")
+                                .and_then(|v| v.as_str())
+                                .unwrap_or("")
+                                .to_uppercase();
+                            
+                            // IS NULL and IS NOT NULL don't need values
+                            if operator != "IS NULL" && operator != "IS NOT NULL" {
+                                if !filter_obj.contains_key("value") {
+                                    // Set a default null value - this will cause an error later
+                                    // but at least the JSON will parse
+                                    filter_obj.insert("value".to_string(), serde_json::Value::Null);
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        
+        // Convert back to JSON string
+        Ok(serde_json::to_string(&json_value)
+            .map_err(|e| RcaError::Llm(format!("Failed to serialize fixed JSON: {}", e)))?)
     }
     
     /// Generate SQL from intent using deterministic compiler

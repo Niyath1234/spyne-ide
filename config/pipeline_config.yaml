@@ -1,0 +1,98 @@
+# Document Retrieval Pipeline Configuration
+
+# Directories
+directories:
+  raw: "data/raw"
+  processed: "data/processed"
+  logs: "logs"
+
+# Vector Database
+vector_db:
+  index_name: "technical-docs"
+  dimension: 1536
+  metric: "cosine"
+
+# Pipeline Settings
+pipeline:
+  # Incremental processing (only process new/changed files)
+  incremental: true
+  
+  # Force reprocessing of all files
+  force: false
+  
+  # Logging level: DEBUG, INFO, WARNING, ERROR
+  log_level: "INFO"
+  
+  # Batch sizes
+  ingestion_batch_size: 10
+  indexing_batch_size: 100
+
+# Scheduling (for cron/Airflow)
+scheduling:
+  # Cron schedule (if using cron)
+  cron_schedule: "0 */6 * * *"  # Every 6 hours
+  
+  # Airflow schedule interval (if using Airflow)
+  airflow_schedule: "0 6 * * *"  # Daily at 6 AM
+  
+  # Timezone
+  timezone: "UTC"
+
+# Notifications
+notifications:
+  # Email notifications on failure
+  email_on_failure: true
+  email_recipients:
+    - "admin@example.com"
+  
+  # Slack webhook (optional)
+  slack_webhook: null
+  
+  # Send notification even on success (for monitoring)
+  notify_on_success: false
+
+# Processing Options
+processing:
+  # Document types to process
+  document_types:
+    - "ARD"
+    - "PRD"
+    - "TRD"
+  
+  # File extensions to process
+  file_extensions:
+    - ".pdf"
+    - ".docx"
+  
+  # Maximum file size (in MB)
+  max_file_size_mb: 100
+  
+  # Skip files matching these patterns
+  skip_patterns:
+    - ".*\\.tmp$"
+    - ".*~$"
+
+# Chunking Settings
+chunking:
+  chunk_size: 1024
+  chunk_overlap: 200
+  preserve_tables: true
+  preserve_hierarchy: true
+
+# Retrieval Settings
+retrieval:
+  # Hybrid search alpha (0.0 = sparse only, 1.0 = dense only)
+  hybrid_alpha: 0.7
+  
+  # Initial retrieval count
+  top_k_retrieval: 20
+  
+  # Final chunks after reranking
+  top_k_rerank: 5
+  
+  # LLM model
+  llm_model: "gpt-4o"
+  
+  # Rerank model
+  rerank_model: "rerank-english-v3.0"
+

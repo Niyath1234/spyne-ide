@@ -200,6 +200,45 @@
       "source": "ARD",
       "product": "slice mini passbook",
       "ref_id": "PROD-3649-2898362610"
+    },
+    "customer_accounts_er": {
+      "description": "Customer and account data mapped from ER diagram",
+      "primary_key": [
+        "customer_id"
+      ],
+      "key_fields": [
+        "customer_id"
+      ],
+      "attributes": [
+        "customer_id",
+        "customer_name",
+        "customer_type",
+        "registration_date",
+        "account_id",
+        "account_balance",
+        "account_status",
+        "account_type"
+      ],
+      "source": "ER_DIAGRAM"
+    },
+    "transactions_er": {
+      "description": "Transaction data mapped from ER diagram",
+      "primary_key": [
+        "customer_id",
+        "transaction_id"
+      ],
+      "key_fields": [
+        "customer_id",
+        "transaction_id"
+      ],
+      "attributes": [
+        "customer_id",
+        "transaction_id",
+        "transaction_date",
+        "transaction_amount",
+        "transaction_type"
+      ],
+      "source": "ER_DIAGRAM"
     }
   },
   "relationships": {
@@ -212,6 +251,16 @@
       "description": "Repayment records connect to payment details",
       "join_key": "repay_id to repayment_txn_id",
       "relationship": "one-to-one"
+    },
+    "customer_accounts_er_to_transactions_er": {
+      "description": "Customer accounts have many transactions",
+      "from_table": "customer_accounts_er",
+      "to_table": "transactions_er",
+      "type": "one-to-many",
+      "join_keys": {
+        "customer_id": "customer_id"
+      },
+      "source": "ER_DIAGRAM"
     }
   },
   "events": {
@@ -341,5 +390,9 @@
       "product": "slice mini passbook",
       "ref_id": "PROD-3649-2898362610"
     }
+  },
+  "_metadata": {
+    "last_updated": "2026-01-23T11:09:49.497801",
+    "version": "1.0"
   }
 }

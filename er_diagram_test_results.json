@@ -1,0 +1,91 @@
+{
+  "timestamp": "2026-01-23T11:10:49.242844",
+  "test_type": "er_diagram_flow",
+  "results": {
+    "api1_success": false,
+    "api2_success": false,
+    "tables_created": 0,
+    "kb_enrichment_success": true,
+    "kb_nodes": 7,
+    "kb_relationships": 3,
+    "kb_joins": 0,
+    "kb_rules": 0,
+    "queries_successful": 8,
+    "queries_total": 10
+  },
+  "created_tables": [],
+  "kb_enrichment": {
+    "added_joins": 0,
+    "added_relationships": 0,
+    "added_tables": 0,
+    "added_terms": 0,
+    "errors": [
+      [
+        "ER_DIAGRAM",
+        "'joins'"
+      ]
+    ],
+    "message": "Knowledge base enriched successfully",
+    "processed": [],
+    "success": true
+  },
+  "kb_verification": {
+    "nodes_found": 7,
+    "relationships_found": 3,
+    "joins_found": [],
+    "rules_found": 0,
+    "all_valid": true
+  },
+  "query_results": [
+    {
+      "query": "How many customer records are in the customer_accounts_er table?",
+      "success": true,
+      "answer": "I need more information to answer your question."
+    },
+    {
+      "query": "What is the total transaction amount in transactions_er?",
+      "success": true,
+      "answer": "I need more information to answer your question."
+    },
+    {
+      "query": "Show me the average account balance by customer type",
+      "success": false,
+      "answer": "N/A"
+    },
+    {
+      "query": "What are the different transaction types and their counts?",
+      "success": true,
+      "answer": "I need more information to answer your question."
+    },
+    {
+      "query": "Can you join customer_accounts_er and transactions_er on customer_id and show total transactions per customer?",
+      "success": true,
+      "answer": "I need more information to answer your question."
+    },
+    {
+      "query": "What is the distribution of account statuses in customer_accounts_er?",
+      "success": true,
+      "answer": "I need more information to answer your question."
+    },
+    {
+      "query": "Show me customers with account balance greater than 50000",
+      "success": false,
+      "answer": "N/A"
+    },
+    {
+      "query": "What is the total transaction amount grouped by transaction type?",
+      "success": true,
+      "answer": "I need more information to answer your question."
+    },
+    {
+      "query": "How many transactions does each customer have?",
+      "success": true,
+      "answer": "I need more information to answer your question."
+    },
+    {
+      "query": "What is the relationship between customer accounts and transactions?",
+      "success": true,
+      "answer": "{\n  \"answer\": \"The provided knowledge base context does not include any transactions table or schema details, so the relationship between customer accounts and transactions cannot be determined from the available information.\",\n  \"what_we_can_infer_from_context\": {\n    \"customer_accounts_table\": \"customer_accounts (system: core_system, entity: customer) exists and likely stores account-level data for customers.\",\n    \"transactions_tables\": \"No table named like transactions/txn/ledger/postings is listed in the available tables.\"\n  },\n  \"examples_from_available_tables\": [\n    {\n      \"table\": \"core_system.customer_accounts\",\n      \"entity\": \"customer\",\n      \"note\": \"Account data is available here, but no transaction linkage is shown in the context.\"\n    }\n  ],\n  \"what_is_missing_to_answer\": [\n    \"A transactions table (e.g., account_transactions, transaction_ledger, postings) and its key columns\",\n    \"Join keys between customer_accounts and transactions (e.g., account_id/account_number, customer_id)\"\n  ]\n}"
+    }
+  ]
+}

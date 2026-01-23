@@ -1,11 +1,53 @@
 {
   "tables": [
     {
-      "name": "customer_accounts",
-      "system": "core_system",
+      "name": "customer_master_a",
+      "system": "system_a",
       "entity": "customer",
-      "primary_key": ["customer_id"],
-      "time_column": null,
+      "primary_key": [
+        "customer_id"
+      ],
+      "time_column": "registration_date",
+      "columns": [
+        {
+          "name": "customer_id",
+          "type": "string",
+          "description": "Unique customer identifier"
+        },
+        {
+          "name": "customer_name",
+          "type": "string",
+          "description": "Customer name"
+        },
+        {
+          "name": "customer_type",
+          "type": "string",
+          "description": "Type of customer"
+        },
+        {
+          "name": "registration_date",
+          "type": "date",
+          "description": "Customer registration date"
+        }
+      ],
+      "grain": [
+        "customer_id"
+      ],
+      "labels": [
+        "customer",
+        "master",
+        "system_a"
+      ],
+      "path": "complex_multi_table_test/customer_master_a.csv"
+    },
+    {
+      "name": "customer_accounts_a",
+      "system": "system_a",
+      "entity": "customer",
+      "primary_key": [
+        "customer_id",
+        "account_id"
+      ],
       "columns": [
         {
           "name": "customer_id",
@@ -13,26 +55,47 @@
           "description": "Customer identifier"
         },
         {
-          "name": "branch_code",
+          "name": "account_id",
           "type": "string",
-          "description": "Branch code"
+          "description": "Account identifier"
         },
         {
-          "name": "is_active",
-          "type": "integer",
-          "description": "Active flag (1=active, 0=inactive)"
+          "name": "account_balance",
+          "type": "float",
+          "description": "Current account balance"
+        },
+        {
+          "name": "account_status",
+          "type": "string",
+          "description": "Account status (active, closed, suspended)"
+        },
+        {
+          "name": "account_type",
+          "type": "string",
+          "description": "Type of account"
         }
       ],
-      "grain": ["customer_id"],
-      "labels": ["customer", "account", "core_system"],
-      "path": "minority_recon/customer_accounts.csv"
+      "grain": [
+        "customer_id",
+        "account_id"
+      ],
+      "labels": [
+        "customer",
+        "account",
+        "system_a"
+      ],
+      "path": "complex_multi_table_test/customer_accounts_a.csv",
+      "time_column": "account_id"
     },
     {
-      "name": "customer_ind_info",
-      "system": "core_system",
+      "name": "customer_transactions_a",
+      "system": "system_a",
       "entity": "customer",
-      "primary_key": ["customer_id"],
-      "time_column": null,
+      "primary_key": [
+        "customer_id",
+        "transaction_id"
+      ],
+      "time_column": "transaction_date",
       "columns": [
         {
           "name": "customer_id",
@@ -40,193 +103,187 @@
           "description": "Customer identifier"
         },
         {
-          "name": "religion_code",
+          "name": "transaction_id",
           "type": "string",
-          "description": "Religion code"
+          "description": "Transaction identifier"
         },
         {
-          "name": "minority_code",
+          "name": "transaction_date",
+          "type": "date",
+          "description": "Transaction date"
+        },
+        {
+          "name": "transaction_amount",
+          "type": "float",
+          "description": "Transaction amount"
+        },
+        {
+          "name": "transaction_type",
           "type": "string",
-          "description": "Minority code"
-        },
-        {
-          "name": "sex_code",
-          "type": "integer",
-          "description": "Sex code (1=Male, 2=Female, 3=Other)"
-        },
-        {
-          "name": "is_active",
-          "type": "integer",
-          "description": "Active flag (1=active, 0=inactive)"
+          "description": "Type of transaction (debit, credit)"
         }
       ],
-      "grain": ["customer_id"],
-      "labels": ["customer", "demographics", "core_system"],
-      "path": "minority_recon/customer_ind_info.csv"
-    },
-    {
-      "name": "picklist_type_data",
-      "system": "core_system",
-      "entity": "lookup",
-      "primary_key": ["type_code", "data_code"],
-      "time_column": null,
-      "columns": [
-        {
-          "name": "type_code",
-          "type": "integer",
-          "description": "Picklist type code (49=religion, 91=religion_alt, 190=minority, 4=state)"
-        },
-        {
-          "name": "data_code",
-          "type": "string",
-          "description": "Data code"
-        },
-        {
-          "name": "data_description",
-          "type": "string",
-          "description": "Data description"
-        },
-        {
-          "name": "is_active",
-          "type": "boolean",
-          "description": "Active flag"
-        }
+      "grain": [
+        "customer_id",
+        "transaction_id"
       ],
-      "grain": ["type_code", "data_code"],
-      "labels": ["lookup", "picklist", "core_system"],
-      "path": "minority_recon/picklist_type_data.csv"
-    },
-    {
-      "name": "branch_master",
-      "system": "core_system",
-      "entity": "branch",
-      "primary_key": ["branch_code"],
-      "time_column": null,
-      "columns": [
-        {
-          "name": "branch_code",
-          "type": "string",
-          "description": "Branch code"
-        },
-        {
-          "name": "state_code",
-          "type": "string",
-          "description": "State code"
-        },
-        {
-          "name": "is_active",
-          "type": "integer",
-          "description": "Active flag (1=active, 0=inactive)"
-        }
+      "labels": [
+        "customer",
+        "transaction",
+        "system_a"
       ],
-      "grain": ["branch_code"],
-      "labels": ["branch", "master", "core_system"],
-      "path": "minority_recon/branch_master.csv"
+      "path": "complex_multi_table_test/customer_transactions_a.csv"
     },
     {
-      "name": "asset_sourcing_personal_details_v2",
-      "system": "los_system",
+      "name": "customer_balances_a",
+      "system": "system_a",
       "entity": "customer",
-      "primary_key": ["cif"],
-      "time_column": null,
+      "primary_key": [
+        "customer_id",
+        "balance_date"
+      ],
+      "time_column": "balance_date",
       "columns": [
         {
-          "name": "cif",
+          "name": "customer_id",
           "type": "string",
-          "description": "Customer identifier (CIF)"
+          "description": "Customer identifier"
         },
         {
-          "name": "applicant_id",
-          "type": "string",
-          "description": "Applicant identifier"
+          "name": "balance_date",
+          "type": "date",
+          "description": "Balance snapshot date"
         },
         {
-          "name": "applicant_type",
-          "type": "string",
-          "description": "Applicant type"
+          "name": "total_balance",
+          "type": "float",
+          "description": "Total balance on this date"
         },
         {
-          "name": "religion",
-          "type": "string",
-          "description": "Religion"
+          "name": "principal_balance",
+          "type": "float",
+          "description": "Principal balance"
         },
         {
-          "name": "social_category",
-          "type": "string",
-          "description": "Social/Minority category"
-        },
-        {
-          "name": "marital_status",
-          "type": "string",
-          "description": "Marital status"
+          "name": "interest_balance",
+          "type": "float",
+          "description": "Interest balance"
         }
       ],
-      "grain": ["cif"],
-      "labels": ["customer", "los", "los_system"],
-      "path": "minority_recon/asset_sourcing_personal_details_v2.csv"
+      "grain": [
+        "customer_id",
+        "balance_date"
+      ],
+      "labels": [
+        "customer",
+        "balance",
+        "system_a"
+      ],
+      "path": "complex_multi_table_test/customer_balances_a.csv"
     },
     {
-      "name": "table_complete_profile",
-      "system": "rca_engine",
-      "entity": "metadata",
-      "primary_key": ["table_name"],
-      "time_column": null,
+      "name": "customer_summary_a",
+      "system": "system_a",
+      "entity": "customer",
+      "primary_key": [
+        "customer_id"
+      ],
+      "time_column": "as_of_date",
       "columns": [
         {
-          "name": "table_name",
+          "name": "customer_id",
           "type": "string",
-          "description": "Table name"
+          "description": "Customer identifier"
         },
         {
-          "name": "system",
-          "type": "string",
-          "description": "System name"
+          "name": "as_of_date",
+          "type": "date",
+          "description": "As of date for summary"
         },
         {
-          "name": "entity_id",
-          "type": "string",
-          "description": "Entity identifier"
+          "name": "total_outstanding",
+          "type": "float",
+          "description": "Total outstanding amount"
         },
         {
-          "name": "row_count",
-          "type": "bigint",
-          "description": "Number of rows"
+          "name": "writeoff_amount",
+          "type": "float",
+          "description": "Writeoff amount"
         },
         {
-          "name": "table_size_bytes",
-          "type": "bigint",
-          "description": "Table size in bytes"
-        },
-        {
-          "name": "avg_row_length",
+          "name": "active_accounts_count",
           "type": "integer",
-          "description": "Average row length"
-        },
-        {
-          "name": "avg_completeness",
-          "type": "double precision",
-          "description": "Average completeness score"
-        },
-        {
-          "name": "avg_validity",
-          "type": "double precision",
-          "description": "Average validity score"
-        },
-        {
-          "name": "freshest_data",
-          "type": "string",
-          "description": "Date of freshest data"
+          "description": "Number of active accounts"
         }
       ],
-      "grain": ["table_name"],
-      "labels": ["metadata", "system"],
-      "path": "table_complete_profile.parquet"
+      "grain": [
+        "customer_id"
+      ],
+      "labels": [
+        "customer",
+        "summary",
+        "system_a"
+      ],
+      "path": "complex_multi_table_test/customer_summary_a.csv"
     },
     {
-      "name": "assetsdb_gold_lmsdata_loan",
-      "system": "lms",
+      "name": "loan_master_b",
+      "system": "system_b",
       "entity": "loan",
-      "primary_key": ["loan_id"],
+      "primary_key": [
+        "loan_id"
+      ],
+      "time_column": "disbursement_date",
+      "columns": [
+        {
+          "name": "loan_id",
+          "type": "string",
+          "description": "Unique loan identifier"
+        },
+        {
+          "name": "customer_id",
+          "type": "string",
+          "description": "Customer identifier"
+        },
+        {
+          "name": "loan_amount",
+          "type": "float",
+          "description": "Original loan amount"
+        },
+        {
+          "name": "loan_status",
+          "type": "string",
+          "description": "Loan status (active, overdue, closed, written_off)"
+        },
+        {
+          "name": "disbursement_date",
+          "type": "date",
+          "description": "Loan disbursement date"
+        },
+        {
+          "name": "interest_rate",
+          "type": "float",
+          "description": "Interest rate"
+        }
+      ],
+      "grain": [
+        "loan_id"
+      ],
+      "labels": [
+        "loan",
+        "master",
+        "system_b"
+      ],
+      "path": "complex_multi_table_test/loan_master_b.csv"
+    },
+    {
+      "name": "loan_disbursements_b",
+      "system": "system_b",
+      "entity": "loan",
+      "primary_key": [
+        "loan_id",
+        "disbursement_id"
+      ],
       "time_column": "disbursement_date",
       "columns": [
         {
@@ -235,77 +292,283 @@
           "description": "Loan identifier"
         },
         {
-          "name": "product_type",
+          "name": "disbursement_id",
           "type": "string",
-          "description": "Product type (scf, term_loan, etc.)"
-        },
-        {
-          "name": "status",
-          "type": "string",
-          "description": "Loan status (DISBURSED, CLOSED, etc.)"
-        },
-        {
-          "name": "total_outstanding_balance",
-          "type": "double",
-          "description": "Total outstanding balance"
-        },
-        {
-          "name": "__is_deleted",
-          "type": "boolean",
-          "description": "Soft delete flag"
+          "description": "Disbursement identifier"
         },
         {
           "name": "disbursement_date",
-          "type": "string",
+          "type": "date",
           "description": "Disbursement date"
+        },
+        {
+          "name": "disbursed_amount",
+          "type": "float",
+          "description": "Amount disbursed"
+        },
+        {
+          "name": "disbursement_type",
+          "type": "string",
+          "description": "Type of disbursement"
+        }
+      ],
+      "grain": [
+        "loan_id",
+        "disbursement_id"
+      ],
+      "labels": [
+        "loan",
+        "disbursement",
+        "system_b"
+      ],
+      "path": "complex_multi_table_test/loan_disbursements_b.csv"
+    },
+    {
+      "name": "loan_repayments_b",
+      "system": "system_b",
+      "entity": "loan",
+      "primary_key": [
+        "loan_id",
+        "repayment_id"
+      ],
+      "time_column": "repayment_date",
+      "columns": [
+        {
+          "name": "loan_id",
+          "type": "string",
+          "description": "Loan identifier"
+        },
+        {
+          "name": "repayment_id",
+          "type": "string",
+          "description": "Repayment identifier"
+        },
+        {
+          "name": "repayment_date",
+          "type": "date",
+          "description": "Repayment date"
+        },
+        {
+          "name": "repaid_amount",
+          "type": "float",
+          "description": "Amount repaid"
+        },
+        {
+          "name": "principal_repaid",
+          "type": "float",
+          "description": "Principal amount repaid"
+        },
+        {
+          "name": "interest_repaid",
+          "type": "float",
+          "description": "Interest amount repaid"
+        }
+      ],
+      "grain": [
+        "loan_id",
+        "repayment_id"
+      ],
+      "labels": [
+        "loan",
+        "repayment",
+        "system_b"
+      ],
+      "path": "complex_multi_table_test/loan_repayments_b.csv"
+    },
+    {
+      "name": "loan_outstanding_b",
+      "system": "system_b",
+      "entity": "loan",
+      "primary_key": [
+        "loan_id",
+        "as_of_date"
+      ],
+      "time_column": "as_of_date",
+      "columns": [
+        {
+          "name": "loan_id",
+          "type": "string",
+          "description": "Loan identifier"
         },
         {
           "name": "customer_id",
           "type": "string",
           "description": "Customer identifier"
+        },
+        {
+          "name": "as_of_date",
+          "type": "date",
+          "description": "As of date"
+        },
+        {
+          "name": "outstanding_principal",
+          "type": "float",
+          "description": "Outstanding principal"
+        },
+        {
+          "name": "outstanding_interest",
+          "type": "float",
+          "description": "Outstanding interest"
+        },
+        {
+          "name": "interest_accrued",
+          "type": "float",
+          "description": "Accrued interest"
+        },
+        {
+          "name": "penalty_waived",
+          "type": "float",
+          "description": "Penalty waived amount"
+        },
+        {
+          "name": "total_outstanding",
+          "type": "float",
+          "description": "Total outstanding"
         }
       ],
-      "grain": ["loan_id"],
-      "labels": ["loan", "lms"],
-      "path": "assetsdb_gold_lmsdata_loan.parquet"
+      "grain": [
+        "loan_id",
+        "as_of_date"
+      ],
+      "labels": [
+        "loan",
+        "outstanding",
+        "system_b"
+      ],
+      "path": "complex_multi_table_test/loan_outstanding_b.csv"
     },
     {
-      "name": "test_table",
-      "system": "test",
-      "entity": "test",
-      "primary_key": ["id"],
-      "time_column": null,
+      "name": "s3_tool_propagator.outstanding_daily",
+      "system": "s3_tool_propagator",
+      "entity": "outstanding",
+      "primary_key": [
+        "order_id",
+        "last_day"
+      ],
+      "time_column": "last_day",
       "columns": [
         {
-          "name": "id",
-          "type": "integer",
-          "description": "ID"
-        },
-        {
-          "name": "name",
+          "name": "order_id",
           "type": "string",
-          "description": "Name"
+          "description": "Order identifier"
         },
         {
-          "name": "age",
-          "type": "integer",
-          "description": "Age"
-        },
-        {
-          "name": "city",
+          "name": "order_type",
           "type": "string",
-          "description": "City"
+          "description": "Type of order"
         },
         {
-          "name": "salary",
-          "type": "double",
-          "description": "Salary"
+          "name": "principal_outstanding",
+          "type": "decimal",
+          "description": "Principal amount outstanding"
+        },
+        {
+          "name": "settlement_flag",
+          "type": "string",
+          "description": "Settlement flag (settled, unsettled)"
+        },
+        {
+          "name": "last_day",
+          "type": "date",
+          "description": "Last day of the period"
+        },
+        {
+          "name": "nbfc_name_colending",
+          "type": "string",
+          "description": "NBFC name for colending"
+        },
+        {
+          "name": "parent_nbfc_name",
+          "type": "string",
+          "description": "Parent NBFC name"
         }
       ],
-      "grain": ["id"],
-      "labels": ["test"],
-      "path": "test_table.parquet"
+      "grain": [
+        "order_id",
+        "last_day"
+      ],
+      "labels": [
+        "outstanding",
+        "daily",
+        "s3_tool_propagator"
+      ],
+      "path": "s3_tool_propagator/outstanding_daily.csv"
+    },
+    {
+      "name": "s3_tool_propagator.da_orders",
+      "system": "s3_tool_propagator",
+      "entity": "da_order",
+      "primary_key": [
+        "order_id"
+      ],
+      "time_column": "da_date",
+      "columns": [
+        {
+          "name": "order_id",
+          "type": "string",
+          "description": "Order identifier"
+        },
+        {
+          "name": "da_date",
+          "type": "date",
+          "description": "DA (Date of Assignment) date"
+        }
+      ],
+      "grain": [
+        "order_id"
+      ],
+      "labels": [
+        "da_order",
+        "s3_tool_propagator"
+      ],
+      "path": "s3_tool_propagator/da_orders.csv"
+    },
+    {
+      "name": "s3_tool_propagator.writeoff_users",
+      "system": "s3_tool_propagator",
+      "entity": "writeoff",
+      "primary_key": [
+        "order_id"
+      ],
+      "columns": [
+        {
+          "name": "order_id",
+          "type": "string",
+          "description": "Order identifier"
+        }
+      ],
+      "grain": [
+        "order_id"
+      ],
+      "labels": [
+        "writeoff",
+        "s3_tool_propagator"
+      ],
+      "path": "s3_tool_propagator/writeoff_users.csv"
+    },
+    {
+      "name": "s3_tool_propagator.provisional_writeoff",
+      "system": "s3_tool_propagator",
+      "entity": "writeoff",
+      "primary_key": [
+        "order_id"
+      ],
+      "columns": [
+        {
+          "name": "order_id",
+          "type": "string",
+          "description": "Order identifier"
+        }
+      ],
+      "grain": [
+        "order_id"
+      ],
+      "labels": [
+        "writeoff",
+        "provisional",
+        "s3_tool_propagator"
+      ],
+      "path": "s3_tool_propagator/provisional_writeoff.csv"
     }
   ]
 }
-

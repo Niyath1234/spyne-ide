@@ -1,0 +1,116 @@
+{
+  "title": "Technical Requirements Document - Loan Management System",
+  "version": "1.0",
+  "schemas": [
+    {
+      "name": "loan_schema",
+      "database": "postgresql",
+      "description": "Schema for loan-related tables"
+    }
+  ],
+  "tables": [
+    {
+      "name": "loans",
+      "schema": "loan_schema",
+      "description": "Main loan table storing loan details",
+      "primary_key": ["loan_id"],
+      "foreign_keys": [
+        {
+          "columns": ["customer_id"],
+          "references_table": "customer_accounts",
+          "references_columns": ["customer_id"]
+        }
+      ],
+      "columns": [
+        {
+          "name": "loan_id",
+          "type": "bigint",
+          "nullable": false,
+          "description": "Primary key for loan"
+        },
+        {
+          "name": "customer_id",
+          "type": "bigint",
+          "nullable": false,
+          "description": "Foreign key to customer_accounts"
+        },
+        {
+          "name": "principal_amount",
+          "type": "decimal(15,2)",
+          "nullable": false,
+          "description": "Loan principal amount"
+        }
+      ],
+      "indexes": [
+        {
+          "name": "idx_loans_customer_id",
+          "columns": ["customer_id"],
+          "type": "btree"
+        }
+      ]
+    },
+    {
+      "name": "customer_accounts",
+      "schema": "loan_schema",
+      "description": "Customer account information",
+      "primary_key": ["customer_id"],
+      "columns": [
+        {
+          "name": "customer_id",
+          "type": "bigint",
+          "nullable": false,
+          "description": "Primary key for customer"
+        },
+        {
+          "name": "account_number",
+          "type": "varchar(50)",
+          "nullable": false,
+          "description": "Unique account number"
+        }
+      ]
+    }
+  ],
+  "joins": [
+    {
+      "from_table": "customer_accounts",
+      "to_table": "loans",
+      "join_type": "left_join",
+      "keys": {
+        "customer_id": "customer_id"
+      },
+      "condition": "customer_accounts.customer_id = loans.customer_id",
+      "description": "Join customer accounts to their loans"
+    },
+    {
+      "from_table": "loans",
+      "to_table": "loan_transactions",
+      "join_type": "left_join",
+      "keys": {
+        "loan_id": "loan_id"
+      },
+      "condition": "loans.loan_id = loan_transactions.loan_id",
+      "description": "Join loans to their transactions"
+    }
+  ],
+  "constraints": [
+    {
+      "name": "fk_loans_customer",
+      "type": "foreign_key",
+      "table": "loans",
+      "columns": ["customer_id"],
+      "references_table": "customer_accounts",
+      "references_columns": ["customer_id"]
+    }
+  ],
+  "relationships": [
+    {
+      "from_table": "customer_accounts",
+      "to_table": "loans",
+      "type": "one-to-many",
+      "join_keys": {
+        "customer_id": "customer_id"
+      }
+    }
+  ]
+}
+

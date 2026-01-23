@@ -1,0 +1,86 @@
+# Document to Reference ID Mapping
+# 
+# Map your ARD/PRD/TRD documents to your existing reference IDs.
+# This allows you to search by reference ID and maintain consistency
+# with your existing documentation system.
+
+# Example mapping structure:
+documents:
+  # Document 1: ARD for Authentication Feature
+  - file_name: "ARD_Authentication_v2.0.pdf"
+    reference_id: "PROJ-101"  # Your project/feature reference ID
+    document_type: "ARD"       # ARD, PRD, or TRD
+    project: "Authentication"  # Project/Feature name
+    version: "2.0"
+    tags:
+      - "authentication"
+      - "security"
+      - "user-management"
+    description: "Architecture requirements for user authentication system"
+    related_docs:
+      - "PRD_Authentication_v2.0.pdf"  # Related PRD
+      - "TRD_Auth_API_v1.5.pdf"         # Related TRD
+  
+  # Document 2: PRD for Authentication Feature
+  - file_name: "PRD_Authentication_v2.0.pdf"
+    reference_id: "PROJ-101"  # Same reference ID as related ARD
+    document_type: "PRD"
+    project: "Authentication"
+    version: "2.0"
+    tags:
+      - "authentication"
+      - "product"
+    description: "Product requirements for authentication feature"
+    related_docs:
+      - "ARD_Authentication_v2.0.pdf"
+      - "TRD_Auth_API_v1.5.pdf"
+  
+  # Document 3: TRD for Authentication API
+  - file_name: "TRD_Auth_API_v1.5.pdf"
+    reference_id: "PROJ-101"  # Same reference ID - all related docs
+    document_type: "TRD"
+    project: "Authentication"
+    version: "1.5"
+    tags:
+      - "authentication"
+      - "api"
+      - "technical"
+    description: "Technical requirements for authentication API"
+    related_docs:
+      - "ARD_Authentication_v2.0.pdf"
+      - "PRD_Authentication_v2.0.pdf"
+  
+  # Document 4: Different project/feature
+  - file_name: "ARD_Payment_Processing_v1.0.pdf"
+    reference_id: "PROJ-202"  # Different reference ID
+    document_type: "ARD"
+    project: "Payment Processing"
+    version: "1.0"
+    tags:
+      - "payment"
+      - "financial"
+    description: "Architecture requirements for payment processing"
+    related_docs: []
+
+# Reference ID Patterns (for auto-mapping)
+# If you have consistent naming, you can use patterns
+patterns:
+  # Pattern: PROJ-{number} for project IDs
+  - pattern: "PROJ-\\d+"
+    description: "Project reference IDs"
+  
+  # Pattern: FEAT-{number} for feature IDs
+  - pattern: "FEAT-\\d+"
+    description: "Feature reference IDs"
+  
+  # Pattern: REQ-{number} for requirement IDs
+  - pattern: "REQ-\\d+"
+    description: "Requirement reference IDs"
+
+# Search Aliases (for easier searching)
+aliases:
+  "auth": "PROJ-101"
+  "authentication": "PROJ-101"
+  "payment": "PROJ-202"
+  "payments": "PROJ-202"
+

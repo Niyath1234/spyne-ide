@@ -1,0 +1,185 @@
+{
+  "table_name": "transactions_er",
+  "created_at": "2026-01-23T11:09:49.485858",
+  "source_metadata": {
+    "source_name": "transactions_api",
+    "extracted_at": "2026-01-23T11:09:49.480875",
+    "row_count": 10,
+    "column_count": 5,
+    "columns": [
+      {
+        "name": "customer_id",
+        "data_type": "object",
+        "nullable": false,
+        "null_count": 0,
+        "unique_count": 7,
+        "sample_values": [
+          "CUST1000",
+          "CUST1004",
+          "CUST1008",
+          "CUST1009",
+          "CUST1009"
+        ]
+      },
+      {
+        "name": "transaction_id",
+        "data_type": "object",
+        "nullable": false,
+        "null_count": 0,
+        "unique_count": 10,
+        "sample_values": [
+          "TXN2000",
+          "TXN2001",
+          "TXN2002",
+          "TXN2003",
+          "TXN2004"
+        ]
+      },
+      {
+        "name": "transaction_date",
+        "data_type": "object",
+        "nullable": false,
+        "null_count": 0,
+        "unique_count": 8,
+        "sample_values": [
+          "2026-01-13",
+          "2025-12-27",
+          "2026-01-21",
+          "2025-12-29",
+          "2026-01-05"
+        ]
+      },
+      {
+        "name": "transaction_amount",
+        "data_type": "float64",
+        "nullable": false,
+        "null_count": 0,
+        "unique_count": 10,
+        "sample_values": [
+          301.45,
+          2477.41,
+          1951.68,
+          1177.51,
+          4139.07
+        ],
+        "min": 132.37,
+        "max": 4417.36,
+        "mean": 2029.4539999999997,
+        "std": 1468.3419185386547
+      },
+      {
+        "name": "transaction_type",
+        "data_type": "object",
+        "nullable": false,
+        "null_count": 0,
+        "unique_count": 4,
+        "sample_values": [
+          "PAYMENT",
+          "TRANSFER",
+          "DEBIT",
+          "TRANSFER",
+          "CREDIT"
+        ]
+      }
+    ],
+    "entity": "transaction",
+    "description": "Transaction data mapped from ER diagram",
+    "er_entity": "transaction",
+    "grain": [
+      "customer_id",
+      "transaction_id"
+    ]
+  },
+  "schema": {
+    "columns": [
+      {
+        "name": "customer_id",
+        "type": "object",
+        "nullable": false
+      },
+      {
+        "name": "transaction_id",
+        "type": "object",
+        "nullable": false
+      },
+      {
+        "name": "transaction_date",
+        "type": "object",
+        "nullable": false
+      },
+      {
+        "name": "transaction_amount",
+        "type": "float64",
+        "nullable": false
+      },
+      {
+        "name": "transaction_type",
+        "type": "object",
+        "nullable": false
+      }
+    ],
+    "primary_key": [
+      "customer_id"
+    ],
+    "row_count": 10
+  },
+  "storage": {
+    "type": "csv",
+    "path": "data/pipeline_output/transactions_api/transactions_er.csv",
+    "checksum": "ab6901b839f2c564ed57867743ae8bedf3d47576ba7961a41098d3b845088c72",
+    "size_bytes": 517
+  },
+  "processing": {
+    "grouped_by": [],
+    "metrics_calculated": {},
+    "aggregation_applied": false
+  },
+  "calculated_metrics": {
+    "row_count": 10,
+    "column_count": 5,
+    "numeric_columns": [
+      {
+        "column": "transaction_amount",
+        "sum": 20294.539999999997,
+        "mean": 2029.4539999999997,
+        "min": 132.37,
+        "max": 4417.36
+      }
+    ],
+    "categorical_columns": [
+      {
+        "column": "customer_id",
+        "unique_count": 7,
+        "most_common": [
+          "CUST1008"
+        ]
+      },
+      {
+        "column": "transaction_id",
+        "unique_count": 10,
+        "most_common": [
+          "TXN2000",
+          "TXN2001",
+          "TXN2002",
+          "TXN2003",
+          "TXN2004"
+        ]
+      },
+      {
+        "column": "transaction_date",
+        "unique_count": 8,
+        "most_common": [
+          "2025-12-29",
+          "2026-01-13"
+        ]
+      },
+      {
+        "column": "transaction_type",
+        "unique_count": 4,
+        "most_common": [
+          "TRANSFER"
+        ]
+      }
+    ]
+  }
+}

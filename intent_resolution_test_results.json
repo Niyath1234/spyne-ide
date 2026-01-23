@@ -1,0 +1,220 @@
+{
+  "test_run": "2026-01-23T14:06:13.830208",
+  "rust_compiler_available": false,
+  "total_tests": 16,
+  "passed": 16,
+  "failed": 0,
+  "results": [
+    {
+      "query": "What is the total outstanding amount?",
+      "category": "simple_metric",
+      "passed": true,
+      "errors": [],
+      "warnings": [
+        "\u2713 Metric resolved: tos",
+        "\u2713 Dimensions resolved: []"
+      ],
+      "resolved_metric": "tos",
+      "resolved_dimensions": []
+    },
+    {
+      "query": "Show me the principal outstanding",
+      "category": "simple_metric",
+      "passed": true,
+      "errors": [],
+      "warnings": [
+        "\u2713 Metric resolved: pos",
+        "\u2713 Dimensions resolved: []"
+      ],
+      "resolved_metric": "pos",
+      "resolved_dimensions": []
+    },
+    {
+      "query": "What is the total outstanding amount by date?",
+      "category": "time_series",
+      "passed": true,
+      "errors": [],
+      "warnings": [
+        "\u2713 Metric resolved: tos",
+        "\u2713 Dimensions resolved: ['date']"
+      ],
+      "resolved_metric": "tos",
+      "resolved_dimensions": [
+        "date"
+      ]
+    },
+    {
+      "query": "Show transaction volume by day",
+      "category": "time_series",
+      "passed": true,
+      "errors": [],
+      "warnings": [
+        "\u2713 Metric resolved: transaction_volume",
+        "\u2713 Dimensions resolved: ['transaction_date']"
+      ],
+      "resolved_metric": "transaction_volume",
+      "resolved_dimensions": [
+        "transaction_date"
+      ]
+    },
+    {
+      "query": "What is the total outstanding by loan status?",
+      "category": "dimension_analysis",
+      "passed": true,
+      "errors": [],
+      "warnings": [
+        "\u2713 Metric resolved: tos",
+        "\u2713 Dimensions resolved: ['loan_status']"
+      ],
+      "resolved_metric": "tos",
+      "resolved_dimensions": [
+        "loan_status"
+      ]
+    },
+    {
+      "query": "Show me the transaction volume by transaction type",
+      "category": "dimension_analysis",
+      "passed": true,
+      "errors": [],
+      "warnings": [
+        "\u2713 Metric resolved: transaction_volume",
+        "\u2713 Dimensions resolved: ['transaction_type']"
+      ],
+      "resolved_metric": "transaction_volume",
+      "resolved_dimensions": [
+        "transaction_type"
+      ]
+    },
+    {
+      "query": "What is the average transaction amount?",
+      "category": "aggregation",
+      "passed": true,
+      "errors": [],
+      "warnings": [
+        "\u2713 Metric resolved: average_transaction_amount",
+        "\u2713 Dimensions resolved: []"
+      ],
+      "resolved_metric": "average_transaction_amount",
+      "resolved_dimensions": []
+    },
+    {
+      "query": "How many transactions occurred?",
+      "category": "aggregation",
+      "passed": true,
+      "errors": [],
+      "warnings": [
+        "\u2713 Metric resolved: transaction_count",
+        "\u2713 Dimensions resolved: []"
+      ],
+      "resolved_metric": "transaction_count",
+      "resolved_dimensions": []
+    },
+    {
+      "query": "What is the total amount disbursed?",
+      "category": "loan_metric",
+      "passed": true,
+      "errors": [],
+      "warnings": [
+        "\u2713 Metric resolved: disbursed_amount",
+        "\u2713 Dimensions resolved: []"
+      ],
+      "resolved_metric": "disbursed_amount",
+      "resolved_dimensions": []
+    },
+    {
+      "query": "Show me the total amount repaid",
+      "category": "loan_metric",
+      "passed": true,
+      "errors": [],
+      "warnings": [
+        "\u2713 Metric resolved: repaid_amount",
+        "\u2713 Dimensions resolved: []"
+      ],
+      "resolved_metric": "repaid_amount",
+      "resolved_dimensions": []
+    },
+    {
+      "query": "What is the outstanding principal?",
+      "category": "loan_metric",
+      "passed": true,
+      "errors": [],
+      "warnings": [
+        "\u2713 Metric resolved: outstanding_principal",
+        "\u2713 Dimensions resolved: []"
+      ],
+      "resolved_metric": "outstanding_principal",
+      "resolved_dimensions": []
+    },
+    {
+      "query": "Show total outstanding loan amount by date",
+      "category": "loan_metric",
+      "passed": true,
+      "errors": [],
+      "warnings": [
+        "\u2713 Metric resolved: total_outstanding_loan",
+        "\u2713 Dimensions resolved: ['as_of_date_loan']"
+      ],
+      "resolved_metric": "total_outstanding_loan",
+      "resolved_dimensions": [
+        "as_of_date_loan"
+      ]
+    },
+    {
+      "query": "What is the total account balance?",
+      "category": "customer_metric",
+      "passed": true,
+      "errors": [],
+      "warnings": [
+        "\u2713 Metric resolved: total_account_balance",
+        "\u2713 Dimensions resolved: []"
+      ],
+      "resolved_metric": "total_account_balance",
+      "resolved_dimensions": []
+    },
+    {
+      "query": "Show active accounts count by customer type",
+      "category": "customer_metric",
+      "passed": true,
+      "errors": [],
+      "warnings": [
+        "\u2713 Metric resolved: active_accounts_count",
+        "\u2713 Dimensions resolved: ['customer_type']"
+      ],
+      "resolved_metric": "active_accounts_count",
+      "resolved_dimensions": [
+        "customer_type"
+      ]
+    },
+    {
+      "query": "Show total outstanding by date and loan status",
+      "category": "multi_dimension",
+      "passed": true,
+      "errors": [],
+      "warnings": [
+        "\u2713 Metric resolved: tos",
+        "\u2713 Dimensions resolved: ['date', 'loan_status']"
+      ],
+      "resolved_metric": "tos",
+      "resolved_dimensions": [
+        "date",
+        "loan_status"
+      ]
+    },
+    {
+      "query": "What is the transaction volume by date, customer type, and transaction type?",
+      "category": "complex",
+      "passed": true,
+      "errors": [],
+      "warnings": [
+        "\u2713 Metric resolved: transaction_volume",
+        "\u2713 Dimensions resolved: ['transaction_date', 'transaction_type', 'customer_type']"
+      ],
+      "resolved_metric": "transaction_volume",
+      "resolved_dimensions": [
+        "transaction_date",
+        "transaction_type",
+        "customer_type"
+      ]
+    }
+  ]
+}

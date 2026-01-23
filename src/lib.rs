@@ -57,6 +57,14 @@ pub mod query_engine;
 pub mod data_assistant;
 pub mod learning_store;
 pub mod optimized_search;
+pub mod semantic;
+pub mod intent;
+pub mod schema_rag;
+pub mod execution_loop;
+pub mod compiler;
+pub mod security;
+pub mod observability;
+pub mod learning;
 
 // Re-export Hypergraph module
 #[path = "../Hypergraph/mod.rs"]

@@ -1,0 +1,832 @@
+{
+  "metrics": [
+    {
+      "name": "tos",
+      "description": "Total outstanding amount across all loans including principal and interest",
+      "aggregation": "sum",
+      "base_table": "assetsdb_gold_lmsdata_loan",
+      "grain": "none",
+      "sql_expression": "SUM(total_outstanding_balance)",
+      "allowed_dimensions": [
+        "date",
+        "region",
+        "product_type",
+        "loan_status"
+      ],
+      "required_filters": [],
+      "policy": {
+        "allowed_roles": [
+          "public",
+          "analyst",
+          "finance",
+          "admin"
+        ],
+        "max_time_range_days": null,
+        "row_limit": null,
+        "max_dimensions": null
+      }
+    },
+    {
+      "name": "pos",
+      "description": "Principal amount outstanding (excluding interest)",
+      "aggregation": "sum",
+      "base_table": "assetsdb_gold_lmsdata_loan",
+      "grain": "none",
+      "sql_expression": "SUM(principal_outstanding)",
+      "allowed_dimensions": [
+        "date",
+        "region",
+        "product_type",
+        "loan_status"
+      ],
+      "required_filters": [],
+      "policy": {
+        "allowed_roles": [
+          "public",
+          "analyst",
+          "finance",
+          "admin"
+        ],
+        "max_time_range_days": null,
+        "row_limit": null,
+        "max_dimensions": null
+      }
+    },
+    {
+      "name": "active_users",
+      "description": "Count of users with at least one session in the selected period",
+      "aggregation": "count_distinct",
+      "base_table": "user_sessions",
+      "grain": "day",
+      "sql_expression": "COUNT(DISTINCT user_id)",
+      "allowed_dimensions": [
+        "date",
+        "region",
+        "platform"
+      ],
+      "required_filters": [],
+      "policy": {
+        "allowed_roles": [
+          "public",
+          "analyst",
+          "admin"
+        ],
+        "max_time_range_days": 365,
+        "row_limit": 1000000,
+        "max_dimensions": 3
+      }
+    },
+    {
+      "name": "total_account_balance",
+      "description": "Sum of all account balances across all accounts",
+      "aggregation": "sum",
+      "base_table": "customer_accounts_a",
+      "grain": "none",
+      "sql_expression": "SUM(account_balance)",
+      "allowed_dimensions": [
+        "customer_type",
+        "account_status",
+        "account_type"
+      ],
+      "required_filters": [],
+      "policy": {
+        "allowed_roles": [
+          "public",
+          "analyst",
+          "finance",
+          "admin"
+        ],
+        "max_time_range_days": null,
+        "row_limit": null,
+        "max_dimensions": 3
+      }
+    },
+    {
+      "name": "transaction_volume",
+      "description": "Total transaction amount (sum of all transactions)",
+      "aggregation": "sum",
+      "base_table": "customer_transactions_a",
+      "grain": "day",
+      "sql_expression": "SUM(transaction_amount)",
+      "allowed_dimensions": [
+        "date",
+        "transaction_date",
+        "customer_type",
+        "transaction_type"
+      ],
+      "required_filters": [],
+      "policy": {
+        "allowed_roles": [
+          "public",
+          "analyst",
+          "finance",
+          "admin"
+        ],
+        "max_time_range_days": 730,
+        "row_limit": 1000000,
+        "max_dimensions": 3
+      }
+    },
+    {
+      "name": "transaction_count",
+      "description": "Count of transactions",
+      "aggregation": "count",
+      "base_table": "customer_transactions_a",
+      "grain": "day",
+      "sql_expression": "COUNT(transaction_id)",
+      "allowed_dimensions": [
+        "date",
+        "transaction_date",
+        "customer_type",
+        "transaction_type"
+      ],
+      "required_filters": [],
+      "policy": {
+        "allowed_roles": [
+          "public",
+          "analyst",
+          "finance",
+          "admin"
+        ],
+        "max_time_range_days": 730,
+        "row_limit": 1000000,
+        "max_dimensions": 3
+      }
+    },
+    {
+      "name": "average_transaction_amount",
+      "description": "Average transaction amount",
+      "aggregation": "avg",
+      "base_table": "customer_transactions_a",
+      "grain": "day",
+      "sql_expression": "AVG(transaction_amount)",
+      "allowed_dimensions": [
+        "date",
+        "transaction_date",
+        "customer_type",
+        "transaction_type"
+      ],
+      "required_filters": [],
+      "policy": {
+        "allowed_roles": [
+          "public",
+          "analyst",
+          "finance",
+          "admin"
+        ],
+        "max_time_range_days": 730,
+        "row_limit": 1000000,
+        "max_dimensions": 3
+      }
+    },
+    {
+      "name": "total_outstanding_customer",
+      "description": "Total outstanding amount per customer",
+      "aggregation": "sum",
+      "base_table": "customer_summary_a",
+      "grain": "day",
+      "sql_expression": "SUM(total_outstanding)",
+      "allowed_dimensions": [
+        "date",
+        "customer_type"
+      ],
+      "required_filters": [],
+      "policy": {
+        "allowed_roles": [
+          "public",
+          "analyst",
+          "finance",
+          "admin"
+        ],
+        "max_time_range_days": 365,
+        "row_limit": 1000000,
+        "max_dimensions": 2
+      }
+    },
+    {
+      "name": "writeoff_amount",
+      "description": "Total writeoff amount",
+      "aggregation": "sum",
+      "base_table": "customer_summary_a",
+      "grain": "day",
+      "sql_expression": "SUM(writeoff_amount)",
+      "allowed_dimensions": [
+        "date",
+        "customer_type"
+      ],
+      "required_filters": [],
+      "policy": {
+        "allowed_roles": [
+          "finance",
+          "admin"
+        ],
+        "max_time_range_days": 365,
+        "row_limit": 1000000,
+        "max_dimensions": 2
+      }
+    },
+    {
+      "name": "active_accounts_count",
+      "description": "Count of active accounts",
+      "aggregation": "sum",
+      "base_table": "customer_summary_a",
+      "grain": "day",
+      "sql_expression": "SUM(active_accounts_count)",
+      "allowed_dimensions": [
+        "date",
+        "customer_type"
+      ],
+      "required_filters": [],
+      "policy": {
+        "allowed_roles": [
+          "public",
+          "analyst",
+          "finance",
+          "admin"
+        ],
+        "max_time_range_days": 365,
+        "row_limit": 1000000,
+        "max_dimensions": 2
+      }
+    },
+    {
+      "name": "loan_amount",
+      "description": "Total loan amount disbursed",
+      "aggregation": "sum",
+      "base_table": "loan_master_b",
+      "grain": "none",
+      "sql_expression": "SUM(loan_amount)",
+      "allowed_dimensions": [
+        "loan_status",
+        "disbursement_date"
+      ],
+      "required_filters": [],
+      "policy": {
+        "allowed_roles": [
+          "public",
+          "analyst",
+          "finance",
+          "admin"
+        ],
+        "max_time_range_days": null,
+        "row_limit": null,
+        "max_dimensions": 2
+      }
+    },
+    {
+      "name": "disbursed_amount",
+      "description": "Total amount disbursed across all disbursements",
+      "aggregation": "sum",
+      "base_table": "loan_disbursements_b",
+      "grain": "day",
+      "sql_expression": "SUM(disbursed_amount)",
+      "allowed_dimensions": [
+        "date",
+        "disbursement_type"
+      ],
+      "required_filters": [],
+      "policy": {
+        "allowed_roles": [
+          "public",
+          "analyst",
+          "finance",
+          "admin"
+        ],
+        "max_time_range_days": 730,
+        "row_limit": 1000000,
+        "max_dimensions": 2
+      }
+    },
+    {
+      "name": "repaid_amount",
+      "description": "Total amount repaid across all repayments",
+      "aggregation": "sum",
+      "base_table": "loan_repayments_b",
+      "grain": "day",
+      "sql_expression": "SUM(repaid_amount)",
+      "allowed_dimensions": [
+        "date"
+      ],
+      "required_filters": [],
+      "policy": {
+        "allowed_roles": [
+          "public",
+          "analyst",
+          "finance",
+          "admin"
+        ],
+        "max_time_range_days": 730,
+        "row_limit": 1000000,
+        "max_dimensions": 1
+      }
+    },
+    {
+      "name": "principal_repaid",
+      "description": "Total principal amount repaid",
+      "aggregation": "sum",
+      "base_table": "loan_repayments_b",
+      "grain": "day",
+      "sql_expression": "SUM(principal_repaid)",
+      "allowed_dimensions": [
+        "date"
+      ],
+      "required_filters": [],
+      "policy": {
+        "allowed_roles": [
+          "public",
+          "analyst",
+          "finance",
+          "admin"
+        ],
+        "max_time_range_days": 730,
+        "row_limit": 1000000,
+        "max_dimensions": 1
+      }
+    },
+    {
+      "name": "interest_repaid",
+      "description": "Total interest amount repaid",
+      "aggregation": "sum",
+      "base_table": "loan_repayments_b",
+      "grain": "day",
+      "sql_expression": "SUM(interest_repaid)",
+      "allowed_dimensions": [
+        "date"
+      ],
+      "required_filters": [],
+      "policy": {
+        "allowed_roles": [
+          "public",
+          "analyst",
+          "finance",
+          "admin"
+        ],
+        "max_time_range_days": 730,
+        "row_limit": 1000000,
+        "max_dimensions": 1
+      }
+    },
+    {
+      "name": "outstanding_principal",
+      "description": "Total outstanding principal amount",
+      "aggregation": "sum",
+      "base_table": "loan_outstanding_b",
+      "grain": "day",
+      "sql_expression": "SUM(outstanding_principal)",
+      "allowed_dimensions": [
+        "date",
+        "as_of_date_loan"
+      ],
+      "required_filters": [],
+      "policy": {
+        "allowed_roles": [
+          "public",
+          "analyst",
+          "finance",
+          "admin"
+        ],
+        "max_time_range_days": 365,
+        "row_limit": 1000000,
+        "max_dimensions": 1
+      }
+    },
+    {
+      "name": "outstanding_interest",
+      "description": "Total outstanding interest amount",
+      "aggregation": "sum",
+      "base_table": "loan_outstanding_b",
+      "grain": "day",
+      "sql_expression": "SUM(outstanding_interest)",
+      "allowed_dimensions": [
+        "date",
+        "as_of_date_loan"
+      ],
+      "required_filters": [],
+      "policy": {
+        "allowed_roles": [
+          "public",
+          "analyst",
+          "finance",
+          "admin"
+        ],
+        "max_time_range_days": 365,
+        "row_limit": 1000000,
+        "max_dimensions": 1
+      }
+    },
+    {
+      "name": "total_outstanding_loan",
+      "description": "Total outstanding amount (principal + interest)",
+      "aggregation": "sum",
+      "base_table": "loan_outstanding_b",
+      "grain": "day",
+      "sql_expression": "SUM(total_outstanding)",
+      "allowed_dimensions": [
+        "date",
+        "as_of_date_loan"
+      ],
+      "required_filters": [],
+      "policy": {
+        "allowed_roles": [
+          "public",
+          "analyst",
+          "finance",
+          "admin"
+        ],
+        "max_time_range_days": 365,
+        "row_limit": 1000000,
+        "max_dimensions": 1
+      }
+    },
+    {
+      "name": "interest_accrued",
+      "description": "Total interest accrued",
+      "aggregation": "sum",
+      "base_table": "loan_outstanding_b",
+      "grain": "day",
+      "sql_expression": "SUM(interest_accrued)",
+      "allowed_dimensions": [
+        "date",
+        "as_of_date_loan"
+      ],
+      "required_filters": [],
+      "policy": {
+        "allowed_roles": [
+          "finance",
+          "admin"
+        ],
+        "max_time_range_days": 365,
+        "row_limit": 1000000,
+        "max_dimensions": 1
+      }
+    },
+    {
+      "name": "penalty_waived",
+      "description": "Total penalty waived amount",
+      "aggregation": "sum",
+      "base_table": "loan_outstanding_b",
+      "grain": "day",
+      "sql_expression": "SUM(penalty_waived)",
+      "allowed_dimensions": [
+        "date",
+        "as_of_date_loan"
+      ],
+      "required_filters": [],
+      "policy": {
+        "allowed_roles": [
+          "finance",
+          "admin"
+        ],
+        "max_time_range_days": 365,
+        "row_limit": 1000000,
+        "max_dimensions": 1
+      }
+    },
+    {
+      "name": "total_balance",
+      "description": "Total balance across all balance snapshots",
+      "aggregation": "sum",
+      "base_table": "customer_balances_a",
+      "grain": "day",
+      "sql_expression": "SUM(total_balance)",
+      "allowed_dimensions": [
+        "date"
+      ],
+      "required_filters": [],
+      "policy": {
+        "allowed_roles": [
+          "public",
+          "analyst",
+          "finance",
+          "admin"
+        ],
+        "max_time_range_days": 365,
+        "row_limit": 1000000,
+        "max_dimensions": 1
+      }
+    },
+    {
+      "name": "principal_balance",
+      "description": "Total principal balance",
+      "aggregation": "sum",
+      "base_table": "customer_balances_a",
+      "grain": "day",
+      "sql_expression": "SUM(principal_balance)",
+      "allowed_dimensions": [
+        "date"
+      ],
+      "required_filters": [],
+      "policy": {
+        "allowed_roles": [
+          "public",
+          "analyst",
+          "finance",
+          "admin"
+        ],
+        "max_time_range_days": 365,
+        "row_limit": 1000000,
+        "max_dimensions": 1
+      }
+    },
+    {
+      "name": "interest_balance",
+      "description": "Total interest balance",
+      "aggregation": "sum",
+      "base_table": "customer_balances_a",
+      "grain": "day",
+      "sql_expression": "SUM(interest_balance)",
+      "allowed_dimensions": [
+        "date"
+      ],
+      "required_filters": [],
+      "policy": {
+        "allowed_roles": [
+          "public",
+          "analyst",
+          "finance",
+          "admin"
+        ],
+        "max_time_range_days": 365,
+        "row_limit": 1000000,
+        "max_dimensions": 1
+      }
+    },
+    {
+      "name": "current_pos",
+      "description": "Current principal outstanding with conditional date-based multipliers (0.01 for Feb 2024, 0.05 otherwise, 1.0 if null)",
+      "aggregation": "sum",
+      "base_table": "s3_tool_propagator.outstanding_daily",
+      "grain": "none",
+      "sql_expression": "SUM(CASE WHEN date_trunc('month', date(s3_tool_propagator.da_orders.da_date)) = date '2024-02-01' THEN s3_tool_propagator.outstanding_daily.principal_outstanding * 0.01 WHEN date_trunc('month', date(s3_tool_propagator.da_orders.da_date)) IS NULL THEN s3_tool_propagator.outstanding_daily.principal_outstanding ELSE s3_tool_propagator.outstanding_daily.principal_outstanding * 0.05 END)",
+      "allowed_dimensions": [
+        "order_type_transformed",
+        "region_literal",
+        "product_group_literal"
+      ],
+      "required_filters": [],
+      "policy": {
+        "allowed_roles": [
+          "public",
+          "analyst",
+          "finance",
+          "admin"
+        ],
+        "max_time_range_days": null,
+        "row_limit": null,
+        "max_dimensions": null
+      }
+    }
+  ],
+  "dimensions": [
+    {
+      "name": "date",
+      "description": "Date dimension for time-based grouping",
+      "base_table": "assetsdb_gold_lmsdata_loan",
+      "column": "as_of_date",
+      "data_type": "date",
+      "join_path": []
+    },
+    {
+      "name": "region",
+      "description": "User's registered region",
+      "base_table": "regions",
+      "column": "region_name",
+      "data_type": "string",
+      "join_path": [
+        {
+          "from_table": "assetsdb_gold_lmsdata_loan",
+          "to_table": "users",
+          "on": "assetsdb_gold_lmsdata_loan.user_id = users.id"
+        },
+        {
+          "from_table": "users",
+          "to_table": "regions",
+          "on": "users.region_id = regions.id"
+        }
+      ]
+    },
+    {
+      "name": "product_type",
+      "description": "Type of product or loan",
+      "base_table": "assetsdb_gold_lmsdata_loan",
+      "column": "product_type",
+      "data_type": "string",
+      "join_path": []
+    },
+    {
+      "name": "loan_status",
+      "description": "Current status of the loan",
+      "base_table": "assetsdb_gold_lmsdata_loan",
+      "column": "loan_status",
+      "data_type": "string",
+      "join_path": []
+    },
+    {
+      "name": "platform",
+      "description": "Platform or channel",
+      "base_table": "user_sessions",
+      "column": "platform",
+      "data_type": "string",
+      "join_path": []
+    },
+    {
+      "name": "customer_type",
+      "description": "Type of customer (e.g., CORPORATE, INDIVIDUAL)",
+      "base_table": "customer_master_a",
+      "column": "customer_type",
+      "data_type": "string",
+      "join_path": []
+    },
+    {
+      "name": "account_status",
+      "description": "Status of the account (active, closed, suspended)",
+      "base_table": "customer_accounts_a",
+      "column": "account_status",
+      "data_type": "string",
+      "join_path": []
+    },
+    {
+      "name": "account_type",
+      "description": "Type of account",
+      "base_table": "customer_accounts_a",
+      "column": "account_type",
+      "data_type": "string",
+      "join_path": []
+    },
+    {
+      "name": "transaction_type",
+      "description": "Type of transaction (debit, credit)",
+      "base_table": "customer_transactions_a",
+      "column": "transaction_type",
+      "data_type": "string",
+      "join_path": []
+    },
+    {
+      "name": "transaction_date",
+      "description": "Date of transaction",
+      "base_table": "customer_transactions_a",
+      "column": "transaction_date",
+      "data_type": "date",
+      "join_path": []
+    },
+    {
+      "name": "balance_date",
+      "description": "Date of balance snapshot",
+      "base_table": "customer_balances_a",
+      "column": "balance_date",
+      "data_type": "date",
+      "join_path": []
+    },
+    {
+      "name": "as_of_date_customer",
+      "description": "As of date for customer summary",
+      "base_table": "customer_summary_a",
+      "column": "as_of_date",
+      "data_type": "date",
+      "join_path": []
+    },
+    {
+      "name": "disbursement_date",
+      "description": "Date of loan disbursement",
+      "base_table": "loan_disbursements_b",
+      "column": "disbursement_date",
+      "data_type": "date",
+      "join_path": []
+    },
+    {
+      "name": "disbursement_type",
+      "description": "Type of disbursement",
+      "base_table": "loan_disbursements_b",
+      "column": "disbursement_type",
+      "data_type": "string",
+      "join_path": []
+    },
+    {
+      "name": "repayment_date",
+      "description": "Date of loan repayment",
+      "base_table": "loan_repayments_b",
+      "column": "repayment_date",
+      "data_type": "date",
+      "join_path": []
+    },
+    {
+      "name": "as_of_date_loan",
+      "description": "As of date for loan outstanding",
+      "base_table": "loan_outstanding_b",
+      "column": "as_of_date",
+      "data_type": "date",
+      "join_path": []
+    },
+    {
+      "name": "loan_status_dim",
+      "description": "Status of the loan (active, overdue, closed, written_off)",
+      "base_table": "loan_master_b",
+      "column": "loan_status",
+      "data_type": "string",
+      "join_path": []
+    },
+    {
+      "name": "order_type_transformed",
+      "description": "Order type with credin/Digital transformation (credin maps to credin, else Digital)",
+      "base_table": "s3_tool_propagator.outstanding_daily",
+      "column": "order_type",
+      "data_type": "string",
+      "join_path": [],
+      "sql_expression": "CASE WHEN lower(s3_tool_propagator.outstanding_daily.order_type) = 'credin' THEN 'credin' ELSE 'Digital' END"
+    },
+    {
+      "name": "region_literal",
+      "description": "Region dimension (hardcoded to OS)",
+      "base_table": "s3_tool_propagator.outstanding_daily",
+      "column": "region",
+      "data_type": "string",
+      "join_path": [],
+      "sql_expression": "'OS'"
+    },
+    {
+      "name": "product_group_literal",
+      "description": "Product group dimension (hardcoded to Digital)",
+      "base_table": "s3_tool_propagator.outstanding_daily",
+      "column": "product_group",
+      "data_type": "string",
+      "join_path": [],
+      "sql_expression": "'Digital'"
+    },
+    {
+      "name": "writeoff_status",
+      "description": "Check if order is in writeoff_users table (for IS NULL filter)",
+      "base_table": "s3_tool_propagator.writeoff_users",
+      "column": "order_id",
+      "data_type": "string",
+      "join_path": [
+        {
+          "from_table": "s3_tool_propagator.outstanding_daily",
+          "to_table": "s3_tool_propagator.writeoff_users",
+          "on": "s3_tool_propagator.outstanding_daily.order_id = s3_tool_propagator.writeoff_users.order_id"
+        }
+      ]
+    },
+    {
+      "name": "provisional_writeoff_status",
+      "description": "Check if order is in provisional_writeoff table (for IS NULL filter)",
+      "base_table": "s3_tool_propagator.provisional_writeoff",
+      "column": "order_id",
+      "data_type": "string",
+      "join_path": [
+        {
+          "from_table": "s3_tool_propagator.outstanding_daily",
+          "to_table": "s3_tool_propagator.provisional_writeoff",
+          "on": "s3_tool_propagator.outstanding_daily.order_id = s3_tool_propagator.provisional_writeoff.order_id"
+        }
+      ]
+    },
+    {
+      "name": "da_date",
+      "description": "DA (Date of Assignment) date from da_orders table",
+      "base_table": "s3_tool_propagator.da_orders",
+      "column": "da_date",
+      "data_type": "date",
+      "join_path": [
+        {
+          "from_table": "s3_tool_propagator.outstanding_daily",
+          "to_table": "s3_tool_propagator.da_orders",
+          "on": "s3_tool_propagator.outstanding_daily.order_id = s3_tool_propagator.da_orders.order_id"
+        }
+      ]
+    },
+    {
+      "name": "nbfc_name_coalesced",
+      "description": "NBFC name using COALESCE(nbfc_name_colending, parent_nbfc_name)",
+      "base_table": "s3_tool_propagator.outstanding_daily",
+      "column": "nbfc_name_colending",
+      "data_type": "string",
+      "join_path": [],
+      "sql_expression": "COALESCE(s3_tool_propagator.outstanding_daily.nbfc_name_colending, s3_tool_propagator.outstanding_daily.parent_nbfc_name)"
+    },
+    {
+      "name": "settlement_flag_dim",
+      "description": "Settlement flag dimension",
+      "base_table": "s3_tool_propagator.outstanding_daily",
+      "column": "settlement_flag",
+      "data_type": "string",
+      "join_path": []
+    },
+    {
+      "name": "last_day_dim",
+      "description": "Last day dimension for date filtering",
+      "base_table": "s3_tool_propagator.outstanding_daily",
+      "column": "last_day",
+      "data_type": "date",
+      "join_path": []
+    },
+    {
+      "name": "order_type_filter",
+      "description": "Order type for filtering (lowercase)",
+      "base_table": "s3_tool_propagator.outstanding_daily",
+      "column": "order_type",
+      "data_type": "string",
+      "join_path": [],
+      "sql_expression": "lower(s3_tool_propagator.outstanding_daily.order_type)"
+    }
+  ]
+}

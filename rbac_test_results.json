@@ -1,0 +1,437 @@
+{
+  "test_run": "2026-01-23T12:59:35.092588",
+  "policy_results": [
+    {
+      "metric": "tos",
+      "allowed_roles": [
+        "public",
+        "analyst",
+        "finance",
+        "admin"
+      ],
+      "has_policy": true,
+      "max_time_range_days": null,
+      "row_limit": null,
+      "max_dimensions": null,
+      "status": "ok"
+    },
+    {
+      "metric": "pos",
+      "allowed_roles": [
+        "public",
+        "analyst",
+        "finance",
+        "admin"
+      ],
+      "has_policy": true,
+      "max_time_range_days": null,
+      "row_limit": null,
+      "max_dimensions": null,
+      "status": "ok"
+    },
+    {
+      "metric": "active_users",
+      "allowed_roles": [
+        "public",
+        "analyst",
+        "admin"
+      ],
+      "has_policy": true,
+      "max_time_range_days": 365,
+      "row_limit": 1000000,
+      "max_dimensions": 3,
+      "status": "ok"
+    },
+    {
+      "metric": "total_account_balance",
+      "allowed_roles": [
+        "public",
+        "analyst",
+        "finance",
+        "admin"
+      ],
+      "has_policy": true,
+      "max_time_range_days": null,
+      "row_limit": null,
+      "max_dimensions": 3,
+      "status": "ok"
+    },
+    {
+      "metric": "transaction_volume",
+      "allowed_roles": [
+        "public",
+        "analyst",
+        "finance",
+        "admin"
+      ],
+      "has_policy": true,
+      "max_time_range_days": 730,
+      "row_limit": 1000000,
+      "max_dimensions": 3,
+      "status": "ok"
+    },
+    {
+      "metric": "transaction_count",
+      "allowed_roles": [
+        "public",
+        "analyst",
+        "finance",
+        "admin"
+      ],
+      "has_policy": true,
+      "max_time_range_days": 730,
+      "row_limit": 1000000,
+      "max_dimensions": 3,
+      "status": "ok"
+    },
+    {
+      "metric": "average_transaction_amount",
+      "allowed_roles": [
+        "public",
+        "analyst",
+        "finance",
+        "admin"
+      ],
+      "has_policy": true,
+      "max_time_range_days": 730,
+      "row_limit": 1000000,
+      "max_dimensions": 3,
+      "status": "ok"
+    },
+    {
+      "metric": "total_outstanding_customer",
+      "allowed_roles": [
+        "public",
+        "analyst",
+        "finance",
+        "admin"
+      ],
+      "has_policy": true,
+      "max_time_range_days": 365,
+      "row_limit": 1000000,
+      "max_dimensions": 2,
+      "status": "ok"
+    },
+    {
+      "metric": "writeoff_amount",
+      "allowed_roles": [
+        "finance",
+        "admin"
+      ],
+      "has_policy": true,
+      "max_time_range_days": 365,
+      "row_limit": 1000000,
+      "max_dimensions": 2,
+      "status": "ok"
+    },
+    {
+      "metric": "active_accounts_count",
+      "allowed_roles": [
+        "public",
+        "analyst",
+        "finance",
+        "admin"
+      ],
+      "has_policy": true,
+      "max_time_range_days": 365,
+      "row_limit": 1000000,
+      "max_dimensions": 2,
+      "status": "ok"
+    },
+    {
+      "metric": "loan_amount",
+      "allowed_roles": [
+        "public",
+        "analyst",
+        "finance",
+        "admin"
+      ],
+      "has_policy": true,
+      "max_time_range_days": null,
+      "row_limit": null,
+      "max_dimensions": 2,
+      "status": "ok"
+    },
+    {
+      "metric": "disbursed_amount",
+      "allowed_roles": [
+        "public",
+        "analyst",
+        "finance",
+        "admin"
+      ],
+      "has_policy": true,
+      "max_time_range_days": 730,
+      "row_limit": 1000000,
+      "max_dimensions": 2,
+      "status": "ok"
+    },
+    {
+      "metric": "repaid_amount",
+      "allowed_roles": [
+        "public",
+        "analyst",
+        "finance",
+        "admin"
+      ],
+      "has_policy": true,
+      "max_time_range_days": 730,
+      "row_limit": 1000000,
+      "max_dimensions": 1,
+      "status": "ok"
+    },
+    {
+      "metric": "principal_repaid",
+      "allowed_roles": [
+        "public",
+        "analyst",
+        "finance",
+        "admin"
+      ],
+      "has_policy": true,
+      "max_time_range_days": 730,
+      "row_limit": 1000000,
+      "max_dimensions": 1,
+      "status": "ok"
+    },
+    {
+      "metric": "interest_repaid",
+      "allowed_roles": [
+        "public",
+        "analyst",
+        "finance",
+        "admin"
+      ],
+      "has_policy": true,
+      "max_time_range_days": 730,
+      "row_limit": 1000000,
+      "max_dimensions": 1,
+      "status": "ok"
+    },
+    {
+      "metric": "outstanding_principal",
+      "allowed_roles": [
+        "public",
+        "analyst",
+        "finance",
+        "admin"
+      ],
+      "has_policy": true,
+      "max_time_range_days": 365,
+      "row_limit": 1000000,
+      "max_dimensions": 1,
+      "status": "ok"
+    },
+    {
+      "metric": "outstanding_interest",
+      "allowed_roles": [
+        "public",
+        "analyst",
+        "finance",
+        "admin"
+      ],
+      "has_policy": true,
+      "max_time_range_days": 365,
+      "row_limit": 1000000,
+      "max_dimensions": 1,
+      "status": "ok"
+    },
+    {
+      "metric": "total_outstanding_loan",
+      "allowed_roles": [
+        "public",
+        "analyst",
+        "finance",
+        "admin"
+      ],
+      "has_policy": true,
+      "max_time_range_days": 365,
+      "row_limit": 1000000,
+      "max_dimensions": 1,
+      "status": "ok"
+    },
+    {
+      "metric": "interest_accrued",
+      "allowed_roles": [
+        "finance",
+        "admin"
+      ],
+      "has_policy": true,
+      "max_time_range_days": 365,
+      "row_limit": 1000000,
+      "max_dimensions": 1,
+      "status": "ok"
+    },
+    {
+      "metric": "penalty_waived",
+      "allowed_roles": [
+        "finance",
+        "admin"
+      ],
+      "has_policy": true,
+      "max_time_range_days": 365,
+      "row_limit": 1000000,
+      "max_dimensions": 1,
+      "status": "ok"
+    },
+    {
+      "metric": "total_balance",
+      "allowed_roles": [
+        "public",
+        "analyst",
+        "finance",
+        "admin"
+      ],
+      "has_policy": true,
+      "max_time_range_days": 365,
+      "row_limit": 1000000,
+      "max_dimensions": 1,
+      "status": "ok"
+    },
+    {
+      "metric": "principal_balance",
+      "allowed_roles": [
+        "public",
+        "analyst",
+        "finance",
+        "admin"
+      ],
+      "has_policy": true,
+      "max_time_range_days": 365,
+      "row_limit": 1000000,
+      "max_dimensions": 1,
+      "status": "ok"
+    },
+    {
+      "metric": "interest_balance",
+      "allowed_roles": [
+        "public",
+        "analyst",
+        "finance",
+        "admin"
+      ],
+      "has_policy": true,
+      "max_time_range_days": 365,
+      "row_limit": 1000000,
+      "max_dimensions": 1,
+      "status": "ok"
+    }
+  ],
+  "role_access_matrix": {
+    "public": {
+      "allowed": [
+        "tos",
+        "pos",
+        "active_users",
+        "total_account_balance",
+        "transaction_volume",
+        "transaction_count",
+        "average_transaction_amount",
+        "total_outstanding_customer",
+        "active_accounts_count",
+        "loan_amount",
+        "disbursed_amount",
+        "repaid_amount",
+        "principal_repaid",
+        "interest_repaid",
+        "outstanding_principal",
+        "outstanding_interest",
+        "total_outstanding_loan",
+        "total_balance",
+        "principal_balance",
+        "interest_balance"
+      ],
+      "denied": [
+        "writeoff_amount",
+        "interest_accrued",
+        "penalty_waived"
+      ]
+    },
+    "analyst": {
+      "allowed": [
+        "tos",
+        "pos",
+        "active_users",
+        "total_account_balance",
+        "transaction_volume",
+        "transaction_count",
+        "average_transaction_amount",
+        "total_outstanding_customer",
+        "active_accounts_count",
+        "loan_amount",
+        "disbursed_amount",
+        "repaid_amount",
+        "principal_repaid",
+        "interest_repaid",
+        "outstanding_principal",
+        "outstanding_interest",
+        "total_outstanding_loan",
+        "total_balance",
+        "principal_balance",
+        "interest_balance"
+      ],
+      "denied": [
+        "writeoff_amount",
+        "interest_accrued",
+        "penalty_waived"
+      ]
+    },
+    "finance": {
+      "allowed": [
+        "tos",
+        "pos",
+        "total_account_balance",
+        "transaction_volume",
+        "transaction_count",
+        "average_transaction_amount",
+        "total_outstanding_customer",
+        "writeoff_amount",
+        "active_accounts_count",
+        "loan_amount",
+        "disbursed_amount",
+        "repaid_amount",
+        "principal_repaid",
+        "interest_repaid",
+        "outstanding_principal",
+        "outstanding_interest",
+        "total_outstanding_loan",
+        "interest_accrued",
+        "penalty_waived",
+        "total_balance",
+        "principal_balance",
+        "interest_balance"
+      ],
+      "denied": [
+        "active_users"
+      ]
+    },
+    "admin": {
+      "allowed": [
+        "tos",
+        "pos",
+        "active_users",
+        "total_account_balance",
+        "transaction_volume",
+        "transaction_count",
+        "average_transaction_amount",
+        "total_outstanding_customer",
+        "writeoff_amount",
+        "active_accounts_count",
+        "loan_amount",
+        "disbursed_amount",
+        "repaid_amount",
+        "principal_repaid",
+        "interest_repaid",
+        "outstanding_principal",
+        "outstanding_interest",
+        "total_outstanding_loan",
+        "interest_accrued",
+        "penalty_waived",
+        "total_balance",
+        "principal_balance",
+        "interest_balance"
+      ],
+      "denied": []
+    }
+  }
+}

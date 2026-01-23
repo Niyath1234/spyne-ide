@@ -1,0 +1,59 @@
+{
+  "entities": [
+    {
+      "name": "customer_accounts_er",
+      "description": "Customer and account data mapped from ER diagram",
+      "primary_key": [
+        "customer_id"
+      ],
+      "attributes": [
+        "customer_id",
+        "customer_name",
+        "customer_type",
+        "registration_date",
+        "account_id",
+        "account_balance",
+        "account_status",
+        "account_type"
+      ]
+    },
+    {
+      "name": "transactions_er",
+      "description": "Transaction data mapped from ER diagram",
+      "primary_key": [
+        "customer_id",
+        "transaction_id"
+      ],
+      "attributes": [
+        "customer_id",
+        "transaction_id",
+        "transaction_date",
+        "transaction_amount",
+        "transaction_type"
+      ]
+    }
+  ],
+  "relationships": [
+    {
+      "from_entity": "customer_accounts_er",
+      "to_entity": "transactions_er",
+      "type": "one-to-many",
+      "description": "Customer accounts have many transactions",
+      "join_keys": {
+        "customer_id": "customer_id"
+      }
+    }
+  ],
+  "joins": [
+    {
+      "from_table": "customer_accounts_er",
+      "to_table": "transactions_er",
+      "join_type": "left_join",
+      "keys": {
+        "customer_id": "customer_id"
+      },
+      "description": "Join customer accounts with transactions on customer_id",
+      "condition": "customer_accounts_er.customer_id = transactions_er.customer_id"
+    }
+  ]
+}
