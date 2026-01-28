@@ -1,0 +1,57 @@
+# RCA Engine Backend Requirements
+# Production-ready Flask application with enterprise features
+
+# Core Framework
+Flask>=3.0.0
+Flask-CORS>=4.0.0
+
+# Production Server
+gunicorn>=21.2.0
+
+# HTTP Client (for LLM API calls)
+requests>=2.31.0
+httpx>=0.25.0
+
+# OpenAI API (LLM features)
+openai>=1.0.0
+
+# Database Support
+psycopg2-binary>=2.9.9
+SQLAlchemy>=2.0.0
+PyMySQL>=1.1.0
+
+# JSON & Data Processing
+orjson>=3.9.0
+pydantic>=2.0.0
+
+# Authentication & Security
+PyJWT>=2.8.0
+python-dotenv>=1.0.0
+bcrypt>=4.1.0
+
+# Observability & Monitoring
+prometheus-client>=0.19.0
+structlog>=23.2.0
+
+# Caching (optional - for production)
+redis>=5.0.0
+
+# Date/Time Handling
+python-dateutil>=2.8.2
+
+# Utilities
+python-multipart>=0.0.6
+typing-extensions>=4.8.0
+
+# Testing (dev only)
+pytest>=7.4.0
+pytest-cov>=4.1.0
+pytest-asyncio>=0.21.0
+
+# CSV Processing
+pandas>=2.0.0
+
+# NLP Utilities (optional - for semantic matching)
+# rapidfuzz>=3.0.0
+# sentence-transformers>=2.2.0
+

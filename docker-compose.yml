@@ -1,18 +1,200 @@
 version: "3.8"
 
 services:
+  # ==========================================================================
+  # RCA Engine Backend (Flask Production Server)
+  # ==========================================================================
   backend:
-    build: .
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
     container_name: rca-backend
+    restart: unless-stopped
     ports:
       - "8080:8080"
+    environment:
+      # Server Configuration
+      - RCA_HOST=0.0.0.0
+      - RCA_PORT=8080
+      - RCA_DEBUG=false
+      - RCA_WORKERS=4
+      - RCA_THREADS=4
+      - RCA_TIMEOUT=120
+      - RCA_LOG_LEVEL=info
+      
+      # LLM Configuration (set in .env file)
+      - OPENAI_API_KEY=${OPENAI_API_KEY:-}
+      - RCA_LLM_MODEL=${RCA_LLM_MODEL:-gpt-4}
+      - RCA_LLM_TEMPERATURE=${RCA_LLM_TEMPERATURE:-0.0}
+      - RCA_LLM_MAX_TOKENS=${RCA_LLM_MAX_TOKENS:-3000}
+      
+      # Security Configuration
+      - RCA_SECRET_KEY=${RCA_SECRET_KEY:-change-me-in-production}
+      - RCA_RATE_LIMIT_RPM=${RCA_RATE_LIMIT_RPM:-60}
+      - RCA_RATE_LIMIT_RPH=${RCA_RATE_LIMIT_RPH:-1000}
+      - RCA_CORS_ORIGINS=${RCA_CORS_ORIGINS:-*}
+      
+      # Database Configuration (optional - for query execution)
+      - RCA_DB_TYPE=${RCA_DB_TYPE:-postgresql}
+      - RCA_DB_HOST=${RCA_DB_HOST:-postgres}
+      - RCA_DB_PORT=${RCA_DB_PORT:-5432}
+      - RCA_DB_NAME=${RCA_DB_NAME:-rca_engine}
+      - RCA_DB_USER=${RCA_DB_USER:-rca_user}
+      - RCA_DB_PASSWORD=${RCA_DB_PASSWORD:-}
+      
+      # Observability
+      - RCA_ENABLE_METRICS=true
+      - RCA_ENABLE_TRACING=true
+    volumes:
+      - ./metadata:/app/../metadata:ro
+      - ./data:/app/../data:ro
+      - ./config:/app/../config:ro
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/api/v1/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+    networks:
+      - rca-network
+    deploy:
+      resources:
+        limits:
+          memory: 2G
+          cpus: '2'
+        reservations:
+          memory: 512M
+          cpus: '0.5'
 
+  # ==========================================================================
+  # RCA Engine Frontend (React UI)
+  # ==========================================================================
   frontend:
     build: ./ui
     container_name: rca-frontend
+    restart: unless-stopped
     ports:
       - "5173:80"
     depends_on:
-      - backend
+      backend:
+        condition: service_healthy
     environment:
       - VITE_API_URL=http://backend:8080
+    networks:
+      - rca-network
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+          cpus: '0.5'
+
+  # ==========================================================================
+  # Optional: Redis Cache
+  # ==========================================================================
+  redis:
+    image: redis:7-alpine
+    container_name: rca-redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+    command: redis-server --appendonly yes
+    networks:
+      - rca-network
+    profiles:
+      - with-cache
+    deploy:
+      resources:
+        limits:
+          memory: 128M
+          cpus: '0.25'
+
+  # ==========================================================================
+  # Optional: PostgreSQL Database
+  # ==========================================================================
+  postgres:
+    image: postgres:15-alpine
+    container_name: rca-postgres
+    restart: unless-stopped
+    ports:
+      - "5432:5432"
+    environment:
+      - POSTGRES_DB=${RCA_DB_NAME:-rca_engine}
+      - POSTGRES_USER=${RCA_DB_USER:-rca_user}
+      - POSTGRES_PASSWORD=${RCA_DB_PASSWORD:-change_me}
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+      - ./schema.sql:/docker-entrypoint-initdb.d/01-schema.sql:ro
+    networks:
+      - rca-network
+    profiles:
+      - with-db
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+          cpus: '1'
+
+  # ==========================================================================
+  # Optional: Prometheus Monitoring
+  # ==========================================================================
+  prometheus:
+    image: prom/prometheus:v2.47.0
+    container_name: rca-prometheus
+    restart: unless-stopped
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./config/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus-data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.enable-lifecycle'
+    networks:
+      - rca-network
+    profiles:
+      - with-monitoring
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+          cpus: '0.5'
+
+  # ==========================================================================
+  # Optional: Grafana Dashboard
+  # ==========================================================================
+  grafana:
+    image: grafana/grafana:10.1.0
+    container_name: rca-grafana
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      - GF_SECURITY_ADMIN_USER=admin
+      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_PASSWORD:-admin}
+      - GF_USERS_ALLOW_SIGN_UP=false
+    volumes:
+      - grafana-data:/var/lib/grafana
+    depends_on:
+      - prometheus
+    networks:
+      - rca-network
+    profiles:
+      - with-monitoring
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+          cpus: '0.5'
+
+networks:
+  rca-network:
+    driver: bridge
+
+volumes:
+  redis-data:
+  postgres-data:
+  prometheus-data:
+  grafana-data:

@@ -11,8 +11,60 @@ const execAsync = promisify(exec);
 const app = express();
 const PORT = 8080;
 
+// Enterprise features: Logging middleware
+const logRequest = (req, res, next) => {
+  const startTime = Date.now();
+  const requestId = `req-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+  req.requestId = requestId;
+  
+  console.log(JSON.stringify({
+    timestamp: new Date().toISOString(),
+    level: 'INFO',
+    request_id: requestId,
+    method: req.method,
+    path: req.path,
+    ip: req.ip,
+    user_agent: req.get('user-agent'),
+  }));
+  
+  res.on('finish', () => {
+    const duration = Date.now() - startTime;
+    console.log(JSON.stringify({
+      timestamp: new Date().toISOString(),
+      level: res.statusCode >= 400 ? 'ERROR' : 'INFO',
+      request_id: requestId,
+      method: req.method,
+      path: req.path,
+      status: res.statusCode,
+      duration_ms: duration,
+    }));
+  });
+  
+  next();
+};
+
+// Enterprise features: Error handling middleware
+const errorHandler = (err, req, res, next) => {
+  console.error(JSON.stringify({
+    timestamp: new Date().toISOString(),
+    level: 'ERROR',
+    request_id: req.requestId || 'unknown',
+    method: req.method,
+    path: req.path,
+    error: err.message,
+    stack: process.env.NODE_ENV === 'development' ? err.stack : undefined,
+  }));
+  
+  res.status(err.status || 500).json({
+    success: false,
+    error: err.message || 'Internal server error',
+    request_id: req.requestId,
+  });
+};
+
 app.use(cors());
 app.use(express.json());
+app.use(logRequest);
 
 // Store pipelines in memory (in production, use a database)
 let pipelines = [];
@@ -61,8 +113,23 @@ app.get('/', (req, res) => {
     version: '1.0.0',
     status: 'running',
     endpoints: {
+      query: {
+        load_prerequisites: '/api/query/load-prerequisites',
+        generate_sql: '/api/query/generate-sql',
+      },
+      agent: {
+        run: '/api/agent/run',
+        continue: '/api/agent/continue',
+      },
+      reasoning: {
+        query: '/api/reasoning/query',
+        assess: '/api/reasoning/assess',
+        clarify: '/api/reasoning/clarify',
+      },
+      assistant: {
+        ask: '/api/assistant/ask',
+      },
       pipelines: '/api/pipelines',
-      reasoning: '/api/reasoning/query',
       rules: '/api/rules',
       ingestion: '/api/ingestion',
       metadata: {
@@ -573,8 +640,334 @@ app.post('/api/metadata/ingest/complete', async (req, res) => {
   }
 });
 
+// Agent API - Agent-based query processing
+// Store agent sessions in memory (in production, use a database)
+let agentSessions = {};
+
+app.post('/api/agent/run', async (req, res) => {
+  try {
+    const { session_id, user_query, ui_context } = req.body;
+    
+    if (!session_id || !user_query) {
+      return res.status(400).json({ 
+        status: 'error',
+        error: 'session_id and user_query are required' 
+      });
+    }
+    
+    // Initialize session if it doesn't exist
+    if (!agentSessions[session_id]) {
+      agentSessions[session_id] = {
+        id: session_id,
+        history: [],
+        context: ui_context || {},
+        createdAt: new Date().toISOString(),
+      };
+    }
+    
+    // Add user query to history
+    agentSessions[session_id].history.push({
+      role: 'user',
+      content: user_query,
+      timestamp: new Date().toISOString(),
+    });
+    
+    // Use query generation API to process the query
+    const path = require('path');
+    const { exec } = require('child_process');
+    const { promisify } = require('util');
+    const execAsync = promisify(exec);
+    
+    const projectRoot = path.join(__dirname, '..');
+    const scriptPath = path.join(__dirname, 'query_regeneration_api.py');
+    const useLLM = process.env.OPENAI_API_KEY ? true : false;
+    const inputData = JSON.stringify({ command: 'generate', query: user_query, use_llm: useLLM });
+    
+    const env = { ...process.env };
+    const { stdout, stderr } = await execAsync(
+      `cd ${projectRoot} && echo '${inputData}' | python3 ${scriptPath}`,
+      {
+        maxBuffer: 10 * 1024 * 1024,
+        env: env,
+      }
+    );
+    
+    const result = JSON.parse(stdout.trim());
+    
+    // Add assistant response to history
+    const assistantResponse = {
+      role: 'assistant',
+      content: result.sql || result.error || 'Query processed',
+      sql: result.sql,
+      intent: result.intent,
+      timestamp: new Date().toISOString(),
+    };
+    agentSessions[session_id].history.push(assistantResponse);
+    
+    // Determine response type
+    if (result.success && result.sql) {
+      res.json({
+        status: 'success',
+        message: 'Query generated successfully',
+        data: {
+          sql: result.sql,
+          intent: result.intent,
+        },
+        final_answer: result.sql,
+        trace: result.reasoning_steps || [],
+      });
+    } else {
+      res.json({
+        status: 'needs_clarification',
+        message: result.error || 'Query needs clarification',
+        clarification: {
+          query: user_query,
+          question: result.error || 'Could you provide more details?',
+          confidence: 0.5,
+          missing_pieces: result.error ? [{
+            field: 'query',
+            importance: 'high',
+            description: result.error,
+          }] : [],
+        },
+      });
+    }
+  } catch (error) {
+    res.status(500).json({
+      status: 'error',
+      error: error.message,
+    });
+  }
+});
+
+app.post('/api/agent/continue', async (req, res) => {
+  try {
+    const { session_id, choice_id, ui_context } = req.body;
+    
+    if (!session_id || !choice_id) {
+      return res.status(400).json({ 
+        status: 'error',
+        error: 'session_id and choice_id are required' 
+      });
+    }
+    
+    const session = agentSessions[session_id];
+    if (!session) {
+      return res.status(404).json({ 
+        status: 'error',
+        error: 'Session not found' 
+      });
+    }
+    
+    // Update context with choice
+    session.context = { ...session.context, ...ui_context };
+    
+    // Continue processing based on choice
+    // For now, return success - in production, implement choice handling logic
+    res.json({
+      status: 'success',
+      message: 'Choice processed',
+      data: {
+        choice_id,
+        session_id,
+      },
+    });
+  } catch (error) {
+    res.status(500).json({
+      status: 'error',
+      error: error.message,
+    });
+  }
+});
+
+// Reasoning API - Additional endpoints
+app.post('/api/reasoning/assess', async (req, res) => {
+  try {
+    const { query } = req.body;
+    
+    if (!query) {
+      return res.status(400).json({ error: 'query is required' });
+    }
+    
+    // Use query generation to assess the query
+    const path = require('path');
+    const { exec } = require('child_process');
+    const { promisify } = require('util');
+    const execAsync = promisify(exec);
+    
+    const projectRoot = path.join(__dirname, '..');
+    const scriptPath = path.join(__dirname, 'query_regeneration_api.py');
+    const useLLM = process.env.OPENAI_API_KEY ? true : false;
+    const inputData = JSON.stringify({ command: 'generate', query, use_llm: useLLM });
+    
+    const env = { ...process.env };
+    const { stdout, stderr } = await execAsync(
+      `cd ${projectRoot} && echo '${inputData}' | python3 ${scriptPath}`,
+      {
+        maxBuffer: 10 * 1024 * 1024,
+        env: env,
+      }
+    );
+    
+    const result = JSON.parse(stdout.trim());
+    
+    // Assess query quality
+    const assessment = {
+      query,
+      clarity: result.success ? 'high' : 'low',
+      completeness: result.sql ? 'complete' : 'incomplete',
+      confidence: result.success ? 0.9 : 0.3,
+      intent: result.intent || null,
+      sql_generated: !!result.sql,
+      warnings: result.warnings || [],
+      suggestions: result.error ? [`Consider: ${result.error}`] : [],
+    };
+    
+    res.json(assessment);
+  } catch (error) {
+    res.status(500).json({
+      error: error.message,
+      assessment: {
+        query: req.body.query,
+        clarity: 'unknown',
+        completeness: 'unknown',
+        confidence: 0.0,
+        error: error.message,
+      },
+    });
+  }
+});
+
+app.post('/api/reasoning/clarify', async (req, res) => {
+  try {
+    const { query, answer } = req.body;
+    
+    if (!query) {
+      return res.status(400).json({ error: 'query is required' });
+    }
+    
+    // Generate clarification based on query and previous answer
+    const clarification = {
+      query,
+      answer: answer || null,
+      needs_clarification: true,
+      clarification_questions: [
+        'Could you specify which metrics you want to see?',
+        'What time range are you interested in?',
+        'Are there any specific filters you want to apply?',
+      ],
+      suggestions: [
+        'Try rephrasing your query with more specific details',
+        'Include metric names if you know them',
+        'Specify date ranges or filters',
+      ],
+    };
+    
+    res.json(clarification);
+  } catch (error) {
+    res.status(500).json({
+      error: error.message,
+    });
+  }
+});
+
+// Assistant API - General assistant queries
+app.post('/api/assistant/ask', async (req, res) => {
+  try {
+    const { question } = req.body;
+    
+    if (!question) {
+      return res.status(400).json({ 
+        response_type: 'Error',
+        error: 'question is required' 
+      });
+    }
+    
+    // Check if it's a SQL query request
+    const isQueryRequest = question.toLowerCase().includes('query') || 
+                          question.toLowerCase().includes('sql') ||
+                          question.toLowerCase().includes('show') ||
+                          question.toLowerCase().includes('get') ||
+                          question.toLowerCase().includes('find');
+    
+    if (isQueryRequest) {
+      // Use query generation API
+      const path = require('path');
+      const { exec } = require('child_process');
+      const { promisify } = require('util');
+      const execAsync = promisify(exec);
+      
+      const projectRoot = path.join(__dirname, '..');
+      const scriptPath = path.join(__dirname, 'query_regeneration_api.py');
+      const useLLM = process.env.OPENAI_API_KEY ? true : false;
+      const inputData = JSON.stringify({ command: 'generate', query: question, use_llm: useLLM });
+      
+      const env = { ...process.env };
+      const { stdout, stderr } = await execAsync(
+        `cd ${projectRoot} && echo '${inputData}' | python3 ${scriptPath}`,
+        {
+          maxBuffer: 10 * 1024 * 1024,
+          env: env,
+        }
+      );
+      
+      const result = JSON.parse(stdout.trim());
+      
+      if (result.success && result.sql) {
+        res.json({
+          response_type: 'QueryResult',
+          status: 'success',
+          answer: `Here's the SQL query:\n\n\`\`\`sql\n${result.sql}\n\`\`\``,
+          result: result.sql,
+          intent: result.intent,
+          validation: result.validation || null,
+        });
+      } else {
+        res.json({
+          response_type: 'NeedsClarification',
+          status: 'failed',
+          answer: result.error || 'I need more information to generate the query.',
+          clarification: {
+            query: question,
+            question: result.error || 'Could you provide more details about what you want to query?',
+            missing_pieces: result.error ? [{
+              field: 'query',
+              importance: 'high',
+              description: result.error,
+            }] : [],
+          },
+        });
+      }
+    } else {
+      // General question - provide helpful response
+      res.json({
+        response_type: 'Answer',
+        status: 'success',
+        answer: `I can help you with SQL queries and data analysis. Try asking me things like:
+- "Show me sales by region"
+- "Query the customer table"
+- "Get revenue metrics"
+- "Find orders from last month"
+
+For your question: "${question}", I can help you generate a SQL query if you provide more details about what data you want to retrieve.`,
+      });
+    }
+  } catch (error) {
+    res.status(500).json({
+      response_type: 'Error',
+      status: 'error',
+      error: error.message,
+      answer: `Sorry, I encountered an error: ${error.message}`,
+    });
+  }
+});
+
+// Error handler must be last
+app.use(errorHandler);
+
 app.listen(PORT, () => {
   console.log(`🚀 Backend API server running on http://localhost:${PORT}`);
   console.log(`📊 Ready to handle pipeline and reasoning requests`);
+  console.log(`✨ New endpoints: /api/agent/*, /api/reasoning/assess, /api/reasoning/clarify, /api/assistant/ask`);
 });
 

@@ -1,0 +1,52 @@
+# Prometheus Configuration for RCA Engine
+# Monitors the RCA Engine API endpoints
+
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+  
+  # Labels to apply to all metrics
+  external_labels:
+    monitor: 'rca-engine'
+    environment: 'production'
+
+# Alertmanager configuration (optional)
+# alerting:
+#   alertmanagers:
+#     - static_configs:
+#         - targets:
+#             - alertmanager:9093
+
+# Rule files (optional)
+# rule_files:
+#   - 'alerts/*.yml'
+
+scrape_configs:
+  # RCA Engine Backend
+  - job_name: 'rca-engine'
+    static_configs:
+      - targets: ['backend:8080']
+        labels:
+          service: 'rca-engine'
+          component: 'backend'
+    metrics_path: '/api/v1/metrics/prometheus'
+    scrape_interval: 30s
+    scrape_timeout: 10s
+    
+  # RCA Engine Health Checks
+  - job_name: 'rca-engine-health'
+    static_configs:
+      - targets: ['backend:8080']
+        labels:
+          service: 'rca-engine'
+          component: 'health'
+    metrics_path: '/api/v1/health'
+    scrape_interval: 60s
+    
+  # Prometheus self-monitoring
+  - job_name: 'prometheus'
+    static_configs:
+      - targets: ['localhost:9090']
+        labels:
+          service: 'prometheus'
+

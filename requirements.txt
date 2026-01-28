@@ -1,4 +1,4 @@
-# RCA Engine Requirements
+# Spyne IDE Requirements
 # Production-grade components
 
 # Core dependencies
@@ -31,4 +31,8 @@ pytest-asyncio>=0.21.0
 
 # Optional: Structured logging
 # structlog>=23.1.0
+
+# Token counting and retry logic
+tiktoken>=0.5.0
+tenacity>=8.2.0
 

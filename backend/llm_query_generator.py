@@ -14,17 +14,63 @@ import os
 import sys
 from pathlib import Path
 from typing import Dict, List, Any, Optional, Tuple
+from dataclasses import dataclass
 import requests
+import logging
+import hashlib
+import re
 
-# Add parent directory to path
-sys.path.insert(0, str(Path(__file__).parent.parent))
+logger = logging.getLogger(__name__)
 
-from test_outstanding_daily_regeneration import load_metadata
-from sql_builder import TableRelationshipResolver, IntentValidator, SQLBuilder, FixConfidence
-from knowledge_base_client import get_knowledge_base_client
+try:
+    import tiktoken
+except ImportError:
+    tiktoken = None
+    logger.warning("tiktoken not installed, token counting disabled")
+
+try:
+    from tenacity import retry, stop_after_attempt, wait_exponential, retry_if_exception_type
+except ImportError:
+    retry = None
+    logger.warning("tenacity not installed, retry logic disabled")
+
+from backend.metadata_provider import MetadataProvider
+from backend.sql_builder import TableRelationshipResolver, IntentValidator, SQLBuilder, FixConfidence
+from backend.knowledge_base_client import get_knowledge_base_client
+
+
+@dataclass
+class ContextBundle:
+    """Bundles all context components for LLM."""
+    rag: str = ""
+    hybrid: str = ""
+    structured: str = ""
+    rules: str = ""
+    
+    def render(self) -> str:
+        """Combine all context components."""
+        parts = []
+        if self.rag:
+            parts.append(self.rag)
+        if self.hybrid:
+            parts.append(self.hybrid)
+        if self.structured:
+            parts.append(self.structured)
+        if self.rules:
+            parts.append(self.rules)
+        return "\n\n".join(parts)
+    
+    def __len__(self) -> int:
+        """Total length of all context."""
+        return len(self.render())
+
 
 class LLMQueryGenerator:
     """LLM-based query generator with comprehensive context."""
+    
+    # Token budget constants
+    MAX_CONTEXT_TOKENS = 18_000  # Leave room for response
+    MAX_SYSTEM_TOKENS = 2_000
     
     def __init__(self, api_key: Optional[str] = None, model: Optional[str] = None, kb_api_url: Optional[str] = None):
         self.api_key = api_key or os.getenv("OPENAI_API_KEY", "")
@@ -53,9 +99,116 @@ class LLMQueryGenerator:
         except Exception as e:
             print(f"⚠️  KnowledgeBase client initialization failed: {e}, RAG disabled")
             self.kb_client = None
+        
+        # Initialize cache
+        self._cache_enabled = True
+        self._cache: Dict[str, Dict[str, Any]] = {}
     
-    def call_llm(self, prompt: str, system_prompt: Optional[str] = None) -> str:
-        """Call OpenAI API."""
+    def _count_tokens(self, text: str, model: str = None) -> int:
+        """Count tokens in text."""
+        if not text:
+            return 0
+        
+        if not tiktoken:
+            # Fallback: rough estimate (4 chars per token)
+            return len(text) // 4
+        
+        model = model or self.model
+        try:
+            # Try to get encoding for model
+            encoding = tiktoken.encoding_for_model(model)
+        except (KeyError, AttributeError):
+            # Fallback to cl100k_base (GPT-4)
+            encoding = tiktoken.get_encoding("cl100k_base")
+        
+        return len(encoding.encode(text))
+    
+    def _truncate_text(self, text: str, target_tokens: int) -> str:
+        """Truncate text to target token count."""
+        if not tiktoken:
+            # Fallback: rough estimate
+            target_chars = target_tokens * 4
+            return text[:target_chars] + "\n[... truncated ...]"
+        
+        encoding = tiktoken.get_encoding("cl100k_base")
+        tokens = encoding.encode(text)
+        if len(tokens) <= target_tokens:
+            return text
+        truncated = tokens[:target_tokens]
+        return encoding.decode(truncated) + "\n[... truncated ...]"
+    
+    def _truncate_structured_metadata(self, structured: str) -> str:
+        """Intelligently truncate structured metadata."""
+        # Keep table schemas, truncate descriptions
+        lines = structured.split('\n')
+        important_lines = []
+        skip_section = False
+        
+        for line in lines:
+            if 'DESCRIPTION:' in line.upper():
+                skip_section = True
+            elif line.startswith('=') or line.startswith('Table:') or line.startswith('Metric:') or line.startswith('Dimension:'):
+                skip_section = False
+                important_lines.append(line)
+            elif not skip_section:
+                important_lines.append(line)
+        
+        return '\n'.join(important_lines[:200])  # Limit to 200 lines
+    
+    def _truncate_context(self, bundle: ContextBundle) -> ContextBundle:
+        """
+        Truncate context if too large.
+        Truncation order (strict):
+        1. RAG (least critical)
+        2. Hybrid (less critical)
+        3. Structured metadata (more critical)
+        4. Rules (never truncate - most critical)
+        """
+        total_tokens = self._count_tokens(bundle.render())
+        
+        if total_tokens <= self.MAX_CONTEXT_TOKENS:
+            return bundle
+        
+        logger.warning(f"Context too large ({total_tokens} tokens), truncating...")
+        
+        # Truncate RAG first
+        if bundle.rag:
+            rag_tokens = self._count_tokens(bundle.rag)
+            if rag_tokens > 0:
+                # Truncate to 50% of original
+                target_tokens = rag_tokens // 2
+                bundle.rag = self._truncate_text(bundle.rag, target_tokens)
+                total_tokens = self._count_tokens(bundle.render())
+                logger.info(f"Truncated RAG: {rag_tokens} -> {self._count_tokens(bundle.rag)} tokens")
+        
+        # Truncate hybrid if still too large
+        if total_tokens > self.MAX_CONTEXT_TOKENS and bundle.hybrid:
+            hybrid_tokens = self._count_tokens(bundle.hybrid)
+            if hybrid_tokens > 0:
+                target_tokens = hybrid_tokens // 2
+                bundle.hybrid = self._truncate_text(bundle.hybrid, target_tokens)
+                total_tokens = self._count_tokens(bundle.render())
+                logger.info(f"Truncated hybrid: {hybrid_tokens} -> {self._count_tokens(bundle.hybrid)} tokens")
+        
+        # Truncate structured metadata if still too large
+        if total_tokens > self.MAX_CONTEXT_TOKENS and bundle.structured:
+            # Keep most important parts (tables, metrics, dimensions)
+            # Truncate less important (descriptions, examples)
+            bundle.structured = self._truncate_structured_metadata(bundle.structured)
+            total_tokens = self._count_tokens(bundle.render())
+            logger.info(f"Truncated structured metadata: {total_tokens} tokens")
+        
+        # Never truncate rules - they're critical
+        
+        if total_tokens > self.MAX_CONTEXT_TOKENS:
+            logger.error(f"Context still too large after truncation: {total_tokens} tokens")
+            # Last resort: aggressive truncation of structured
+            bundle.structured = bundle.structured[:5000]  # Hard limit
+        
+        return bundle
+    
+    def _call_llm_impl(self, prompt: str, system_prompt: Optional[str] = None) -> str:
+        """Internal implementation of LLM call (without retry)."""
         if not self.api_key:
             raise ValueError("OpenAI API key not found. Set OPENAI_API_KEY environment variable.")
         
@@ -82,43 +235,99 @@ class LLMQueryGenerator:
         else:
             payload["max_tokens"] = 3000
         
-        try:
-            response = requests.post(self.base_url, headers=headers, json=payload, timeout=120)
+        response = requests.post(self.base_url, headers=headers, json=payload, timeout=120)
+        
+        # Don't retry on 4xx errors (bad request)
+        if response.status_code == 429:
+            # Rate limit - retry
+            raise requests.exceptions.HTTPError(f"Rate limit: {response.text}")
+        elif 400 <= response.status_code < 500:
+            # Client error - don't retry
             response.raise_for_status()
-            result = response.json()
-            return result["choices"][0]["message"]["content"]
-        except requests.exceptions.HTTPError as e:
-            error_detail = ""
-            try:
-                error_detail = f" - {response.json()}"
-            except:
-                error_detail = f" - {response.text[:200]}"
-            raise Exception(f"LLM API call failed: {str(e)}{error_detail}")
-        except Exception as e:
-            raise Exception(f"LLM API call failed: {str(e)}")
+        
+        response.raise_for_status()
+        result = response.json()
+        return result["choices"][0]["message"]["content"]
     
-    def build_comprehensive_context(self, metadata: Dict[str, Any], query_text: Optional[str] = None) -> str:
+    def call_llm(self, prompt: str, system_prompt: Optional[str] = None) -> str:
         """
-        Build comprehensive context from metadata.
-        Uses node-level isolation - only includes relevant nodes for the query.
+        Call OpenAI API with retry logic.
+        
+        Retries on:
+        - Network errors
+        - HTTP 5xx errors
+        - Rate limit errors (429)
+        
+        Does NOT retry on:
+        - HTTP 4xx errors (bad request)
+        - Authentication errors (401)
+        """
+        if retry:
+            # Use tenacity for retry logic
+            @retry(
+                stop=stop_after_attempt(3),
+                wait=wait_exponential(multiplier=1, min=2, max=10),
+                retry=retry_if_exception_type((
+                    requests.exceptions.RequestException,
+                    requests.exceptions.HTTPError
+                )),
+                reraise=True
+            )
+            def _retryable_call():
+                return self._call_llm_impl(prompt, system_prompt)
+            
+            try:
+                return _retryable_call()
+            except requests.exceptions.Timeout:
+                logger.warning("LLM API timeout, will retry")
+                raise
+            except requests.exceptions.ConnectionError:
+                logger.warning("LLM API connection error, will retry")
+                raise
+            except requests.exceptions.HTTPError as e:
+                if hasattr(e, 'response') and e.response:
+                    if 500 <= e.response.status_code < 600:
+                        logger.warning(f"LLM API server error {e.response.status_code}, will retry")
+                        raise
+                    else:
+                        # Don't retry on client errors
+                        error_detail = ""
+                        try:
+                            error_detail = f" - {e.response.json()}"
+                        except:
+                            error_detail = f" - {e.response.text[:200]}"
+                        raise Exception(f"LLM API call failed: {str(e)}{error_detail}")
+                raise
+            except Exception as e:
+                raise Exception(f"LLM API call failed: {str(e)}")
+        else:
+            # No retry library, just call directly
+            try:
+                return self._call_llm_impl(prompt, system_prompt)
+            except requests.exceptions.HTTPError as e:
+                error_detail = ""
+                try:
+                    if hasattr(e, 'response') and e.response:
+                        error_detail = f" - {e.response.json()}"
+                except:
+                    if hasattr(e, 'response') and e.response:
+                        error_detail = f" - {e.response.text[:200]}"
+                raise Exception(f"LLM API call failed: {str(e)}{error_detail}")
+            except Exception as e:
+                raise Exception(f"LLM API call failed: {str(e)}")
+    
+    def build_comprehensive_context(self, metadata: Dict[str, Any], query_text: Optional[str] = None, compress: bool = True) -> str:
+        """
+        Build comprehensive context from metadata with optional compression.
+        
+        NOTE: Metadata should already be isolated before calling this function.
+        Do NOT call node-level isolation here.
         
         Args:
-            metadata: Metadata dictionary (can be isolated or full)
-            query_text: Optional query text for node-level isolation
+            metadata: Metadata dictionary (should be pre-isolated)
+            query_text: Optional query text (for logging only)
+            compress: Whether to compress context (reduce token usage)
         """
-        # Use node-level accessor if query_text provided
-        if query_text:
-            try:
-                from backend.node_level_metadata_accessor import get_node_level_accessor
-                accessor = get_node_level_accessor()
-                # Build isolated metadata - only what's needed
-                isolated_metadata = accessor.build_isolated_context(query_text)
-                # Merge with provided metadata (isolated takes precedence)
-                metadata = {**metadata, **isolated_metadata}
-            except Exception as e:
-                # Fallback to full metadata if isolation fails
-                print(f"Node-level isolation failed, using full metadata: {e}")
-        
         context_parts = []
         
         # 1. Tables metadata (now isolated to relevant tables only)
@@ -135,12 +344,25 @@ class LLMQueryGenerator:
             if table.get('time_column'):
                 context_parts.append(f"  Time Column: {table.get('time_column')}")
             context_parts.append(f"  Description: {table.get('description', 'N/A')}")
-            context_parts.append("  Columns:")
-            for col in table.get('columns', []):
+            # Compress columns - only show important ones
+            columns = table.get('columns', [])
+            if compress and len(columns) > 20:
+                # Show first 10 and last 5
+                important_cols = columns[:10] + columns[-5:]
+                context_parts.append(f"  Columns ({len(columns)} total, showing 15):")
+            else:
+                important_cols = columns
+                context_parts.append("  Columns:")
+            
+            for col in important_cols:
                 col_name = col.get('name') or col.get('column', '')
                 col_type = col.get('data_type') or col.get('type', 'unknown')
-                col_desc = col.get('description', '')
-                context_parts.append(f"    - {col_name} ({col_type}): {col_desc}")
+                # Skip description if compress
+                if compress:
+                    context_parts.append(f"    - {col_name} ({col_type})")
+                else:
+                    col_desc = col.get('description', '')
+                    context_parts.append(f"    - {col_name} ({col_type}): {col_desc}")
         
         # 2. Semantic Registry - Metrics (isolated to relevant metrics)
         registry = metadata.get("semantic_registry", {})
@@ -150,7 +372,8 @@ class LLMQueryGenerator:
         
         for metric in registry.get("metrics", []):
             context_parts.append(f"\nMetric: {metric.get('name')}")
-            context_parts.append(f"  Description: {metric.get('description')}")
+            if not compress:
+                context_parts.append(f"  Description: {metric.get('description')}")
             context_parts.append(f"  Base Table: {metric.get('base_table')}")
             context_parts.append(f"  SQL Expression: {metric.get('sql_expression', 'N/A')}")
             context_parts.append(f"  Allowed Dimensions: {', '.join(metric.get('allowed_dimensions', []))}")
@@ -164,7 +387,8 @@ class LLMQueryGenerator:
         
         for dim in registry.get("dimensions", []):
             context_parts.append(f"\nDimension: {dim.get('name')}")
-            context_parts.append(f"  Description: {dim.get('description')}")
+            if not compress:
+                context_parts.append(f"  Description: {dim.get('description')}")
             context_parts.append(f"  Base Table: {dim.get('base_table')}")
             context_parts.append(f"  Column: {dim.get('column')}")
             if dim.get('sql_expression'):
@@ -222,6 +446,81 @@ class LLMQueryGenerator:
         
         return "\n".join(context_parts)
     
+    def _isolate_metadata(self, query: str, metadata: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Isolate metadata to relevant nodes for the query.
+        Called exactly once per request.
+        
+        Args:
+            query: User query
+            metadata: Full metadata dictionary
+            
+        Returns:
+            Isolated metadata dictionary
+        """
+        try:
+            from backend.node_level_metadata_accessor import get_node_level_accessor
+            accessor = get_node_level_accessor()
+            isolated_metadata = accessor.build_isolated_context(query)
+            # Merge with provided metadata (isolated takes precedence)
+            logger.debug(f"Metadata isolated: {len(isolated_metadata.get('tables', {}).get('tables', []))} tables")
+            return {**metadata, **isolated_metadata}
+        except Exception as e:
+            logger.warning(f"Node-level isolation failed, using full metadata: {e}", exc_info=True)
+            return metadata  # Fallback to full metadata
+    
+    def _build_context_bundle(self, query: str, metadata: Dict[str, Any]) -> ContextBundle:
+        """
+        Build all context components exactly once.
+        No retries, no fallbacks that rebuild.
+        
+        Args:
+            query: User query
+            metadata: Metadata dictionary (should be pre-isolated)
+            
+        Returns:
+            ContextBundle with all context components
+        """
+        bundle = ContextBundle()
+        
+        # Build RAG context (optional, fails gracefully)
+        try:
+            bundle.rag = self._get_rag_context(query, top_k=5)
+            logger.debug("RAG context built successfully")
+        except Exception as e:
+            logger.warning(f"RAG context failed: {e}", exc_info=True)
+            bundle.rag = ""
+        
+        # Build hybrid context (optional, fails gracefully)
+        try:
+            from backend.hybrid_knowledge_retriever import HybridKnowledgeRetriever
+            hybrid_retriever = HybridKnowledgeRetriever()
+            bundle.hybrid = hybrid_retriever.build_optimized_context(
+                query, metadata, max_knowledge_items=30
+            )
+            logger.debug("Hybrid context built successfully")
+        except Exception as e:
+            logger.warning(f"Hybrid retrieval failed: {e}", exc_info=True)
+            bundle.hybrid = ""
+        
+        # Build structured context (required)
+        try:
+            bundle.structured = self.build_comprehensive_context(metadata, query)
+            logger.debug("Structured context built successfully")
+        except Exception as e:
+            logger.error(f"Structured context failed (critical): {e}", exc_info=True)
+            raise  # Re-raise - this is critical
+        
+        # Build knowledge rules context (optional, fails gracefully)
+        try:
+            bundle.rules = self._build_knowledge_register_rules_context(metadata, query)
+            logger.debug("Knowledge rules context built successfully")
+        except Exception as e:
+            logger.warning(f"Knowledge rules context failed: {e}", exc_info=True)
+            bundle.rules = ""
+        
+        return bundle
+    
     def _get_rag_context(self, query: str, top_k: int = 5) -> str:
         """
         Get RAG context from KnowledgeBase vector store.
@@ -242,7 +541,83 @@ class LLMQueryGenerator:
             # Fail silently if RAG is unavailable
             return ""
     
-    def _build_knowledge_register_rules_context(self, metadata: Dict[str, Any]) -> str:
+    def _normalize_query(self, query: str) -> str:
+        """
+        Normalize query for deduplication.
+        
+        - Lowercase
+        - Remove extra whitespace
+        """
+        normalized = query.lower().strip()
+        # Remove multiple spaces
+        normalized = ' '.join(normalized.split())
+        return normalized
+    
+    def _get_metadata_signature(self, metadata: Dict[str, Any]) -> str:
+        """Get signature of metadata (for cache invalidation)."""
+        # Use table count and registry size as signature
+        table_count = len(metadata.get('tables', {}).get('tables', []))
+        metric_count = len(metadata.get('semantic_registry', {}).get('metrics', []))
+        dim_count = len(metadata.get('semantic_registry', {}).get('dimensions', []))
+        return f"{table_count}:{metric_count}:{dim_count}"
+    
+    def _get_rules_signature(self, bundle: ContextBundle) -> str:
+        """Get signature of rules context."""
+        return hashlib.md5(bundle.rules.encode()).hexdigest() if bundle.rules else ""
+    
+    def _compute_cache_key(self, query: str, metadata_signature: str, rules_signature: str) -> str:
+        """Compute cache key from query and context signatures."""
+        # Normalize query
+        normalized_query = self._normalize_query(query)
+        
+        # Combine signatures
+        combined = f"{normalized_query}:{metadata_signature}:{rules_signature}"
+        
+        # Hash
+        return hashlib.sha256(combined.encode()).hexdigest()
+    
+    def _extract_columns_from_query(self, query: str) -> List[str]:
+        """Extract column names mentioned in query."""
+        columns = set()
+        query_lower = query.lower()
+        
+        # Common column patterns
+        column_patterns = [
+            r'\b(write_off_flag|writeoff_flag|arc_flag|originator|settled_flag)\b',
+            r'\b(\w+_flag)\b',  # Any _flag column
+            r'\b(\w+_id)\b',    # Any _id column
+        ]
+        
+        for pattern in column_patterns:
+            matches = re.findall(pattern, query_lower)
+            for match in matches:
+                if isinstance(match, tuple):
+                    columns.update(match)
+                else:
+                    columns.add(match)
+        
+        return list(columns)
+    
+    def _extract_columns_from_metadata(self, metadata: Dict[str, Any]) -> List[str]:
+        """Extract columns from metadata (tables, metrics, dimensions)."""
+        columns = set()
+        
+        # From tables
+        for table in metadata.get('tables', {}).get('tables', []):
+            for col in table.get('columns', []):
+                col_name = col.get('name') or col.get('column', '')
+                if col_name:
+                    columns.add(col_name.lower())
+        
+        # From dimensions
+        for dim in metadata.get('semantic_registry', {}).get('dimensions', []):
+            col_name = dim.get('column', '')
+            if col_name:
+                columns.add(col_name.lower())
+        
+        return list(columns)
+    
+    def _build_knowledge_register_rules_context(self, metadata: Dict[str, Any], query: str = "") -> str:
         """
         Build context string from knowledge register rules.
         
@@ -262,10 +637,13 @@ class LLMQueryGenerator:
         context_parts.append("KNOWLEDGE REGISTER RULES:")
         context_parts.append("=" * 50)
         
-        # Get rules for common columns
-        common_columns = ['write_off_flag', 'writeoff_flag', 'arc_flag', 'originator', 'settled_flag']
+        # Dynamic column discovery
+        query_columns = self._extract_columns_from_query(query) if query else []
+        metadata_columns = self._extract_columns_from_metadata(metadata)
+        all_columns = set(query_columns + metadata_columns)
         
-        for col in common_columns:
+        # Get rules for discovered columns
+        for col in all_columns:
             rules = knowledge_rules.get_rules_for_column(col)
             if rules:
                 context_parts.append(f"\n{col}:")
@@ -307,36 +685,62 @@ class LLMQueryGenerator:
         Returns:
             Tuple of (intent, reasoning_steps)
         """
+        # Skip cache if conversational context exists (different context)
+        if conversational_context:
+            return self._generate_without_cache(query, metadata, conversational_context)
         
-        # Use hybrid knowledge retrieval (RAG + Graph + Rules)
-        try:
-            from backend.hybrid_knowledge_retriever import HybridKnowledgeRetriever
-            hybrid_retriever = HybridKnowledgeRetriever()
-            hybrid_context = hybrid_retriever.build_optimized_context(query, metadata, max_knowledge_items=30)
-            
-            # Build comprehensive context with node-level isolation
-            structured_context = self.build_comprehensive_context(metadata, query)
-            
-            # Combine hybrid (semantic + structured) with comprehensive (isolated)
-            context = f"{hybrid_context}\n\n{structured_context}"
-        except Exception as e:
-            # Fallback to original approach
-            print(f"Hybrid retrieval failed, using fallback: {e}")
-            
-            # Get RAG context from KnowledgeBase vector store
-            rag_context = self._get_rag_context(query, top_k=5)
-            
-            # Build comprehensive context with node-level isolation
-            context = self.build_comprehensive_context(metadata, query)
-            
-            # Add knowledge register rules to context
-            knowledge_rules_context = self._build_knowledge_register_rules_context(metadata)
-            if knowledge_rules_context:
-                context = f"{context}\n\n{knowledge_rules_context}"
-            
-            # Prepend RAG context if available
-            if rag_context:
-                context = f"{rag_context}\n\n{context}"
+        # STEP 1: Isolate metadata ONCE (moved from build_comprehensive_context)
+        isolated_metadata = self._isolate_metadata(query, metadata)
+        
+        # STEP 2: Build context bundle (each component once)
+        bundle = self._build_context_bundle(query, isolated_metadata)
+        
+        # Compute cache key
+        metadata_sig = self._get_metadata_signature(metadata)
+        rules_sig = self._get_rules_signature(bundle)
+        cache_key = self._compute_cache_key(query, metadata_sig, rules_sig)
+        
+        # Check cache
+        if self._cache_enabled and cache_key in self._cache:
+            logger.info(f"Cache hit for query: {query[:50]}")
+            cached = self._cache[cache_key]
+            return cached['intent'], cached['reasoning_steps']
+        
+        # Generate (no cache)
+        intent, reasoning_steps = self._generate_without_cache(query, metadata, conversational_context, bundle)
+        
+        # Store in cache (limit cache size)
+        if self._cache_enabled:
+            if len(self._cache) > 100:  # Limit cache size
+                # Remove oldest entry (simple FIFO)
+                oldest_key = next(iter(self._cache))
+                del self._cache[oldest_key]
+            self._cache[cache_key] = {
+                'intent': intent,
+                'reasoning_steps': reasoning_steps
+            }
+            logger.info(f"Cached result for query: {query[:50]}")
+        
+        return intent, reasoning_steps
+    
+    def _generate_without_cache(self, query: str, metadata: Dict[str, Any], 
+                               conversational_context: Optional[Dict[str, Any]] = None,
+                               bundle: Optional[ContextBundle] = None) -> tuple[Dict[str, Any], List[str]]:
+        """
+        Original generation logic (moved from generate_sql_intent).
+        """
+        # STEP 1: Isolate metadata ONCE (moved from build_comprehensive_context)
+        isolated_metadata = self._isolate_metadata(query, metadata)
+        
+        # STEP 2: Build context bundle (each component once) if not provided
+        if bundle is None:
+            bundle = self._build_context_bundle(query, isolated_metadata)
+        
+        # STEP 3: Enforce token budget
+        bundle = self._truncate_context(bundle)
+        
+        # STEP 4: Combine context
+        context = bundle.render()
         
         reasoning_steps = []
         
@@ -553,6 +957,16 @@ IMPORTANT:
 
 Return ONLY the JSON object:"""
         
+        # Verify token count before LLM call
+        context_tokens = self._count_tokens(context)
+        system_tokens = self._count_tokens(system_prompt)
+        
+        if context_tokens + system_tokens > 30_000:  # Model limit
+            logger.error(f"Context still too large: {context_tokens + system_tokens} tokens")
+            raise ValueError(f"Context exceeds model limit: {context_tokens + system_tokens} tokens")
+        
+        logger.debug(f"Token counts: context={context_tokens}, system={system_tokens}, total={context_tokens + system_tokens}")
+        
         try:
             reasoning_steps.append("🤖 Calling LLM to analyze query with comprehensive context...")
             response = self.call_llm(user_prompt, system_prompt)
@@ -697,7 +1111,7 @@ Return ONLY the JSON object:"""
 def generate_sql_with_llm(query: str, use_llm: bool = True) -> dict:
     """Generate SQL using LLM with comprehensive context."""
     try:
-        metadata = load_metadata()
+        metadata = MetadataProvider.load()
         
         if use_llm:
             generator = LLMQueryGenerator()

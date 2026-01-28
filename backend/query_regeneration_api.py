@@ -9,20 +9,46 @@ using metadata and business rules from the semantic registry.
 import json
 import sys
 from pathlib import Path
+from typing import Dict, Any
 
 # Add parent directory to path to import test functions
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from test_outstanding_daily_regeneration import (
-    load_metadata,
-    find_metric_by_query,
-    find_dimensions_by_query,
-    identify_required_joins,
-    identify_required_filters,
-    generate_sql_from_metadata,
-    classify_query_intent,
-    find_table_by_query,
-)
+from backend.metadata_provider import MetadataProvider
+
+# Import test functions with fallback
+try:
+    from test_outstanding_daily_regeneration import (
+        find_metric_by_query,
+        find_dimensions_by_query,
+        identify_required_joins,
+        identify_required_filters,
+        generate_sql_from_metadata,
+        classify_query_intent,
+        find_table_by_query,
+    )
+except ImportError as e:
+    # Fallback implementations if test file doesn't exist
+    def classify_query_intent(query: str) -> str:
+        return "relational"
+    
+    def find_metric_by_query(registry: Dict[str, Any], query: str) -> Any:
+        return None
+    
+    def find_dimensions_by_query(registry: Dict[str, Any], query: str, metric: Any, tables: Dict[str, Any]) -> list:
+        return []
+    
+    def identify_required_joins(query: str, metric: Any, dimensions: list, filters: list, registry: Dict[str, Any], tables: Dict[str, Any]) -> list:
+        return []
+    
+    def identify_required_filters(query: str, metric: Any, dimensions: list, registry: Dict[str, Any]) -> list:
+        return []
+    
+    def generate_sql_from_metadata(query: str, metadata: Dict[str, Any]) -> Dict[str, Any]:
+        return {"success": False, "error": "Metadata functions not available"}
+    
+    def find_table_by_query(tables: Dict[str, Any], query: str) -> Any:
+        return None
 
 def generate_sql_from_query(query: str, use_llm: bool = True) -> dict:
     """Generate SQL from natural language query using LLM with comprehensive context."""
@@ -30,14 +56,7 @@ def generate_sql_from_query(query: str, use_llm: bool = True) -> dict:
         # Try LLM-based generation first (with full context)
         if use_llm:
             try:
-                # Import from same directory
-                import sys
-                from pathlib import Path
-                backend_dir = Path(__file__).parent
-                if str(backend_dir) not in sys.path:
-                    sys.path.insert(0, str(backend_dir))
-                
-                from llm_query_generator import generate_sql_with_llm
+                from backend.llm_query_generator import generate_sql_with_llm
                 result = generate_sql_with_llm(query, use_llm=True)
                 if result.get("success"):
                     # Ensure reasoning_steps are included
@@ -55,7 +74,7 @@ def generate_sql_from_query(query: str, use_llm: bool = True) -> dict:
         
         # Fallback: Rule-based generation
         # Load metadata
-        metadata = load_metadata()
+        metadata = MetadataProvider.load()
         registry = metadata["semantic_registry"]
         tables = metadata["tables"]
         
@@ -132,7 +151,7 @@ def generate_sql_from_query(query: str, use_llm: bool = True) -> dict:
         }
         
         # Use production-grade SQL builder
-        from sql_builder import TableRelationshipResolver, IntentValidator, SQLBuilder
+        from backend.sql_builder import TableRelationshipResolver, IntentValidator, SQLBuilder
         
         # Enable learning by default - will ask user when join paths not found
         resolver = TableRelationshipResolver(metadata, enable_learning=True)
@@ -198,7 +217,7 @@ def generate_sql_from_query(query: str, use_llm: bool = True) -> dict:
 def load_prerequisites() -> dict:
     """Load all prerequisites (metadata)."""
     try:
-        metadata = load_metadata()
+        metadata = MetadataProvider.load()
         registry = metadata.get("semantic_registry", {})
         tables = metadata.get("tables", {})
         

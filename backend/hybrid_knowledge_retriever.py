@@ -8,8 +8,12 @@ for optimal knowledge retrieval.
 
 from typing import Dict, List, Any, Optional, Tuple
 from dataclasses import dataclass
+from concurrent.futures import ThreadPoolExecutor, as_completed
+import logging
 from backend.knowledge_graph import KnowledgeGraph, NodeType, RelationshipType, get_knowledge_graph
 from backend.knowledge_base_client import get_knowledge_base_client
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass
@@ -42,7 +46,7 @@ class HybridKnowledgeRetriever:
     def retrieve_for_query(self, query: str, metadata: Dict[str, Any],
                           max_results: int = 20) -> List[RetrievedKnowledge]:
         """
-        Retrieve knowledge for a query using hybrid approach.
+        Retrieve knowledge for a query using hybrid approach with parallel execution.
         
         Args:
             query: User query
@@ -60,22 +64,65 @@ class HybridKnowledgeRetriever:
         
         retrieved = []
         
-        # 1. RAG Search (Semantic)
-        rag_results = self._rag_search(query, max_results // 2)
-        retrieved.extend(rag_results)
+        # Parallel retrieval
+        with ThreadPoolExecutor(max_workers=3) as executor:
+            futures = {
+                executor.submit(self._rag_search, query, max_results // 2): 'rag',
+                executor.submit(self._graph_search, query, max_results // 2): 'graph',
+                executor.submit(self._rule_search, query, metadata): 'rule'
+            }
+            
+            for future in as_completed(futures):
+                source_type = futures[future]
+                try:
+                    results = future.result()
+                    retrieved.extend(results)
+                except Exception as e:
+                    logger.warning(f"{source_type} search failed: {e}", exc_info=True)
+                    # Continue with other sources
         
-        # 2. Graph Traversal (Structured)
-        graph_results = self._graph_search(query, max_results // 2)
-        retrieved.extend(graph_results)
+        # Validate results
+        validated = [k for k in retrieved if self._validate_knowledge(k, query)]
         
-        # 3. Rule Fetching (Knowledge)
-        rule_results = self._rule_search(query, metadata)
-        retrieved.extend(rule_results)
-        
-        # 4. Deduplicate and rank by relevance
-        unique_results = self._deduplicate_and_rank(retrieved, max_results)
+        # Deduplicate and rank by relevance
+        unique_results = self._deduplicate_and_rank(validated, max_results)
         
         return unique_results
+    
+    def _validate_knowledge(self, knowledge: RetrievedKnowledge, query: str) -> bool:
+        """
+        Validate knowledge relevance.
+        
+        Returns:
+            True if knowledge should be included, False otherwise.
+        """
+        # Check relevance score
+        if knowledge.relevance_score < 0.3:
+            return False
+        
+        # Check content quality
+        if not knowledge.content:
+            return False
+        
+        content_str = str(knowledge.content)
+        if len(content_str) < 10:  # Too short
+            return False
+        
+        # Check if content relates to query (simple keyword check)
+        query_lower = query.lower()
+        content_lower = content_str.lower()
+        
+        # At least one query word should appear in content
+        query_words = set(query_lower.split())
+        content_words = set(content_lower.split())
+        
+        if not query_words.intersection(content_words):
+            # No overlap - might be irrelevant
+            # But don't filter if relevance is high
+            if knowledge.relevance_score < 0.5:
+                return False
+        
+        return True
     
     def _rag_search(self, query: str, max_results: int) -> List[RetrievedKnowledge]:
         """Semantic search using RAG."""

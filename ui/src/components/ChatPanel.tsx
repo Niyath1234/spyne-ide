@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { Box, TextField, IconButton, Typography } from '@mui/material';
 import { Send as SendIcon } from '@mui/icons-material';
 import ReactMarkdown from 'react-markdown';
+import { assistantAPI } from '../api/client';
 
 interface Message {
   id: string;
@@ -39,13 +40,7 @@ export const ChatPanel: React.FC = () => {
     setIsLoading(true);
 
     try {
-      const response = await fetch('http://localhost:8080/api/assistant/ask', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ question: userMessage.content }),
-      });
-
-      const data = await response.json();
+      const data = await assistantAPI.ask(userMessage.content);
       let answer = '';
       
       if (data.response_type === 'Answer') {

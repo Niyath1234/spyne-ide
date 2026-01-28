@@ -1,0 +1,83 @@
+# RCA Engine Configuration
+# This file contains configuration for the RCA Engine
+# Environment variables can override these values (see config_manager.py)
+
+databases:
+  postgres:
+    host: ${DB_HOST:-localhost}
+    port: ${DB_PORT:-5432}
+    database: ${DB_NAME:-rca_engine}
+    user: ${DB_USER:-postgres}
+    password: ${DB_PASSWORD:-}
+    pool_size: 10
+    timeout: 30
+
+llm:
+  provider: openai
+  model: ${LLM_MODEL:-gpt-4}
+  api_key: ${OPENAI_API_KEY:-}
+  temperature: 0.0  # Deterministic
+  max_tokens: 3000
+  timeout: 120
+
+cache:
+  enabled: true
+  type: memory  # or 'redis'
+  ttl: 3600
+  max_size: 1000
+  redis:
+    host: ${REDIS_HOST:-localhost}
+    port: ${REDIS_PORT:-6379}
+    db: 0
+
+security:
+  rate_limit:
+    enabled: true
+    requests_per_minute: 60
+    requests_per_hour: 1000
+  sql_injection_protection: true
+  query_timeout: 30
+  max_rows: 10000
+  default_limit: 1000
+
+invariants:
+  enforce_determinism: true
+  enforce_boundary: true
+  enforce_reproducibility: true
+  enforce_fail_closed: true
+
+execution:
+  sandbox:
+    max_execution_time: 30
+    max_rows: 10000
+    default_limit: 1000
+    read_only_role: rca_readonly
+    enforce_ordering: true
+    enforce_limit: true
+  firewall:
+    enabled: true
+    blocked_patterns: []
+  kill_switch:
+    enabled: true
+
+observability:
+  logging:
+    level: INFO
+    format: json
+    file: logs/rca_engine.log
+  metrics:
+    enabled: true
+    export_interval: 60
+
+deployment:
+  feature_flags:
+    multi_step_planning: false
+    query_optimization: false
+    advanced_caching: false
+    rag_versioning: false
+  shadow_mode:
+    enabled: false
+
+metadata:
+  path: metadata
+

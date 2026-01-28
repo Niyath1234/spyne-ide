@@ -366,6 +366,18 @@ class Stage6SQLBuilder:
 class Stage7LearningSystem:
     """Stage 7: Learning & Feedback."""
     
+    def __init__(self, learning_store_path: Optional[str] = None):
+        """
+        Initialize learning system.
+        
+        Args:
+            learning_store_path: Path to learning store (optional)
+        """
+        self.learning_store_path = learning_store_path or "metadata/learning_store.json"
+        self.query_patterns = {}
+        self.corrections = []
+        self.successful_templates = []
+    
     def learn(self, query: str, sql: str, intent: Dict[str, Any],
              feedback: Optional[Dict[str, Any]] = None):
         """
@@ -377,12 +389,141 @@ class Stage7LearningSystem:
             intent: Generated intent
             feedback: Optional user feedback
         """
-        # TODO: Implement learning system
-        # - Store successful patterns
-        # - Learn from corrections
-        # - Update knowledge graph
-        # - Store query templates
-        pass
+        import json
+        import os
+        from pathlib import Path
+        
+        try:
+            # Store successful pattern
+            pattern = {
+                'query': query,
+                'sql': sql,
+                'intent': intent,
+                'timestamp': __import__('datetime').datetime.now(__import__('datetime').timezone.utc).isoformat(),
+                'success': feedback is None or feedback.get('success', True)
+            }
+            
+            # Extract key entities for pattern matching
+            entities = intent.get('entities', {})
+            pattern_key = self._generate_pattern_key(query, entities)
+            
+            if pattern_key not in self.query_patterns:
+                self.query_patterns[pattern_key] = []
+            
+            self.query_patterns[pattern_key].append(pattern)
+            
+            # Store corrections if feedback provided
+            if feedback and not feedback.get('success', True):
+                correction = {
+                    'original_query': query,
+                    'original_sql': sql,
+                    'corrected_sql': feedback.get('corrected_sql'),
+                    'correction_reason': feedback.get('reason'),
+                    'timestamp': __import__('datetime').datetime.utcnow().isoformat()
+                }
+                self.corrections.append(correction)
+            
+            # Store successful templates
+            if feedback is None or feedback.get('success', True):
+                template = {
+                    'query_pattern': pattern_key,
+                    'sql_template': self._extract_template(sql),
+                    'intent_template': self._simplify_intent(intent),
+                    'usage_count': 1
+                }
+                
+                # Check if template already exists
+                existing = next((t for t in self.successful_templates if t['query_pattern'] == pattern_key), None)
+                if existing:
+                    existing['usage_count'] += 1
+                else:
+                    self.successful_templates.append(template)
+            
+            # Persist to disk
+            self._persist_learning()
+            
+        except Exception as e:
+            logger.warning(f"Learning system failed to store pattern: {e}", exc_info=True)
+    
+    def _generate_pattern_key(self, query: str, entities: Dict[str, Any]) -> str:
+        """Generate a pattern key from query and entities."""
+        # Extract key words and entity types
+        key_parts = []
+        
+        # Add entity types
+        if entities.get('tables'):
+            key_parts.append(f"tables:{len(entities['tables'])}")
+        if entities.get('metrics'):
+            key_parts.append(f"metrics:{len(entities['metrics'])}")
+        if entities.get('dimensions'):
+            key_parts.append(f"dimensions:{len(entities['dimensions'])}")
+        
+        # Add query type indicators
+        query_lower = query.lower()
+        if 'count' in query_lower or 'sum' in query_lower:
+            key_parts.append("aggregation")
+        if 'group' in query_lower:
+            key_parts.append("grouping")
+        if 'join' in query_lower or 'join' in query_lower:
+            key_parts.append("join")
+        
+        return "|".join(key_parts) if key_parts else "generic"
+    
+    def _extract_template(self, sql: str) -> str:
+        """Extract a template from SQL by replacing values with placeholders."""
+        import re
+        # Replace quoted strings
+        template = re.sub(r"'[^']*'", "'?value?'", sql)
+        # Replace numbers
+        template = re.sub(r'\b\d+\b', '?number?', template)
+        return template
+    
+    def _simplify_intent(self, intent: Dict[str, Any]) -> Dict[str, Any]:
+        """Simplify intent to template form."""
+        simplified = {}
+        if 'query_type' in intent:
+            simplified['query_type'] = intent['query_type']
+        if 'base_table' in intent:
+            simplified['base_table'] = intent['base_table']
+        if 'metric' in intent:
+            simplified['has_metric'] = True
+        return simplified
+    
+    def _persist_learning(self):
+        """Persist learning data to disk."""
+        import json
+        from pathlib import Path
+        
+        try:
+            store_path = Path(self.learning_store_path)
+            store_path.parent.mkdir(parents=True, exist_ok=True)
+            
+            learning_data = {
+                'query_patterns': self.query_patterns,
+                'corrections': self.corrections[-100:],  # Keep last 100 corrections
+                'successful_templates': self.successful_templates,
+                'last_updated': __import__('datetime').datetime.now(__import__('datetime').timezone.utc).isoformat()
+            }
+            
+            with open(store_path, 'w') as f:
+                json.dump(learning_data, f, indent=2)
+                
+        except Exception as e:
+            logger.warning(f"Failed to persist learning data: {e}", exc_info=True)
+    
+    def get_similar_patterns(self, query: str, entities: Dict[str, Any]) -> List[Dict[str, Any]]:
+        """
+        Get similar patterns from learning store.
+        
+        Args:
+            query: Query string
+            entities: Extracted entities
+            
+        Returns:
+            List of similar patterns
+        """
+        pattern_key = self._generate_pattern_key(query, entities)
+        return self.query_patterns.get(pattern_key, [])
 
 
 class MultiStageReasoningPipeline:

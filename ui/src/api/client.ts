@@ -1,6 +1,66 @@
-import axios from 'axios';
+import axios, { AxiosError } from 'axios';
+import type { AxiosInstance } from 'axios';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8080';
+
+// Create axios instance with default config
+const apiClient: AxiosInstance = axios.create({
+  baseURL: API_BASE_URL,
+  timeout: 120000, // 2 minutes for LLM queries
+  headers: {
+    'Content-Type': 'application/json',
+  },
+});
+
+// Request interceptor for adding request ID
+apiClient.interceptors.request.use((config) => {
+  config.headers['X-Request-ID'] = `ui-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+  return config;
+});
+
+// Response interceptor for error handling
+apiClient.interceptors.response.use(
+  (response) => response,
+  (error: AxiosError) => {
+    const errorResponse = {
+      success: false,
+      error: error.message || 'Unknown error',
+      status: error.response?.status,
+      request_id: error.config?.headers?.['X-Request-ID'],
+    };
+    
+    if (error.response?.data && typeof error.response.data === 'object') {
+      Object.assign(errorResponse, error.response.data);
+    }
+    
+    console.error('API Error:', errorResponse);
+    return Promise.reject(errorResponse);
+  }
+);
+
+// Health check API
+export const healthAPI = {
+  check: async (): Promise<{ status: string; version?: string; timestamp?: string }> => {
+    const response = await apiClient.get('/api/v1/health');
+    return response.data;
+  },
+  detailed: async (): Promise<any> => {
+    const response = await apiClient.get('/api/v1/health/detailed');
+    return response.data;
+  },
+  ready: async (): Promise<{ status: string }> => {
+    const response = await apiClient.get('/api/v1/health/ready');
+    return response.data;
+  },
+};
+
+// Metrics API
+export const metricsAPI = {
+  get: async (): Promise<any> => {
+    const response = await apiClient.get('/api/v1/metrics');
+    return response.data;
+  },
+};
 
 export interface AgentResponse {
   status: string;
@@ -38,7 +98,7 @@ export interface ClarificationRequest {
 
 export const agentAPI = {
   run: async (sessionId: string, query: string, uiContext?: any): Promise<AgentResponse> => {
-    const response = await axios.post(`${API_BASE_URL}/api/agent/run`, {
+    const response = await apiClient.post('/api/agent/run', {
       session_id: sessionId,
       user_query: query,
       ui_context: uiContext || {},
@@ -46,7 +106,7 @@ export const agentAPI = {
     return response.data;
   },
   continue: async (sessionId: string, choiceId: string, uiContext?: any): Promise<AgentResponse> => {
-    const response = await axios.post(`${API_BASE_URL}/api/agent/continue`, {
+    const response = await apiClient.post('/api/agent/continue', {
       session_id: sessionId,
       choice_id: choiceId,
       ui_context: uiContext || {},
@@ -57,20 +117,20 @@ export const agentAPI = {
 
 export const reasoningAPI = {
   assess: async (query: string): Promise<any> => {
-    const response = await axios.post(`${API_BASE_URL}/api/reasoning/assess`, {
+    const response = await apiClient.post('/api/reasoning/assess', {
       query,
     });
     return response.data;
   },
   clarify: async (query: string, answer: string): Promise<any> => {
-    const response = await axios.post(`${API_BASE_URL}/api/reasoning/clarify`, {
+    const response = await apiClient.post('/api/reasoning/clarify', {
       query,
       answer,
     });
     return response.data;
   },
   query: async (query: string): Promise<any> => {
-    const response = await axios.post(`${API_BASE_URL}/api/reasoning/query`, {
+    const response = await apiClient.post('/api/reasoning/query', {
       query,
     });
     return response.data;
@@ -79,7 +139,7 @@ export const reasoningAPI = {
 
 export const assistantAPI = {
   ask: async (question: string): Promise<any> => {
-    const response = await axios.post(`${API_BASE_URL}/api/assistant/ask`, {
+    const response = await apiClient.post('/api/assistant/ask', {
       question,
     });
     return response.data;
@@ -127,15 +187,104 @@ export interface PrerequisitesResult {
 
 export const queryAPI = {
   loadPrerequisites: async (): Promise<PrerequisitesResult> => {
-    const response = await axios.get(`${API_BASE_URL}/api/query/load-prerequisites`);
+    const response = await apiClient.get('/api/query/load-prerequisites');
     return response.data;
   },
   generateSQL: async (query: string, useLLM: boolean = true): Promise<QueryGenerationResult> => {
-    const response = await axios.post(`${API_BASE_URL}/api/query/generate-sql`, {
+    const response = await apiClient.post('/api/query/generate-sql', {
       query,
       use_llm: useLLM,
     });
     return response.data;
   },
 };
+
+// Pipelines API
+export const pipelinesAPI = {
+  list: async (): Promise<any[]> => {
+    const response = await apiClient.get('/api/pipelines');
+    return response.data;
+  },
+  create: async (data: any): Promise<any> => {
+    const response = await apiClient.post('/api/pipelines', data);
+    return response.data;
+  },
+  get: async (id: string): Promise<any> => {
+    const response = await apiClient.get(`/api/pipelines/${id}`);
+    return response.data;
+  },
+  update: async (id: string, data: any): Promise<any> => {
+    const response = await apiClient.put(`/api/pipelines/${id}`, data);
+    return response.data;
+  },
+  delete: async (id: string): Promise<any> => {
+    const response = await apiClient.delete(`/api/pipelines/${id}`);
+    return response.data;
+  },
+  run: async (id: string): Promise<any> => {
+    const response = await apiClient.post(`/api/pipelines/${id}/run`);
+    return response.data;
+  },
+  status: async (id: string): Promise<any> => {
+    const response = await apiClient.get(`/api/pipelines/${id}/status`);
+    return response.data;
+  },
+};
+
+// Rules API
+export const rulesAPI = {
+  list: async (): Promise<{ rules: any[] }> => {
+    const response = await apiClient.get('/api/rules');
+    return response.data;
+  },
+  create: async (data: any): Promise<any> => {
+    const response = await apiClient.post('/api/rules', data);
+    return response.data;
+  },
+  get: async (id: string): Promise<any> => {
+    const response = await apiClient.get(`/api/rules/${id}`);
+    return response.data;
+  },
+  update: async (id: string, data: any): Promise<any> => {
+    const response = await apiClient.put(`/api/rules/${id}`, data);
+    return response.data;
+  },
+  delete: async (id: string): Promise<any> => {
+    const response = await apiClient.delete(`/api/rules/${id}`);
+    return response.data;
+  },
+};
+
+// Metadata Ingestion API
+export const metadataAPI = {
+  ingestTable: async (tableDescription: string, system?: string): Promise<any> => {
+    const response = await apiClient.post('/api/metadata/ingest/table', {
+      table_description: tableDescription,
+      system,
+    });
+    return response.data;
+  },
+  ingestJoin: async (joinCondition: string): Promise<any> => {
+    const response = await apiClient.post('/api/metadata/ingest/join', {
+      join_condition: joinCondition,
+    });
+    return response.data;
+  },
+  ingestRules: async (rulesText: string): Promise<any> => {
+    const response = await apiClient.post('/api/metadata/ingest/rules', {
+      rules_text: rulesText,
+    });
+    return response.data;
+  },
+  ingestComplete: async (metadataText: string, system?: string): Promise<any> => {
+    const response = await apiClient.post('/api/metadata/ingest/complete', {
+      metadata_text: metadataText,
+      system,
+    });
+    return response.data;
+  },
+};
+
+// Export apiClient for advanced usage
+export { apiClient, API_BASE_URL };
 

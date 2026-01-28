@@ -8,31 +8,34 @@ from typing import Dict, Any, Optional
 from datetime import datetime
 import re
 
-from config import get_config
-from invariants import (
+from backend.config.config_manager import get_config
+from backend.invariants import (
     DeterminismEnforcer,
     LLMDatabaseBoundary,
     ReproducibilityEngine,
     FailClosedEnforcer
 )
-from planes import (
+from backend.planes import (
     IngressPlane,
     PlanningPlane,
     ExecutionPlane,
     PresentationPlane
 )
-from planning import MultiStepPlanner, PlanningGuardrails
-from planning.intent_extractor import IntentExtractor
-from planning.query_builder import QueryBuilder
-from execution import QuerySandbox, QueryFirewall, KillSwitch
-from execution.sandbox import SandboxConfig
-from observability import GoldenSignals, CorrelationID, StructuredLogger
-from security import DataExfiltrationProtection, PromptInjectionProtection
-from failure_handling import LLMFailureHandler, MetadataDriftHandler, PartialResultHandler
-from deployment import FeatureFlags, ShadowMode
-from implementations import PostgreSQLExecutor, MySQLExecutor, SQLiteExecutor, OpenAIProvider, MemoryCache, RedisCache
-from auth import JWTAuthenticator, TokenBucketRateLimiter
-from presentation import ResultFormatter, ResultExplainer
+from backend.planning import MultiStepPlanner, PlanningGuardrails
+from backend.planning.intent_extractor import IntentExtractor
+from backend.planning.query_builder import QueryBuilder
+from backend.planning.schema_selector import SchemaSelector
+from backend.planning.metric_resolver import MetricResolver
+from backend.execution import QuerySandbox, QueryFirewall, KillSwitch
+from backend.execution.sandbox import SandboxConfig
+from backend.observability import GoldenSignals, CorrelationID, StructuredLogger
+from backend.security import DataExfiltrationProtection, PromptInjectionProtection
+from backend.failure_handling import LLMFailureHandler, MetadataDriftHandler, PartialResultHandler
+from backend.deployment import FeatureFlags, ShadowMode
+from backend.implementations import PostgreSQLExecutor, MySQLExecutor, SQLiteExecutor, OpenAIProvider, MemoryCache, RedisCache
+from backend.auth import JWTAuthenticator, TokenBucketRateLimiter
+from backend.presentation import ResultFormatter, ResultExplainer
+from backend.planning.validator import QueryValidator, TableValidator
 
 
 class RCAEngineOrchestrator:
@@ -114,11 +117,15 @@ class RCAEngineOrchestrator:
                 requests_per_hour=rate_limit_config.get('requests_per_hour', 1000)
             )
         
+        # Initialize validators
+        self.query_validator = QueryValidator(metadata=None)  # Will be updated with metadata
+        self.table_validator = TableValidator(metadata=None)  # Will be updated with metadata
+        
         # Ingress plane
         self.ingress_plane = IngressPlane(
             authenticator=authenticator,
             rate_limiter=rate_limiter,
-            validator=None  # TODO: Implement validator
+            validator=self.query_validator
         )
         
         # Planning plane
@@ -174,17 +181,30 @@ class RCAEngineOrchestrator:
         # Query builder
         query_builder = QueryBuilder()
         
+        # Schema selector and metric resolver
+        metadata_path = self.config.get('metadata.path', None)
+        schema_selector = SchemaSelector(metadata_path=metadata_path)
+        metric_resolver = MetricResolver(metadata_path=metadata_path)
+        
+        # Load known metrics from metric resolver
+        known_metrics = metric_resolver.known_metrics
+        
+        # Update validators with metadata
+        self.query_validator.metadata = self.metadata
+        self.table_validator.metadata = self.metadata
+        self.table_validator._build_table_registry()
+        
         # Guardrails
         self.planning_guardrails = PlanningGuardrails(
-            known_metrics=None,  # TODO: Load from metadata
-            table_validator=None  # TODO: Implement table validator
+            known_metrics=known_metrics,
+            table_validator=self.table_validator
         )
         
         # Multi-step planner
         self.multi_step_planner = MultiStepPlanner(
             intent_extractor=intent_extractor,
-            schema_selector=None,  # TODO: Implement schema selector
-            metric_resolver=None,  # TODO: Implement metric resolver
+            schema_selector=schema_selector,
+            metric_resolver=metric_resolver,
             query_builder=query_builder,
             guardrails=self.planning_guardrails
         )

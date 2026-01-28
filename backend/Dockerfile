@@ -1,4 +1,4 @@
-# RCA Engine Production Backend
+# RCA Engine Production Flask Backend
 # Multi-stage build for optimized production image
 
 # ============================================================================
@@ -16,7 +16,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && rm -rf /var/lib/apt/lists/*
 
 # Copy requirements first for better caching
-COPY backend/requirements.txt ./
+COPY requirements.txt ./
 
 # Create virtual environment and install dependencies
 RUN python -m venv /opt/venv
@@ -44,21 +44,15 @@ COPY --from=builder /opt/venv /opt/venv
 ENV PATH="/opt/venv/bin:$PATH"
 
 # Copy application code
-COPY --chown=appuser:appuser backend/ ./backend/
-COPY --chown=appuser:appuser metadata/ ./metadata/
-COPY --chown=appuser:appuser config/ ./config/
-COPY --chown=appuser:appuser data/ ./data/
+COPY --chown=appuser:appuser . .
 
-# Copy root-level Python files needed for query generation
-COPY --chown=appuser:appuser test_outstanding_daily_regeneration.py ./
-
-# Set working directory to backend for imports
-WORKDIR /app/backend
+# Copy project root files needed by backend
+COPY --chown=appuser:appuser ../metadata /app/../metadata
+COPY --chown=appuser:appuser ../test_outstanding_daily_regeneration.py /app/../test_outstanding_daily_regeneration.py 2>/dev/null || true
 
 # Set environment variables
 ENV PYTHONUNBUFFERED=1 \
     PYTHONDONTWRITEBYTECODE=1 \
-    PYTHONPATH=/app:/app/backend \
     RCA_HOST=0.0.0.0 \
     RCA_PORT=8080 \
     RCA_WORKERS=4 \
@@ -80,3 +74,4 @@ CMD ["gunicorn", \
     "--config", "gunicorn.conf.py", \
     "--bind", "0.0.0.0:8080", \
     "app_production:app"]
+
