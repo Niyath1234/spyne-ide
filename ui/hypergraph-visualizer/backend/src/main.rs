@@ -124,8 +124,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     
     // Start the server
     let listener = tokio::net::TcpListener::bind("0.0.0.0:3000").await?;
-    println!("🚀 Hypergraph Visualizer Backend running on http://localhost:3000");
-    println!("📊 Graph API available at http://localhost:3000/api/graph");
+    println!(" Hypergraph Visualizer Backend running on http://localhost:3000");
+    println!(" Graph API available at http://localhost:3000/api/graph");
     
     axum::serve(listener, app).await?;
     

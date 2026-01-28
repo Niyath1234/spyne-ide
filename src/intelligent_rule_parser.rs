@@ -60,7 +60,7 @@ impl IntelligentRuleParser {
         metric: &str,
         target_entity: &str,
     ) -> Result<ParsedFormula> {
-        println!("\n🔍 Intelligent Rule Parser");
+        println!("\n Intelligent Rule Parser");
         println!("   Parsing formula: \"{}\"", formula_text);
         println!("   System: {}", system);
         println!("   Metric: {}", metric);
@@ -116,7 +116,7 @@ impl IntelligentRuleParser {
             
             if matches.is_empty() {
                 // No match found - ask for clarification with ALL columns
-                println!("     ❌ No matches found for '{}'", variable);
+                println!("      No matches found for '{}'", variable);
                 clarification_questions.push(ClarificationQuestion {
                     variable: variable.clone(),
                     options: self.get_all_column_options(&all_columns, target_entity),
@@ -125,7 +125,7 @@ impl IntelligentRuleParser {
             } else if matches.len() == 1 {
                 // Single best match - use it automatically
                 let best_match = &matches[0];
-                println!("     ✅ Single match found: {} (table: {}, confidence: {:.2}%)", 
+                println!("      Single match found: {} (table: {}, confidence: {:.2}%)", 
                     best_match.column_name, 
                     best_match.table_name,
                     best_match.confidence * 100.0
@@ -133,7 +133,7 @@ impl IntelligentRuleParser {
                 column_matches.insert(variable.clone(), best_match.clone());
             } else {
                 // Multiple matches - show top matches and ask for clarification
-                println!("     ⚠️  Found {} possible matches (showing top 5):", matches.len());
+                println!("     ️  Found {} possible matches (showing top 5):", matches.len());
                 let top_matches: Vec<_> = matches.iter().take(5).collect();
                 for (idx, m) in top_matches.iter().enumerate() {
                     println!("       {}: {} (table: {}, confidence: {:.2}%)", 

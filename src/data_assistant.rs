@@ -126,12 +126,12 @@ impl DataAssistant {
             return Ok(()); // Already initialized
         }
 
-        info!("🚀 Initializing agentic SQL execution system...");
+        info!(" Initializing agentic SQL execution system...");
 
         // Load semantic registry
         let registry_path = self.data_dir.join("../metadata/semantic_registry.json");
         let semantic_registry = load_from_file(registry_path.to_str().unwrap_or("metadata/semantic_registry.json"))?;
-        info!("✅ Loaded semantic registry with {} metrics and {} dimensions", 
+        info!(" Loaded semantic registry with {} metrics and {} dimensions", 
             semantic_registry.list_metrics().len(),
             semantic_registry.list_dimensions().len());
 
@@ -147,7 +147,7 @@ impl DataAssistant {
             Arc::clone(&semantic_registry),
         );
         schema_rag.initialize().await?;
-        info!("✅ Initialized schema RAG with {} documents", schema_rag.vector_store_len());
+        info!(" Initialized schema RAG with {} documents", schema_rag.vector_store_len());
 
         // Initialize execution loop
         let execution_loop = ExecutionLoop::new(3, true); // Max 3 attempts, abort on repeat error
@@ -160,7 +160,7 @@ impl DataAssistant {
         self.execution_loop = Some(execution_loop);
         self.access_controller = Some(access_controller);
 
-        info!("✅ Agentic system initialized successfully");
+        info!(" Agentic system initialized successfully");
         Ok(())
     }
 
@@ -177,7 +177,7 @@ impl DataAssistant {
         let query_id = uuid::Uuid::new_v4().to_string();
         let start_time = std::time::Instant::now();
 
-        info!("🔍 Executing data query with agentic system...");
+        info!(" Executing data query with agentic system...");
         reasoning_steps.push("Using agentic execution loop with semantic metrics".to_string());
 
         // Get required components
@@ -256,7 +256,7 @@ impl DataAssistant {
                         vsql
                     }
                     Err(e) => {
-                        reasoning_steps.push(format!("❌ Completeness validation failed (proceeding anyway): {}", e));
+                        reasoning_steps.push(format!(" Completeness validation failed (proceeding anyway): {}", e));
                         sql // Fall back to original SQL
                     }
                 };
@@ -370,13 +370,13 @@ impl DataAssistant {
     
     /// Answer a question using all available knowledge
     pub async fn answer(&self, question: &str) -> Result<AssistantResponse> {
-        info!("🤖 Data Assistant: Processing question: {}", question);
+        info!(" Data Assistant: Processing question: {}", question);
         
         let mut reasoning_steps = Vec::new();
         reasoning_steps.push(format!("Analyzing question: {}", question));
         
         // Step 1: Search knowledge base for relevant information
-        info!("📚 Step 1: Searching knowledge base...");
+        info!(" Step 1: Searching knowledge base...");
         let (nodes, knowledge_pages, metadata_pages) = self.node_registry.search_all(question);
         reasoning_steps.push(format!("Found {} relevant nodes in knowledge base", nodes.len()));
         
@@ -384,7 +384,7 @@ impl DataAssistant {
         let knowledge_context = self.build_knowledge_context(nodes, knowledge_pages, metadata_pages);
         
         // Step 3: Determine if this is a query execution request or a knowledge question
-        info!("🔍 Step 2: Determining query type...");
+        info!(" Step 2: Determining query type...");
         let query_type = self.classify_query(question, &knowledge_context).await?;
         reasoning_steps.push(format!("Query type: {:?}", query_type));
         
@@ -604,7 +604,7 @@ IMPORTANT: For data queries, be confident and infer reasonable defaults:
         knowledge_context: &str,
         mut reasoning_steps: Vec<String>,
     ) -> Result<AssistantResponse> {
-        info!("📖 Answering knowledge question...");
+        info!(" Answering knowledge question...");
         reasoning_steps.push("Using knowledge base to answer question".to_string());
         
         let prompt = format!(
@@ -649,7 +649,7 @@ ANSWER:"#,
         knowledge_context: &str,
         mut reasoning_steps: Vec<String>,
     ) -> Result<AssistantResponse> {
-        info!("🔍 Executing data query...");
+        info!(" Executing data query...");
         reasoning_steps.push("Classified as data query - generating SQL".to_string());
         
         // Step 1: Generate SQL intent JSON from natural language question
@@ -678,7 +678,7 @@ ANSWER:"#,
                 vsql
             }
             Err(e) => {
-                reasoning_steps.push(format!("❌ Completeness validation failed (proceeding anyway): {}", e));
+                reasoning_steps.push(format!(" Completeness validation failed (proceeding anyway): {}", e));
                 sql // Fall back to original SQL
             }
         };
@@ -832,7 +832,7 @@ JSON:"#,
                     if attempt < 3 {
                         // Improve prompt for retry
                         current_prompt = format!(
-                            "{}\n\n⚠️ RETRY ATTEMPT {}: The previous JSON was invalid. Error: {}\n\
+                            "{}\n\n️ RETRY ATTEMPT {}: The previous JSON was invalid. Error: {}\n\
                             CRITICAL FIXES NEEDED:\n\
                             1. All filter objects MUST have 'value' field (except IS NULL/IS NOT NULL)\n\
                             2. date_constraint must be null OR have a 'value' field (never empty object {{}})\n\
@@ -857,7 +857,7 @@ JSON:"#,
                     if attempt < 3 {
                         // Improve prompt for retry with parsing error
                         current_prompt = format!(
-                            "{}\n\n⚠️ RETRY ATTEMPT {}: JSON parsing failed. Error: {}\n\
+                            "{}\n\n️ RETRY ATTEMPT {}: JSON parsing failed. Error: {}\n\
                             The JSON you generated:\n{}\n\n\
                             CRITICAL FIXES NEEDED:\n\
                             1. All filter objects MUST have 'value' field (except IS NULL/IS NOT NULL)\n\

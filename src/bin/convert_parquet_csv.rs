@@ -31,8 +31,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         let csv_path = csv_base.join(format!("system_a_{}.csv", table));
         
         match convert_parquet_to_csv(&parquet_path, &csv_path) {
-            Ok(rows) => println!("✅ {}: {} rows → {:?}", table, rows, csv_path),
-            Err(e) => println!("❌ {}: {}", table, e),
+            Ok(rows) => println!(" {}: {} rows → {:?}", table, rows, csv_path),
+            Err(e) => println!(" {}: {}", table, e),
         }
     }
     
@@ -45,12 +45,12 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         let csv_path = csv_base.join(format!("system_b_{}.csv", table));
         
         match convert_parquet_to_csv(&parquet_path, &csv_path) {
-            Ok(rows) => println!("✅ {}: {} rows → {:?}", table, rows, csv_path),
-            Err(e) => println!("❌ {}: {}", table, e),
+            Ok(rows) => println!(" {}: {} rows → {:?}", table, rows, csv_path),
+            Err(e) => println!(" {}: {}", table, e),
         }
     }
     
-    println!("\n✅ Conversion complete!");
+    println!("\n Conversion complete!");
     println!("CSV files saved to: {:?}", csv_base);
     
     Ok(())

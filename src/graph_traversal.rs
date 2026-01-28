@@ -291,7 +291,7 @@ impl GraphTraversalAgent {
         system_b: &str,
         date_constraint: Option<&str>,
     ) -> Result<TraversalState> {
-        info!("🚀 Starting graph traversal for problem: {}", problem);
+        info!(" Starting graph traversal for problem: {}", problem);
         
         // Initialize state
         let mut state = self.initialize_state(initial_metric, system_a, system_b).await?;
@@ -305,13 +305,13 @@ impl GraphTraversalAgent {
         // Traversal loop: Traverse → Test → Observe → Decide → Repeat
         while !state.root_cause_found && state.current_depth < state.max_depth {
             state.current_depth += 1;
-            info!("📍 Traversal depth: {}", state.current_depth);
+            info!(" Traversal depth: {}", state.current_depth);
             
             // Step 1: Choose next best node to visit
             let next_node = self.choose_next_node(&state).await?;
             
             if let Some(node) = next_node {
-                info!("🎯 Selected node: {} ({:?})", node.node_id, node.node_type);
+                info!(" Selected node: {} ({:?})", node.node_id, node.node_type);
                 
                 // Step 2: Run SQL probe at this node
                 let probe_result = self.probe_node(&node, date_constraint).await?;
@@ -358,7 +358,7 @@ impl GraphTraversalAgent {
             }
         }
         
-        info!("✅ Traversal completed. Found {} findings", state.findings.len());
+        info!(" Traversal completed. Found {} findings", state.findings.len());
         
         Ok(state)
     }
@@ -391,7 +391,7 @@ impl GraphTraversalAgent {
         system_a: &str,
         system_b: &str,
     ) -> Result<()> {
-        info!("🔨 Building initial graph for metric: {}", metric);
+        info!(" Building initial graph for metric: {}", metric);
         
         // Add metric nodes for both systems with rich metadata
         let metric_a_metadata = self.build_metric_metadata(metric, system_a)?;
@@ -557,7 +557,7 @@ impl GraphTraversalAgent {
             }
         }
         
-        info!("✅ Built graph with {} nodes", state.nodes.len());
+        info!(" Built graph with {} nodes", state.nodes.len());
         
         Ok(())
     }
@@ -845,7 +845,7 @@ impl GraphTraversalAgent {
         let choice: NodeSelectionResponse = serde_json::from_str(&cleaned)
             .map_err(|e| RcaError::Llm(format!("Failed to parse node selection: {}. Response: {}", e, &cleaned[..cleaned.len().min(500)])))?;
         
-        info!("🤖 LLM selected node: {} (confidence: {:.2})", choice.node_id, choice.confidence);
+        info!(" LLM selected node: {} (confidence: {:.2})", choice.node_id, choice.confidence);
         info!("   Reasoning: {}", choice.reasoning);
         info!("   Expected insight: {}", choice.expected_insight);
         
@@ -1116,9 +1116,9 @@ impl GraphTraversalAgent {
         let interpretation: ResultInterpretationResponse = serde_json::from_str(&cleaned)
             .map_err(|e| RcaError::Llm(format!("Failed to parse result interpretation: {}. Response: {}", e, &cleaned[..cleaned.len().min(500)])))?;
         
-        info!("🤖 LLM interpretation: {}", interpretation.observation);
+        info!(" LLM interpretation: {}", interpretation.observation);
         if interpretation.root_cause_found {
-            info!("   ✅ Root cause found: {}", interpretation.hypothesis);
+            info!("    Root cause found: {}", interpretation.hypothesis);
         }
         
         Ok(interpretation)

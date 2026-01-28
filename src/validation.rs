@@ -1451,7 +1451,7 @@ impl ValidationEngine {
 impl std::fmt::Display for ValidationResult {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         writeln!(f, "{}", "=".repeat(80))?;
-        writeln!(f, "✅ VALIDATION RESULT")?;
+        writeln!(f, " VALIDATION RESULT")?;
         writeln!(f, "{}\n", "=".repeat(80))?;
         
         writeln!(f, "Query: {}", self.query)?;
@@ -1463,7 +1463,7 @@ impl std::fmt::Display for ValidationResult {
         }
         
         writeln!(f, "\n{}", "-".repeat(80))?;
-        writeln!(f, "📊 SUMMARY")?;
+        writeln!(f, " SUMMARY")?;
         writeln!(f, "{}", "-".repeat(80))?;
         writeln!(f, "Total Rows Checked: {}", self.total_rows_checked)?;
         writeln!(f, "Violations Found: {}", self.violations_count)?;
@@ -1471,7 +1471,7 @@ impl std::fmt::Display for ValidationResult {
         
         if self.violations_count > 0 {
             writeln!(f, "\n{}", "-".repeat(80))?;
-            writeln!(f, "❌ VIOLATIONS")?;
+            writeln!(f, " VIOLATIONS")?;
             writeln!(f, "{}", "-".repeat(80))?;
             
             // Show violations (limit to first 50 rows)
@@ -1525,13 +1525,13 @@ impl std::fmt::Display for ValidationResult {
                 }
             }
         } else {
-            writeln!(f, "\n✅ No violations found - all rows pass validation!")?;
+            writeln!(f, "\n No violations found - all rows pass validation!")?;
         }
         
         // Print statistics if available
         if let Some(ref col_stats) = self.statistics.column_stats {
             writeln!(f, "\n{}", "-".repeat(80))?;
-            writeln!(f, "📈 COLUMN STATISTICS")?;
+            writeln!(f, " COLUMN STATISTICS")?;
             writeln!(f, "{}", "-".repeat(80))?;
             if let Some(min) = col_stats.min {
                 writeln!(f, "Min: {:.2}", min)?;
@@ -1546,7 +1546,7 @@ impl std::fmt::Display for ValidationResult {
         
         if let Some(ref null_stats) = self.statistics.null_stats {
             writeln!(f, "\n{}", "-".repeat(80))?;
-            writeln!(f, "📊 NULL STATISTICS")?;
+            writeln!(f, " NULL STATISTICS")?;
             writeln!(f, "{}", "-".repeat(80))?;
             writeln!(f, "Null Count: {} ({:.2}%)", null_stats.null_count, null_stats.null_percentage * 100.0)?;
             writeln!(f, "Non-Null Count: {} ({:.2}%)", null_stats.non_null_count, null_stats.non_null_percentage * 100.0)?;
@@ -1554,7 +1554,7 @@ impl std::fmt::Display for ValidationResult {
         
         if let Some(ref uniq_stats) = self.statistics.uniqueness_stats {
             writeln!(f, "\n{}", "-".repeat(80))?;
-            writeln!(f, "🔑 UNIQUENESS STATISTICS")?;
+            writeln!(f, " UNIQUENESS STATISTICS")?;
             writeln!(f, "{}", "-".repeat(80))?;
             writeln!(f, "Total Unique: {}", uniq_stats.total_unique)?;
             writeln!(f, "Total Duplicates: {}", uniq_stats.total_duplicates)?;

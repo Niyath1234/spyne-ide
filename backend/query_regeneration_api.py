@@ -256,7 +256,7 @@ def generate_sql_from_query(query: str, use_llm: bool = True,
             result["explain_plan"] = explain_plan
         
         if warnings:
-            result["warnings"] = "\n".join([f"⚠️  {w}" for w in warnings])
+            result["warnings"] = "\n".join([f"️  {w}" for w in warnings])
         
         # Add reasoning steps if available from LLM
         if "reasoning_steps" in locals() and reasoning_steps:

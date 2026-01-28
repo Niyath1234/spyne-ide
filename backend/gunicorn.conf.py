@@ -116,27 +116,27 @@ proc_name = 'rca-engine'
 
 def on_starting(server):
     """Called before the master process is initialized."""
-    print(f"🚀 RCA Engine starting with {workers} workers")
+    print(f" RCA Engine starting with {workers} workers")
 
 
 def on_reload(server):
     """Called when the server is reloaded."""
-    print("🔄 RCA Engine reloading...")
+    print(" RCA Engine reloading...")
 
 
 def when_ready(server):
     """Called when the server is ready to receive requests."""
-    print(f"✅ RCA Engine ready on {bind}")
+    print(f" RCA Engine ready on {bind}")
 
 
 def worker_int(worker):
     """Called when a worker receives the INT signal."""
-    print(f"⚠️  Worker {worker.pid} interrupted")
+    print(f"Worker {worker.pid} interrupted")
 
 
 def worker_abort(worker):
     """Called when a worker times out."""
-    print(f"❌ Worker {worker.pid} aborted (timeout)")
+    print(f" Worker {worker.pid} aborted (timeout)")
 
 
 def pre_fork(server, worker):
@@ -146,7 +146,7 @@ def pre_fork(server, worker):
 
 def post_fork(server, worker):
     """Called after a worker is forked."""
-    print(f"👷 Worker {worker.pid} spawned")
+    print(f" Worker {worker.pid} spawned")
 
 
 def pre_exec(server):
@@ -156,7 +156,7 @@ def pre_exec(server):
 
 def child_exit(server, worker):
     """Called when a worker exits."""
-    print(f"👋 Worker {worker.pid} exited")
+    print(f" Worker {worker.pid} exited")
 
 
 def worker_exit(server, worker):
@@ -166,12 +166,12 @@ def worker_exit(server, worker):
 
 def nworkers_changed(server, new_value, old_value):
     """Called when the number of workers changes."""
-    print(f"📊 Workers changed: {old_value} → {new_value}")
+    print(f" Workers changed: {old_value} → {new_value}")
 
 
 def on_exit(server):
     """Called when the arbiter is shutting down."""
-    print("🛑 RCA Engine shutting down...")
+    print(" RCA Engine shutting down...")
 
 
 # ============================================================================

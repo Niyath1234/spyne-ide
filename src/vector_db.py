@@ -109,9 +109,9 @@ class HybridVectorDB:
                     region="us-east-1"
                 )
             )
-            print(f"✓ Index {self.index_name} created")
+            print(f" Index {self.index_name} created")
         else:
-            print(f"✓ Using existing index: {self.index_name}")
+            print(f" Using existing index: {self.index_name}")
     
     def _generate_embedding(self, text: str) -> List[float]:
         """
@@ -272,9 +272,9 @@ class HybridVectorDB:
             if batch_vectors:
                 try:
                     self.index.upsert(vectors=batch_vectors)
-                    print(f"  ✓ Upserted batch {batch_start // batch_size + 1}: {len(batch_vectors)} chunks")
+                    print(f"   Upserted batch {batch_start // batch_size + 1}: {len(batch_vectors)} chunks")
                 except Exception as e:
-                    print(f"  ✗ Failed to upsert batch {batch_start // batch_size + 1}: {e}")
+                    print(f"   Failed to upsert batch {batch_start // batch_size + 1}: {e}")
                     # Retry with smaller batches if needed
                     if len(batch_vectors) > 100:
                         # Split into smaller batches
@@ -282,11 +282,11 @@ class HybridVectorDB:
                             sub_batch = batch_vectors[sub_batch_start:sub_batch_start + 100]
                             try:
                                 self.index.upsert(vectors=sub_batch)
-                                print(f"    ✓ Upserted sub-batch: {len(sub_batch)} chunks")
+                                print(f"     Upserted sub-batch: {len(sub_batch)} chunks")
                             except Exception as e2:
-                                print(f"    ✗ Failed to upsert sub-batch: {e2}")
+                                print(f"     Failed to upsert sub-batch: {e2}")
         
-        print(f"✓ Successfully processed {len(nodes)} chunks")
+        print(f" Successfully processed {len(nodes)} chunks")
     
     def hybrid_search(
         self,
@@ -358,7 +358,7 @@ class HybridVectorDB:
         """Delete all vectors from the index."""
         print(f"Deleting all vectors from {self.index_name}...")
         self.index.delete(delete_all=True)
-        print("✓ All vectors deleted")
+        print(" All vectors deleted")
 
 
 def main():

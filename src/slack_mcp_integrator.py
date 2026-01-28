@@ -75,7 +75,7 @@ class SlackMCPIntegrator:
         tables_count = len(knowledge.get("tables", []))
         entities_count = len(knowledge.get("entities", []))
         
-        message = f"""📚 *Knowledge Extracted*
+        message = f""" *Knowledge Extracted*
 
 *Page:* {page_title}
 *Product:* {product}
@@ -166,7 +166,7 @@ Knowledge has been integrated into the Knowledge Register and Knowledge Base.
         title = knowledge.get("title", "Unknown")
         product = knowledge.get("product", "Unknown")
         
-        message = f"""📊 *Knowledge Summary*
+        message = f""" *Knowledge Summary*
 
 *{title}*
 
@@ -261,7 +261,7 @@ Knowledge has been integrated into the Knowledge Register and Knowledge Base.
         if not channel:
             return {"ok": False, "error": "No channel specified"}
         
-        message = f"⚠️ *Error in RCA Engine*\n\n*Error:* {error_message}\n"
+        message = f"️ *Error in RCA Engine*\n\n*Error:* {error_message}\n"
         if context:
             message += f"*Context:* {context}\n"
         message += f"\n_Time: {datetime.now().isoformat()}_"
@@ -293,7 +293,7 @@ Knowledge has been integrated into the Knowledge Register and Knowledge Base.
         if not channel:
             return {"ok": False, "error": "No channel specified"}
         
-        slack_message = f"✅ *Success*\n\n{message}\n"
+        slack_message = f" *Success*\n\n{message}\n"
         if details:
             slack_message += f"\n*Details:* {details}\n"
         

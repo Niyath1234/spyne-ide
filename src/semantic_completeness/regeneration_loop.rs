@@ -56,13 +56,13 @@ impl SemanticCompletenessValidator {
             let entities = match self.entity_extractor.extract_entities(question).await {
                 Ok(e) => {
                     reasoning_steps.push(format!(
-                        "✅ Extracted entities - anchors: {:?}, attributes: {:?}, relationships: {:?}",
+                        " Extracted entities - anchors: {:?}, attributes: {:?}, relationships: {:?}",
                         e.anchor_entities, e.attribute_entities, e.relationship_entities
                     ));
                     e
                 }
                 Err(e) => {
-                    let error_msg = format!("⚠️ Failed to extract entities: {}. Proceeding with SQL as-is.", e);
+                    let error_msg = format!("️ Failed to extract entities: {}. Proceeding with SQL as-is.", e);
                     warn!("{}", error_msg);
                     reasoning_steps.push(error_msg);
                     return Ok(current_sql);
@@ -75,16 +75,16 @@ impl SemanticCompletenessValidator {
                 Ok(t) => {
                     if t.is_empty() {
                         // No tables found - might be a valid case (e.g., system query)
-                        let msg = "⚠️ No required tables found for entities. This might be a system query. Proceeding with SQL as-is.";
+                        let msg = "️ No required tables found for entities. This might be a system query. Proceeding with SQL as-is.";
                         info!("{}", msg);
                         reasoning_steps.push(msg.to_string());
                         return Ok(current_sql);
                     }
-                    reasoning_steps.push(format!("✅ Mapped to required tables: {:?}", t));
+                    reasoning_steps.push(format!(" Mapped to required tables: {:?}", t));
                     t
                 }
                 Err(e) => {
-                    let error_msg = format!("⚠️ Failed to map entities to tables: {}. Proceeding with SQL as-is.", e);
+                    let error_msg = format!("️ Failed to map entities to tables: {}. Proceeding with SQL as-is.", e);
                     warn!("{}", error_msg);
                     reasoning_steps.push(error_msg);
                     return Ok(current_sql);
@@ -98,14 +98,14 @@ impl SemanticCompletenessValidator {
             let validation = match self.sql_validator.validate_completeness(&current_sql, &required_tables) {
                 Ok(v) => {
                     if v.is_complete {
-                        reasoning_steps.push("✅ SQL completeness validated - all required tables present".to_string());
+                        reasoning_steps.push(" SQL completeness validated - all required tables present".to_string());
                     } else {
-                        reasoning_steps.push(format!("⚠️ SQL incomplete. Missing tables: {:?}", v.missing_tables));
+                        reasoning_steps.push(format!("️ SQL incomplete. Missing tables: {:?}", v.missing_tables));
                     }
                     v
                 }
                 Err(e) => {
-                    let error_msg = format!("⚠️ Failed to validate SQL completeness: {}. Proceeding with SQL as-is.", e);
+                    let error_msg = format!("️ Failed to validate SQL completeness: {}. Proceeding with SQL as-is.", e);
                     warn!("{}", error_msg);
                     reasoning_steps.push(error_msg);
                     return Ok(current_sql);
@@ -126,15 +126,15 @@ impl SemanticCompletenessValidator {
                     validation.missing_tables.join(", ")
                 );
 
-                reasoning_steps.push(format!("🔄 Regenerating SQL to include missing tables: {:?}", validation.missing_tables));
+                reasoning_steps.push(format!(" Regenerating SQL to include missing tables: {:?}", validation.missing_tables));
                 current_sql = match self.regenerate_sql(question, &current_sql, &feedback).await {
                     Ok(new_sql) => {
                         info!("Regenerated SQL (attempt {})", iteration + 2);
-                        reasoning_steps.push(format!("✅ SQL regenerated (attempt {}): {}", iteration + 2, new_sql));
+                        reasoning_steps.push(format!(" SQL regenerated (attempt {}): {}", iteration + 2, new_sql));
                         new_sql
                     }
                     Err(e) => {
-                        let error_msg = format!("⚠️ Failed to regenerate SQL: {}. Using current SQL.", e);
+                        let error_msg = format!("️ Failed to regenerate SQL: {}. Using current SQL.", e);
                         warn!("{}", error_msg);
                         reasoning_steps.push(error_msg);
                         return Ok(current_sql);
@@ -156,7 +156,7 @@ impl SemanticCompletenessValidator {
         if let Some(validation) = final_validation {
             if !validation.is_complete {
                 let warning = format!(
-                    "⚠️ SQL completeness validation failed after {} iterations. Missing tables: {:?}",
+                    "️ SQL completeness validation failed after {} iterations. Missing tables: {:?}",
                     max_iterations,
                     validation.missing_tables
                 );
@@ -165,7 +165,7 @@ impl SemanticCompletenessValidator {
             }
         } else {
             let warning = format!(
-                "⚠️ Could not validate completeness after {} iterations. Proceeding with current SQL.",
+                "️ Could not validate completeness after {} iterations. Proceeding with current SQL.",
                 max_iterations
             );
             warn!("{}", warning);

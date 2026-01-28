@@ -128,7 +128,7 @@ pub async fn start_server(host: &str, port: u16, state: ApiState) -> Result<(), 
     let addr = format!("{}:{}", host, port);
     let listener = tokio::net::TcpListener::bind(&addr).await?;
     
-    println!("🚀 KnowledgeBase API server listening on http://{}", addr);
+    println!(" KnowledgeBase API server listening on http://{}", addr);
     
     axum::serve(listener, app).await?;
     

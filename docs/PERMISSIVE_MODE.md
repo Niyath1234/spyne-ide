@@ -7,16 +7,16 @@ By default, Spyne IDE uses **fail-closed** validation that rejects ambiguous que
 ## Current Behavior (Fail-Closed)
 
 **Default:** `FailClosedEnforcer` rejects ambiguous queries:
-- ❌ "Show me customers" → Rejected (no metric specified)
-- ❌ "Total revenue" → Rejected (no time range)
-- ❌ "Orders by region" → Rejected (ambiguous metric)
+-  "Show me customers" → Rejected (no metric specified)
+-  "Total revenue" → Rejected (no time range)
+-  "Orders by region" → Rejected (ambiguous metric)
 
 ## Permissive Mode (Fail-Open)
 
 **New:** `FailOpenEnforcer` interprets vague queries:
-- ✅ "Show me customers" → Assumes relational query, shows customer records
-- ✅ "Total revenue" → Assumes metric query, uses default time range (last 30 days)
-- ✅ "Orders by region" → Infers metric from context, groups by region
+-  "Show me customers" → Assumes relational query, shows customer records
+-  "Total revenue" → Assumes metric query, uses default time range (last 30 days)
+-  "Orders by region" → Infers metric from context, groups by region
 
 ## How It Works
 
@@ -110,9 +110,9 @@ class PlanningPlane:
 ### Example 1: Vague Query
 **Query:** "show me customers"
 
-**Fail-Closed:** ❌ Rejected - "Ambiguous intent: metric not specified"
+**Fail-Closed:**  Rejected - "Ambiguous intent: metric not specified"
 
-**Permissive Mode:** ✅ Accepted
+**Permissive Mode:**  Accepted
 - Assumes relational query
 - Shows customer records
 - Warning: "No metric specified - assuming relational query"
@@ -120,9 +120,9 @@ class PlanningPlane:
 ### Example 2: Missing Time Range
 **Query:** "total revenue"
 
-**Fail-Closed:** ❌ Rejected - "Ambiguous intent: time range or aggregation required"
+**Fail-Closed:**  Rejected - "Ambiguous intent: time range or aggregation required"
 
-**Permissive Mode:** ✅ Accepted
+**Permissive Mode:**  Accepted
 - Infers metric query from "total"
 - Uses default time range: "last 30 days"
 - Warning: "No time range specified - using default: 'last 30 days'"
@@ -130,9 +130,9 @@ class PlanningPlane:
 ### Example 3: Ambiguous Table
 **Query:** "orders by region"
 
-**Fail-Closed:** ❌ Rejected - "Ambiguous intent: metric not specified"
+**Fail-Closed:**  Rejected - "Ambiguous intent: metric not specified"
 
-**Permissive Mode:** ✅ Accepted
+**Permissive Mode:**  Accepted
 - Infers metric query from "by region" (grouping)
 - Chooses most relevant metric (e.g., "total_orders")
 - Groups by region dimension
@@ -141,13 +141,13 @@ class PlanningPlane:
 ## Safety Considerations
 
 Permissive mode still blocks:
-- ❌ **Dangerous operations**: DROP TABLE, TRUNCATE, DELETE without WHERE
-- ❌ **Unsafe SQL**: ALTER TABLE, unbounded updates
+-  **Dangerous operations**: DROP TABLE, TRUNCATE, DELETE without WHERE
+-  **Unsafe SQL**: ALTER TABLE, unbounded updates
 
 Permissive mode warns but allows:
-- ⚠️ **Complex queries**: Many joins (>10), many subqueries (>5)
-- ⚠️ **Unknown metrics**: Proceeds but warns
-- ⚠️ **Access issues**: Warns about potentially inaccessible tables/columns
+- ️ **Complex queries**: Many joins (>10), many subqueries (>5)
+- ️ **Unknown metrics**: Proceeds but warns
+- ️ **Access issues**: Warns about potentially inaccessible tables/columns
 
 ## Configuration
 
@@ -174,12 +174,12 @@ enforcer = FailOpenEnforcer() if permissive else FailClosedEnforcer()
 
 | Aspect | Fail-Closed | Fail-Open (Permissive) |
 |--------|-------------|------------------------|
-| **Ambiguous queries** | ❌ Rejects | ✅ Interprets with warnings |
-| **Missing metrics** | ❌ Error | ⚠️ Infers from context |
-| **Missing time range** | ❌ Error | ⚠️ Uses default |
-| **Unknown metrics** | ❌ Error | ⚠️ Warns but allows |
-| **Complex queries** | ❌ Blocks (>4 joins) | ⚠️ Warns but allows (>10 joins) |
-| **Dangerous SQL** | ❌ Blocks | ❌ Still blocks |
+| **Ambiguous queries** |  Rejects |  Interprets with warnings |
+| **Missing metrics** |  Error | ️ Infers from context |
+| **Missing time range** |  Error | ️ Uses default |
+| **Unknown metrics** |  Error | ️ Warns but allows |
+| **Complex queries** |  Blocks (>4 joins) | ️ Warns but allows (>10 joins) |
+| **Dangerous SQL** |  Blocks |  Still blocks |
 | **User experience** | Strict, safe | Flexible, Cursor-like |
 
 ## Best Practices
@@ -315,9 +315,9 @@ class PlanningPlaneWithClarification(PlanningPlane):
 
 | Mode | Behavior | Use Case |
 |------|----------|----------|
-| **Fail-Closed** | ❌ Rejects ambiguous queries | Production, strict validation |
-| **Fail-Open (Assumption)** | ⚠️ Makes assumptions, warns | Quick exploration, Cursor-like |
-| **Fail-Open (Clarification)** | ❓ Asks questions proactively | **Best UX - interactive, accurate** |
+| **Fail-Closed** |  Rejects ambiguous queries | Production, strict validation |
+| **Fail-Open (Assumption)** | ️ Makes assumptions, warns | Quick exploration, Cursor-like |
+| **Fail-Open (Clarification)** |  Asks questions proactively | **Best UX - interactive, accurate** |
 
 ### When to Use Each Mode
 
@@ -327,7 +327,7 @@ class PlanningPlaneWithClarification(PlanningPlane):
 
 ## Future Enhancements
 
-- [x] Proactive clarification questions ✅
+- [x] Proactive clarification questions 
 - [ ] Learn from user corrections to improve inference
 - [ ] Confidence scoring for assumptions
 - [ ] User preference learning (what defaults they prefer)

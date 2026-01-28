@@ -40,7 +40,7 @@ def example_clarification_flow():
         result = clarification_agent.analyze_query(query, metadata=metadata)
         
         if result.needs_clarification:
-            print(f"⚠️  Needs Clarification (Confidence: {result.confidence:.1%})")
+            print(f"️  Needs Clarification (Confidence: {result.confidence:.1%})")
             print(f"\nQuestions to ask:")
             for i, q in enumerate(result.questions, 1):
                 print(f"\n{i}. {q.question}")
@@ -48,7 +48,7 @@ def example_clarification_flow():
                 if q.options:
                     print(f"   Options: {', '.join(q.options[:5])}")
         else:
-            print(f"✅ No clarification needed (Confidence: {result.confidence:.1%})")
+            print(f" No clarification needed (Confidence: {result.confidence:.1%})")
             if result.suggested_intent:
                 print(f"   Suggested intent: {result.suggested_intent.get('query_type', 'unknown')}")
 

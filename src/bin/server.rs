@@ -751,7 +751,7 @@ async fn handle_request(request: &str) -> String {
                         format!("\n\nError: RCA execution failed: {}\n\nPlease check:\n- Query interpretation is correct\n- Rules exist for specified metrics\n- Data files are accessible\n- Server logs for detailed error", e)
                     };
                     
-                    let result_text = format!("⚠️ RCA Analysis Failed - Adaptive Error Response\n\nQuery: {}\n\nDetected Systems: {} and {}\nDetected Metrics: {} and {}\n\n{}", 
+                    let result_text = format!("️ RCA Analysis Failed - Adaptive Error Response\n\nQuery: {}\n\nDetected Systems: {} and {}\nDetected Metrics: {} and {}\n\n{}", 
                         query, detected_systems.0, detected_systems.1, metric_a, metric_b, table_data);
                     
                     let result_json = serde_json::json!({

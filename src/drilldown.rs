@@ -116,7 +116,7 @@ impl DrilldownEngine {
         rca_summary: &crate::core::llm::strategy::RcaSummary,
         available_columns: &[String],
     ) -> Result<DrilldownStrategy> {
-        info!("🔍 LLM-guided drilldown for metric: {}", metric);
+        info!(" LLM-guided drilldown for metric: {}", metric);
         
         if let Some(strategy_engine) = self.get_strategy_engine() {
             strategy_engine.generate_drilldown_strategy(
@@ -147,7 +147,7 @@ impl DrilldownEngine {
         rule_b_id: &str,
         as_of_date: Option<chrono::NaiveDate>,
     ) -> Result<DrilldownResult> {
-        info!("🔍 Executing drilldown on dimension: {} (column: {})", dimension.name, dimension.column);
+        info!(" Executing drilldown on dimension: {} (column: {})", dimension.name, dimension.column);
         
         // Execute both rules
         let steps_a = self.executor.execute_with_steps(rule_a_id, as_of_date).await?;

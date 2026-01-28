@@ -251,10 +251,10 @@ impl Severity {
     
     pub fn emoji(&self) -> &'static str {
         match self {
-            Severity::Low => "🟢",
-            Severity::Medium => "🟡",
-            Severity::High => "🟠",
-            Severity::Critical => "🔴",
+            Severity::Low => "",
+            Severity::Medium => "",
+            Severity::High => "",
+            Severity::Critical => "",
         }
     }
 }

@@ -26,7 +26,7 @@ impl IntelligentRuleBuilder {
         metric: &str,
         target_entity: &str,
     ) -> Result<Rule> {
-        println!("\n🔍 Intelligent Rule Builder");
+        println!("\n Intelligent Rule Builder");
         println!("   Business Rule: \"{}\"", business_rule);
         println!("   System: {}", system);
         println!("   Metric: {}", metric);
@@ -37,7 +37,7 @@ impl IntelligentRuleBuilder {
         
         // Handle clarifications if needed
         let resolved_formula = if parsed.needs_clarification {
-            println!("\n   ⚠️  Need clarification for column matching:");
+            println!("\n   ️  Need clarification for column matching:");
             self.resolve_clarifications(parsed.clone()).await?
         } else {
             parsed.formula.clone()
@@ -69,7 +69,7 @@ impl IntelligentRuleBuilder {
             labels: None,
         };
         
-        println!("   ✅ Rule built successfully!");
+        println!("    Rule built successfully!");
         println!("      Formula: {}", rule.computation.formula);
         println!("      Source Entities: {:?}", rule.computation.source_entities);
         
@@ -80,7 +80,7 @@ impl IntelligentRuleBuilder {
         let mut resolved_vars = HashMap::new();
         
         for question in &parsed.clarification_questions {
-            println!("\n   ❓ {}", question.question);
+            println!("\n    {}", question.question);
             println!("      Options:");
             
             // Display options with better formatting
@@ -111,11 +111,11 @@ impl IntelligentRuleBuilder {
                         break;
                     }
                     Ok(_) => {
-                        println!("      ⚠️  Please enter a number between 1 and {}", question.options.len());
+                        println!("      ️  Please enter a number between 1 and {}", question.options.len());
                         continue;
                     }
                     Err(_) => {
-                        println!("      ⚠️  Invalid input. Please enter a number.");
+                        println!("      ️  Invalid input. Please enter a number.");
                         continue;
                     }
                 }
@@ -124,7 +124,7 @@ impl IntelligentRuleBuilder {
             let selected = &question.options[choice - 1];
             resolved_vars.insert(question.variable.clone(), selected.column_name.clone());
             
-            println!("      ✅ Selected: {} from table {}", 
+            println!("       Selected: {} from table {}", 
                 selected.column_name, selected.table_name);
         }
         

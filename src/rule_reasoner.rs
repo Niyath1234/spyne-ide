@@ -50,7 +50,7 @@ impl RuleReasoner {
         system: &str,
         metric: &str,
     ) -> Result<SelectedRule> {
-        info!("🔍 RuleReasoner: Selecting rule for {} {} with chain-of-thought reasoning", system, metric);
+        info!(" RuleReasoner: Selecting rule for {} {} with chain-of-thought reasoning", system, metric);
         
         // Step 1: Get all candidate rules
         let candidate_rules = self.metadata.get_rules_for_system_metric(system, metric);
@@ -167,7 +167,7 @@ impl RuleReasoner {
                 }
                 
                 if all_match {
-                    debug!("✅ Rule {} matches all filter conditions", rule.id);
+                    debug!(" Rule {} matches all filter conditions", rule.id);
                     matching.push(rule.clone());
                 }
             } else {
@@ -373,7 +373,7 @@ impl RuleReasoner {
     ) -> Result<ChainOfThought> {
         let prompt = self.build_reasoning_prompt(rule, filters, all_rules);
         
-        info!("🤔 Generating chain-of-thought reasoning for rule: {}", rule.id);
+        info!(" Generating chain-of-thought reasoning for rule: {}", rule.id);
         
         let response = self.llm.call_llm(&prompt).await?;
         

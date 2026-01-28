@@ -81,22 +81,22 @@ impl LlmValueMatcher {
         let total_distinct_a = distinct_a.len();
         let total_distinct_b = distinct_b.len();
         
-        println!("   📊 Found {} distinct values in System A", total_distinct_a);
-        println!("   📊 Found {} distinct values in System B", total_distinct_b);
+        println!("    Found {} distinct values in System A", total_distinct_a);
+        println!("    Found {} distinct values in System B", total_distinct_b);
         
         // Stage 2: Exact matching
         let (exact_matches, unmatched_a_after_exact, unmatched_b_after_exact) = 
             self.exact_match(&distinct_a, &distinct_b);
         
-        println!("   ✅ Exact matches: {}", exact_matches.len());
+        println!("    Exact matches: {}", exact_matches.len());
         
         // Stage 3: Fuzzy matching on remaining unmatched values
         let (fuzzy_matches, unmatched_a_after_fuzzy, unmatched_b_after_fuzzy) = 
             self.fuzzy_match(&unmatched_a_after_exact, &unmatched_b_after_exact);
         
-        println!("   🔍 Fuzzy matches: {}", fuzzy_matches.len());
-        println!("   ⚠️  Remaining unmatched in A: {}", unmatched_a_after_fuzzy.len());
-        println!("   ⚠️  Remaining unmatched in B: {}", unmatched_b_after_fuzzy.len());
+        println!("    Fuzzy matches: {}", fuzzy_matches.len());
+        println!("   ️  Remaining unmatched in A: {}", unmatched_a_after_fuzzy.len());
+        println!("   ️  Remaining unmatched in B: {}", unmatched_b_after_fuzzy.len());
         
         // Combine exact and fuzzy matches
         let mut all_matches: Vec<ValueMatch> = exact_matches
@@ -121,7 +121,7 @@ impl LlmValueMatcher {
         let (llm_matches, final_unmatched_a, final_unmatched_b): (Vec<LlmMatch>, Vec<String>, Vec<String>) = 
             if !unmatched_a_after_fuzzy.is_empty() || !unmatched_b_after_fuzzy.is_empty() {
                 if let Some(ref llm) = self.llm_client {
-                    println!("   🤖 LLM matching available for {} unmatched values", 
+                    println!("    LLM matching available for {} unmatched values", 
                         unmatched_a_after_fuzzy.len() + unmatched_b_after_fuzzy.len());
                     // Return unmatched values - user will be prompted separately
                     (Vec::new(), unmatched_a_after_fuzzy, unmatched_b_after_fuzzy)
@@ -165,7 +165,7 @@ impl LlmValueMatcher {
             return Ok(Vec::new());
         }
         
-        println!("   🤖 Using LLM to match {} values from A with {} values from B", 
+        println!("    Using LLM to match {} values from A with {} values from B", 
             unmatched_a.len(), unmatched_b.len());
         
         let request = LlmMatchRequest {
@@ -176,7 +176,7 @@ impl LlmValueMatcher {
         
         let response = self.call_llm_matching(llm, &request).await?;
         
-        println!("   ✅ LLM found {} matches", response.matches.len());
+        println!("    LLM found {} matches", response.matches.len());
         for m in &response.matches {
             println!("      '{}' <-> '{}' (confidence: {:.1}%) - {}", 
                 m.value_a, m.value_b, m.confidence * 100.0, m.reasoning);

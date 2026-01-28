@@ -2,7 +2,7 @@
 
 Welcome to the Spyne IDE documentation. This directory contains all project documentation organized by topic.
 
-## 📚 Quick Links
+##  Quick Links
 
 ### Getting Started
 - **[SETUP.md](./SETUP.md)** - Installation and setup instructions
@@ -27,33 +27,33 @@ Welcome to the Spyne IDE documentation. This directory contains all project docu
 - **[CHANGELOG.md](./CHANGELOG.md)** - Version history and changelog
 - **[CONTRIBUTING.md](./CONTRIBUTING.md)** - Contribution guidelines
 
-## 📖 Documentation by Category
+##  Documentation by Category
 
-### 🚀 Deployment & Operations
+###  Deployment & Operations
 - [PRODUCTION_READINESS.md](./PRODUCTION_READINESS.md) - Complete production deployment guide
 - [SHIP_READY_CHECKLIST.md](./SHIP_READY_CHECKLIST.md) - Pre-deployment verification checklist
 - [PRODUCTION_FEATURES_CHECKLIST.md](./PRODUCTION_FEATURES_CHECKLIST.md) - Production features status
 
-### 🔧 Setup & Configuration
+###  Setup & Configuration
 - [SETUP.md](./SETUP.md) - Installation and configuration guide
 
-### 📡 API Reference
+###  API Reference
 - [CLARIFICATION_API_GUIDE.md](./CLARIFICATION_API_GUIDE.md) - Clarification API endpoints and usage
 
-### 🏗️ Architecture
+### ️ Architecture
 - [END_TO_END_PIPELINE.md](./END_TO_END_PIPELINE.md) - Complete pipeline architecture
 - [IMPLEMENTATION_COMPLETE.md](./IMPLEMENTATION_COMPLETE.md) - Implementation details
 - [INTEGRATION_STATUS.md](./INTEGRATION_STATUS.md) - Component integration status
 
-### ✨ Features
+###  Features
 - [CLARIFICATION_SUMMARY.md](./CLARIFICATION_SUMMARY.md) - Clarification system overview
 - [PERMISSIVE_MODE.md](./PERMISSIVE_MODE.md) - Permissive mode documentation
 
-### 📝 Project Management
+###  Project Management
 - [CHANGELOG.md](./CHANGELOG.md) - Version history
 - [CONTRIBUTING.md](./CONTRIBUTING.md) - How to contribute
 
-## 🔍 Finding Documentation
+##  Finding Documentation
 
 ### By Use Case
 
@@ -82,7 +82,7 @@ Welcome to the Spyne IDE documentation. This directory contains all project docu
 - [CLARIFICATION_API_GUIDE.md](./CLARIFICATION_API_GUIDE.md) - API reference
 - [CLARIFICATION_SUMMARY.md](./CLARIFICATION_SUMMARY.md) - Feature overview
 
-## 📄 Document Descriptions
+##  Document Descriptions
 
 ### Core Documents
 

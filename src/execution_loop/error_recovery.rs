@@ -28,7 +28,7 @@ impl ErrorRecovery {
         let mut prompt_parts = Vec::new();
 
         prompt_parts.push(format!(
-            "⚠️ RETRY ATTEMPT {}: Your previous intent failed with the following error:",
+            "️ RETRY ATTEMPT {}: Your previous intent failed with the following error:",
             attempt
         ));
 

@@ -150,9 +150,9 @@ async fn run_agentic_rca(
     api_key: Option<String>,
 ) -> Result<()> {
     println!("\n{}", "=".repeat(80));
-    println!("🤖 AGENTIC RCA REASONING (Cursor-like Stage-wise Planning)");
+    println!(" AGENTIC RCA REASONING (Cursor-like Stage-wise Planning)");
     println!("{}", "=".repeat(80));
-    println!("\n📋 Problem: {}\n", problem);
+    println!("\n Problem: {}\n", problem);
     
     // Load metadata
     info!("Loading metadata from {:?}", metadata_dir);
@@ -178,18 +178,18 @@ async fn run_agentic_rca(
     let mut reasoner = AgenticReasoner::new(llm, graph, metadata, None);
     
     // Run agentic reasoning
-    println!("🚀 Starting agentic reasoning with stage-wise planning...\n");
+    println!(" Starting agentic reasoning with stage-wise planning...\n");
     println!("{}", "-".repeat(80));
     let solution = reasoner.reason(&problem).await
         .map_err(|e| anyhow::anyhow!("Agentic reasoning failed: {}", e))?;
     
     // Display results
     println!("\n{}", "=".repeat(80));
-    println!("✅ AGENTIC REASONING COMPLETE");
+    println!(" AGENTIC REASONING COMPLETE");
     println!("{}", "=".repeat(80));
     
     if let Some(ref plan) = solution.plan {
-        println!("\n📋 Plan Created:");
+        println!("\n Plan Created:");
         println!("   Goal: {}", plan.goal);
         println!("   Reasoning: {}", plan.reasoning);
         println!("   Steps: {}", plan.steps.len());
@@ -202,10 +202,10 @@ async fn run_agentic_rca(
         }
     }
     
-    println!("\n🔍 EXPLORATION STEPS EXECUTED: {}", solution.exploration_steps.len());
+    println!("\n EXPLORATION STEPS EXECUTED: {}", solution.exploration_steps.len());
     println!("{}", "-".repeat(80));
     for (i, step) in solution.exploration_steps.iter().enumerate() {
-        println!("\n📍 Step {}: {:?}", i + 1, step.step_type);
+        println!("\n Step {}: {:?}", i + 1, step.step_type);
         println!("   Action: {}", step.query);
         println!("   Reasoning: {}", step.reasoning);
         match &step.result {
@@ -254,12 +254,12 @@ async fn run_agentic_rca(
     
     if let Some(ref answer) = solution.final_answer {
         println!("\n{}", "=".repeat(80));
-        println!("📝 FINAL ANSWER");
+        println!(" FINAL ANSWER");
         println!("{}", "=".repeat(80));
         println!("\n{}", answer);
     }
     
-    println!("\n🎯 Overall Confidence: {:.2}%", solution.confidence * 100.0);
+    println!("\n Overall Confidence: {:.2}%", solution.confidence * 100.0);
     println!("\n{}", "=".repeat(80));
     
     Ok(())
@@ -378,7 +378,7 @@ async fn run_csv_rca(
     api_key: Option<String>,
 ) -> Result<()> {
     println!("\n{}", "=".repeat(80));
-    println!("🔍 RCA Engine - CSV Mode");
+    println!(" RCA Engine - CSV Mode");
     println!("{}\n", "=".repeat(80));
     
     // Check files exist
@@ -389,7 +389,7 @@ async fn run_csv_rca(
         return Err(anyhow::anyhow!("CSV file B not found: {}", csv_b.display()));
     }
     
-    println!("📊 Loading CSV files...");
+    println!(" Loading CSV files...");
     println!("  System A: {} ({})", system_a, csv_a.display());
     println!("  System B: {} ({})", system_b, csv_b.display());
     
@@ -420,16 +420,16 @@ async fn run_csv_rca(
     let df_a = spyne_ide::data_utils::round_float64_to_integers(df_a)?;
     let df_b = spyne_ide::data_utils::round_float64_to_integers(df_b)?;
     
-    println!("  ✓ Loaded {} rows from System A ({} columns)", df_a.height(), df_a.width());
-    println!("  ✓ Loaded {} rows from System B ({} columns)", df_b.height(), df_b.width());
+    println!("   Loaded {} rows from System A ({} columns)", df_a.height(), df_a.width());
+    println!("   Loaded {} rows from System B ({} columns)", df_b.height(), df_b.width());
     
     // Show column names
-    println!("\n📋 Columns in System A:");
+    println!("\n Columns in System A:");
     for (i, col) in df_a.get_column_names().iter().enumerate() {
         println!("  {}. {}", i + 1, col);
     }
     
-    println!("\n📋 Columns in System B:");
+    println!("\n Columns in System B:");
     for (i, col) in df_b.get_column_names().iter().enumerate() {
         println!("  {}. {}", i + 1, col);
     }
@@ -482,7 +482,7 @@ async fn run_csv_rca(
     
     // Interactive prompt for query
     println!("\n{}", "=".repeat(80));
-    println!("💬 Enter your reconciliation query:");
+    println!(" Enter your reconciliation query:");
     println!("   Example: 'MSME numbers not matching between {} and {}'", system_a, system_b);
     println!("   Example: 'Compare {} vs {} for total disbursement amount'", system_a, system_b);
     println!("   Example: 'Find differences in loan counts between {} and {}'", system_a, system_b);
@@ -519,7 +519,7 @@ async fn run_csv_rca(
         None
     };
     
-    println!("\n🤖 Analyzing query with LLM...");
+    println!("\n Analyzing query with LLM...");
     println!("   Query: \"{}\"", query);
     
     // Use LLM to intelligently analyze the query and determine:
@@ -535,7 +535,7 @@ async fn run_csv_rca(
         sample_b.as_deref(),
     ).await?;
     
-    println!("   ✅ LLM Analysis:");
+    println!("    LLM Analysis:");
     println!("      - Grain column: {}", analysis.grain_column);
     if let Some(ref mc) = analysis.metric_column {
         println!("      - Metric column: {}", mc);
@@ -556,15 +556,15 @@ async fn run_csv_rca(
     let mut df_b_filtered = df_b.clone();
     
     for filter in &analysis.filters {
-        println!("\n   🔍 Applying filter: {} {} {:?}", filter.column, filter.operator, filter.value);
+        println!("\n    Applying filter: {} {} {:?}", filter.column, filter.operator, filter.value);
         
         // Check if column exists
         if !df_a_filtered.get_column_names().contains(&filter.column.as_str()) {
-            println!("      ⚠️  Warning: Column '{}' not found in System A, skipping filter", filter.column);
+            println!("      ️  Warning: Column '{}' not found in System A, skipping filter", filter.column);
             continue;
         }
         if !df_b_filtered.get_column_names().contains(&filter.column.as_str()) {
-            println!("      ⚠️  Warning: Column '{}' not found in System B, skipping filter", filter.column);
+            println!("      ️  Warning: Column '{}' not found in System B, skipping filter", filter.column);
             continue;
         }
         
@@ -608,7 +608,7 @@ async fn run_csv_rca(
                 let filter_value = filter.value.as_str().unwrap_or("");
                 // For contains, we'll use a simple equality check for now
                 // More complex pattern matching can be added later
-                println!("      ⚠️  Note: 'contains' operator simplified to equality check");
+                println!("      ️  Note: 'contains' operator simplified to equality check");
                 df_a_filtered = df_a_filtered
                     .lazy()
                     .filter(col(&filter.column).eq(lit(filter_value)))
@@ -619,11 +619,11 @@ async fn run_csv_rca(
                     .collect()?;
             }
             _ => {
-                println!("      ⚠️  Warning: Operator '{}' not yet supported, skipping filter", filter.operator);
+                println!("      ️  Warning: Operator '{}' not yet supported, skipping filter", filter.operator);
             }
         }
         
-        println!("      ✓ Applied filter: {} rows remaining in A, {} rows in B", 
+        println!("       Applied filter: {} rows remaining in A, {} rows in B", 
             df_a_filtered.height(), df_b_filtered.height());
     }
     
@@ -645,7 +645,7 @@ async fn run_csv_rca(
     let mut file_b = fs::File::create(&parquet_b)?;
     ParquetWriter::new(&mut file_b).finish(&mut df_b_filtered.clone())?;
     
-    println!("\n🔧 Creating metadata...");
+    println!("\n Creating metadata...");
     
     // Use LLM-determined grain and metric
     let grain = analysis.grain_column;
@@ -654,8 +654,8 @@ async fn run_csv_rca(
         "count".to_string()
     });
     
-    println!("  ✓ Grain column: {}", grain);
-    println!("  ✓ Metric: {} ({})", analysis.metric_name, analysis.aggregation_type);
+    println!("   Grain column: {}", grain);
+    println!("   Metric: {} ({})", analysis.metric_name, analysis.aggregation_type);
     
     // Create metadata with aggregation type
     create_csv_metadata_with_agg(
@@ -672,20 +672,20 @@ async fn run_csv_rca(
     let metadata = Metadata::load(&metadata_dir)?;
     
     // Run RCA (LLM client already initialized above)
-    println!("\n🚀 Running RCA...\n");
+    println!("\n Running RCA...\n");
     let engine = RcaEngine::new(metadata, llm, data_dir.clone());
     let result = engine.run(query).await?;
     
     // Print results
     println!("\n{}", "=".repeat(80));
-    println!("✅ RCA Results");
+    println!(" RCA Results");
     println!("{}\n", "=".repeat(80));
     println!("{}", result);
     
     // Cleanup
-    println!("\n🧹 Cleaning up temporary files...");
+    println!("\n Cleaning up temporary files...");
     fs::remove_dir_all(&temp_dir)?;
-    println!("  ✓ Done");
+    println!("   Done");
     
     Ok(())
 }
@@ -1068,9 +1068,9 @@ async fn run_one_shot(
     explain: bool,
 ) -> Result<()> {
     println!("\n{}", "=".repeat(80));
-    println!("🚀 ONE-SHOT AGENTIC RCA + DV ENGINE");
+    println!(" ONE-SHOT AGENTIC RCA + DV ENGINE");
     println!("{}", "=".repeat(80));
-    println!("\n📋 Query: {}\n", query);
+    println!("\n Query: {}\n", query);
     
     // Load metadata
     info!("Loading metadata from {:?}", metadata_dir);
@@ -1093,45 +1093,45 @@ async fn run_one_shot(
     let runner = OneShotRunner::new(metadata, llm, data_dir);
     
     // Run query
-    println!("🔍 Processing query...\n");
+    println!(" Processing query...\n");
     let result = runner.run(&query).await
         .map_err(|e| anyhow::anyhow!("One-shot execution failed: {}", e))?;
     
     // Display results
     println!("{}", "=".repeat(80));
     if result.success {
-        println!("✅ SUCCESS");
+        println!(" SUCCESS");
     } else {
-        println!("❌ FAILED");
+        println!(" FAILED");
     }
     println!("{}", "=".repeat(80));
     
-    println!("\n📊 Task Type: {:?}", result.intent.task_type);
-    println!("📈 Systems: {:?}", result.intent.systems);
-    println!("📏 Metrics: {:?}", result.intent.target_metrics);
-    println!("🌾 Grain: {:?}", result.intent.grain);
+    println!("\n Task Type: {:?}", result.intent.task_type);
+    println!(" Systems: {:?}", result.intent.systems);
+    println!(" Metrics: {:?}", result.intent.target_metrics);
+    println!(" Grain: {:?}", result.intent.grain);
     
     if let Some(ref task) = result.grounded_task {
-        println!("\n🔍 Grounded Task:");
+        println!("\n Grounded Task:");
         println!("   Candidate Tables: {}", task.candidate_tables.len());
         for table in &task.candidate_tables {
             println!("      - {} (system: {}, confidence: {:.2})", 
                 table.table_name, table.system, table.confidence);
         }
         if !task.unresolved_fields.is_empty() {
-            println!("   ⚠️  Unresolved: {:?}", task.unresolved_fields);
+            println!("   ️  Unresolved: {:?}", task.unresolved_fields);
         }
     }
     
     if let Some(ref plan) = result.execution_plan {
-        println!("\n📋 Execution Plan:");
+        println!("\n Execution Plan:");
         println!("   Nodes: {}", plan.nodes.len());
         println!("   Edges: {}", plan.edges.len());
         println!("   Root Nodes: {:?}", plan.root_nodes);
     }
     
     if explain {
-        println!("\n💡 Explanation:");
+        println!("\n Explanation:");
         println!("   Summary: {}", result.explanation.summary);
         if !result.explanation.why_tables.is_empty() {
             println!("\n   Why These Tables:");
@@ -1192,14 +1192,14 @@ async fn run_one_shot(
     }
     
     if !result.failures.is_empty() {
-        println!("\n⚠️  Failures:");
+        println!("\n️  Failures:");
         for failure in &result.failures {
             println!("   - [{}] {}", failure.failure_type, failure.message);
         }
     }
     
     if let Some(ref data) = result.result_data {
-        println!("\n📊 Result Data:");
+        println!("\n Result Data:");
         println!("{}", serde_json::to_string_pretty(data)?);
     }
     
@@ -1218,7 +1218,7 @@ async fn upload_csv(
     use std::io::{self, Write};
     
     println!("\n{}", "=".repeat(80));
-    println!("📤 CSV Upload - Simple Interface");
+    println!(" CSV Upload - Simple Interface");
     println!("{}", "=".repeat(80));
     
     // Check file exists
@@ -1226,7 +1226,7 @@ async fn upload_csv(
         return Err(anyhow::anyhow!("CSV file not found: {}", csv_file.display()));
     }
     
-    println!("\n📄 Reading CSV file: {}", csv_file.display());
+    println!("\n Reading CSV file: {}", csv_file.display());
     
     // Read CSV file
     let csv_content = fs::read_to_string(&csv_file)
@@ -1243,14 +1243,14 @@ async fn upload_csv(
         .map(|h| h.trim().to_string())
         .collect::<Vec<String>>();
     
-    println!("\n✅ Found {} columns:", headers.len());
+    println!("\n Found {} columns:", headers.len());
     for (i, col) in headers.iter().enumerate() {
         println!("  {}. {}", i + 1, col);
     }
     
     // Prompt for column descriptions
     println!("\n{}", "-".repeat(80));
-    println!("📝 Please provide a brief description for each column:");
+    println!(" Please provide a brief description for each column:");
     println!("{}", "-".repeat(80));
     
     let mut column_descriptions: std::collections::HashMap<String, String> = std::collections::HashMap::new();
@@ -1268,7 +1268,7 @@ async fn upload_csv(
     
     // Prompt for table information
     println!("\n{}", "-".repeat(80));
-    println!("📋 Table Information:");
+    println!(" Table Information:");
     println!("{}", "-".repeat(80));
     
     print!("\n  What is this table about? (brief description): ");
@@ -1358,7 +1358,7 @@ async fn upload_csv(
         .to_string();
     
     println!("\n{}", "=".repeat(80));
-    println!("🚀 Creating metadata and ingesting data...");
+    println!(" Creating metadata and ingesting data...");
     println!("{}", "=".repeat(80));
     
     // Ensure directories exist
@@ -1434,7 +1434,7 @@ async fn upload_csv(
     let tables_json = json!(metadata.tables);
     fs::write(metadata_dir.join("tables.json"), serde_json::to_string_pretty(&tables_json)?)?;
     
-    println!("\n✅ Metadata created successfully!");
+    println!("\n Metadata created successfully!");
     println!("   - Table: {}", table_name);
     println!("   - System: {}", system_name);
     println!("   - Entity: {}", entity_name);
@@ -1452,7 +1452,7 @@ async fn upload_csv(
     let orchestrator = IngestionOrchestrator::new();
     
     // Ingest data
-    println!("\n📥 Ingesting data...");
+    println!("\n Ingesting data...");
     let result = orchestrator.ingest(
         &mut world_state,
         &data_dir,
@@ -1460,21 +1460,21 @@ async fn upload_csv(
         Some(table_name.clone()),
     )?;
     
-    println!("\n✅ Ingestion complete!");
+    println!("\n Ingestion complete!");
     println!("   - Records ingested: {}", result.records_ingested);
     println!("   - Tables affected: {:?}", result.tables_affected);
     println!("   - Schema versions: {:?}", result.schema_versions);
     
     // Create hypergraph to automatically create nodes and edges
-    println!("\n🔗 Creating nodes and edges in hypergraph...");
+    println!("\n Creating nodes and edges in hypergraph...");
     let graph = Hypergraph::new(metadata.clone());
     
-    println!("\n✅ Nodes and edges created successfully!");
+    println!("\n Nodes and edges created successfully!");
     println!("   - Graph initialized with {} tables", metadata.tables.len());
     println!("   - Entities: {}", metadata.entities.len());
     
     println!("\n{}", "=".repeat(80));
-    println!("🎉 Upload complete! Your CSV has been processed and added to the system.");
+    println!(" Upload complete! Your CSV has been processed and added to the system.");
     println!("{}", "=".repeat(80));
     
     Ok(())

@@ -205,8 +205,8 @@ impl TaskGrounder {
         let selected_rule = if let Some(ref reasoner) = self.rule_reasoner {
             match reasoner.select_rule(intent, system, metric).await {
                 Ok(selected) => {
-                    info!("✅ RuleReasoner selected: {} (confidence: {:.2})", selected.rule.id, selected.confidence);
-                    info!("📝 Reasoning: {}", selected.reasoning);
+                    info!(" RuleReasoner selected: {} (confidence: {:.2})", selected.rule.id, selected.confidence);
+                    info!(" Reasoning: {}", selected.reasoning);
                     Some(selected.rule)
                 }
                 Err(e) => {
@@ -239,7 +239,7 @@ impl TaskGrounder {
         if let Some(ref llm) = self.llm_client {
             match self.llm_reason_about_tables(llm, system, metric, &system_tables, &matching_rules, intent, grain).await {
                 Ok(llm_scored) => {
-                    info!("✅ LLM-based table reasoning completed for {} tables", llm_scored.len());
+                    info!(" LLM-based table reasoning completed for {} tables", llm_scored.len());
                     llm_scored_opt = Some(llm_scored);
                 }
                 Err(e) => {
@@ -658,7 +658,7 @@ impl TaskGrounder {
         intent: &IntentSpec,
         grain: &[String],
     ) -> Result<Vec<TableCandidate>> {
-        info!("🤖 LLM reasoning about {} candidate tables for {} {}", candidate_tables.len(), system, metric);
+        info!(" LLM reasoning about {} candidate tables for {} {}", candidate_tables.len(), system, metric);
         
         // Build comprehensive table knowledge context
         let mut table_contexts = Vec::new();

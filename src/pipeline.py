@@ -197,14 +197,14 @@ class DocumentPipeline:
                     if result.get("success"):
                         processed_count += 1
                         self._mark_file_processed(file_path, result.get("metadata", {}))
-                        self.logger.info(f"✓ Processed {file_path.name}")
+                        self.logger.info(f" Processed {file_path.name}")
                     else:
                         errors.append(f"{file_path.name}: {result.get('error', 'Unknown error')}")
                 
                 except Exception as e:
                     error_msg = f"{file_path.name}: {str(e)}"
                     errors.append(error_msg)
-                    self.logger.error(f"✗ Error processing {file_path.name}: {e}")
+                    self.logger.error(f" Error processing {file_path.name}: {e}")
             
             result = {
                 "success": len(errors) == 0,

@@ -80,7 +80,7 @@ class PipelineTracer:
     def log_finding(self, stage: int, finding: str):
         """Log a finding."""
         if self.verbose:
-            print(f"    ✓ {finding}")
+            print(f"     {finding}")
         if stage not in self.stage_logs:
             self.stage_logs[stage] = []
         self.stage_logs[stage].append(f"Found: {finding}")
@@ -165,7 +165,7 @@ class PipelineTracer:
             lines.append(f"\n{stage_name}:")
             for log in self.stage_logs[stage]:
                 if log.startswith("Found:"):
-                    lines.append(f"  ✓ {log.replace('Found: ', '')}")
+                    lines.append(f"   {log.replace('Found: ', '')}")
                 elif log.startswith("No "):
                     lines.append(f"  ⊘ {log}")
                 else:
@@ -289,10 +289,10 @@ class Stage1LinguisticIntentExtractor:
 - Aggregations: sum, count, average, etc.
 
 CRITICAL RULES:
-❌ NO table names
-❌ NO column names  
-❌ NO metric names
-❌ NO dimension names
+ NO table names
+ NO column names  
+ NO metric names
+ NO dimension names
 
 Only extract linguistic tokens."""
         
@@ -317,7 +317,7 @@ Return JSON:
             # Validate: ensure no table/column names leaked
             if self._has_ontology_leakage(entities):
                 if state.tracer:
-                    state.tracer.log_stage(1, "✗ Validation failed: ontology leakage detected")
+                    state.tracer.log_stage(1, " Validation failed: ontology leakage detected")
                 return False, None, "Linguistic extraction leaked ontology information"
             
             if state.tracer:
@@ -342,7 +342,7 @@ Return JSON:
             
         except Exception as e:
             if state.tracer:
-                state.tracer.log_stage(1, f"✗ Error: {str(e)}")
+                state.tracer.log_stage(1, f" Error: {str(e)}")
             return False, None, f"Linguistic intent extraction failed: {e}"
     
     def _clean_json_response(self, response: str) -> str:
@@ -409,7 +409,7 @@ class Stage2OntologyClassifier:
                 if not self.knowledge_graph.nodes:
                     self.knowledge_graph.build_from_metadata(metadata)
                     if state.tracer:
-                        state.tracer.log_stage(2, f"✓ Knowledge graph built: {len(self.knowledge_graph.nodes)} nodes")
+                        state.tracer.log_stage(2, f" Knowledge graph built: {len(self.knowledge_graph.nodes)} nodes")
             
             # Extract all words from linguistic entities
             all_words = []
@@ -716,7 +716,7 @@ class Stage4ContextAssembler:
             
         except Exception as e:
             if state.tracer:
-                state.tracer.log_stage(4, f"✗ Error: {str(e)}")
+                state.tracer.log_stage(4, f" Error: {str(e)}")
             return False, "", f"Context assembly failed: {e}"
 
 
@@ -840,7 +840,7 @@ Remember: NO SQL strings, only intent structure."""
             # Validate intent schema
             if not self._validate_intent_schema(intent):
                 if state.tracer:
-                    state.tracer.log_stage(5, "✗ Validation failed: intent schema mismatch")
+                    state.tracer.log_stage(5, " Validation failed: intent schema mismatch")
                 return False, None, "SQL intent does not match required schema"
             
             if state.tracer:
@@ -863,7 +863,7 @@ Remember: NO SQL strings, only intent structure."""
             
         except Exception as e:
             if state.tracer:
-                state.tracer.log_stage(5, f"✗ Error: {str(e)}")
+                state.tracer.log_stage(5, f" Error: {str(e)}")
             return False, None, f"SQL intent synthesis failed: {e}"
     
     def _clean_json_response(self, response: str) -> str:
@@ -1013,7 +1013,7 @@ class Stage6SemanticRuleExpander:
             
         except Exception as e:
             if state.tracer:
-                state.tracer.log_stage(6, f"✗ Error: {str(e)}")
+                state.tracer.log_stage(6, f" Error: {str(e)}")
             return False, intent, [], f"Semantic rule expansion failed: {e}"
 
 
@@ -1125,7 +1125,7 @@ class Stage7ConstraintEnforcer:
             
         except Exception as e:
             if state.tracer:
-                state.tracer.log_stage(7, f"✗ Error: {str(e)}")
+                state.tracer.log_stage(7, f" Error: {str(e)}")
             return False, intent, [], f"Constraint enforcement failed: {e}"
 
 
@@ -1164,11 +1164,11 @@ class Stage8ValidationGate:
         base_table = intent.get("base_table")
         if not base_table:
             if state.tracer:
-                state.tracer.log_stage(8, "✗ Validation failed: missing base_table")
+                state.tracer.log_stage(8, " Validation failed: missing base_table")
             return ValidationOutcome.FAIL, "Missing base_table in intent", 0.0
         
         if state.tracer:
-            findings.append(f"Base table: {base_table} ✓")
+            findings.append(f"Base table: {base_table} ")
         
         # Check 2: Query type consistency
         query_type = intent.get("query_type", "relational")
@@ -1213,11 +1213,11 @@ class Stage8ValidationGate:
         
         if confidence < 0.5:
             if state.tracer:
-                state.tracer.log_stage(8, f"✗ Validation failed: confidence too low ({confidence:.2f})")
+                state.tracer.log_stage(8, f" Validation failed: confidence too low ({confidence:.2f})")
             return ValidationOutcome.FAIL, f"Confidence too low ({confidence:.2f}). Issues: {', '.join(issues)}", confidence
         elif confidence < 0.7 or issues:
             if state.tracer:
-                state.tracer.log_stage(8, f"⚠ Clarification needed: {', '.join(issues) if issues else 'confidence low'}")
+                state.tracer.log_stage(8, f" Clarification needed: {', '.join(issues) if issues else 'confidence low'}")
             clarification = f"Clarification needed: {', '.join(issues)}" if issues else "Please confirm intent"
             return ValidationOutcome.ASK_CLARIFICATION, clarification, confidence
         else:
@@ -1305,13 +1305,13 @@ class Stage9SQLCompiler:
                 )
                 state.tracer.log_stage(9, "SQL compilation complete")
                 state.tracer.log_stage(9, "Generating output...")
-                state.tracer.log_stage(9, f"✓ SQL generated ({len(sql.split())} words)")
+                state.tracer.log_stage(9, f" SQL generated ({len(sql.split())} words)")
             
             return True, sql, explain_plan, None
             
         except Exception as e:
             if state.tracer:
-                state.tracer.log_stage(9, f"✗ Error: {str(e)}")
+                state.tracer.log_stage(9, f" Error: {str(e)}")
             return False, "", {}, f"SQL compilation failed: {e}"
 
 

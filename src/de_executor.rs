@@ -19,7 +19,7 @@ impl DeExecutor {
         columns: &[String],
         top_n: usize,
     ) -> Result<InspectionResult> {
-        println!("\n   🔍 INSPECTING COLUMNS");
+        println!("\n    INSPECTING COLUMNS");
         println!("      Table: {}", table_name);
         println!("      Columns: {:?}", columns);
         
@@ -57,7 +57,7 @@ impl DeExecutor {
         table_b: &str,
         join_columns: &HashMap<String, String>,
     ) -> Result<SchemaValidationResult> {
-        println!("\n   ✅ VALIDATING SCHEMA");
+        println!("\n    VALIDATING SCHEMA");
         println!("      Left Table: {}", table_a);
         println!("      Right Table: {}", table_b);
         println!("      Join Columns: {:?}", join_columns);
@@ -66,15 +66,15 @@ impl DeExecutor {
         
         // Log results
         if result.compatible {
-            println!("      ✅ Schema is compatible");
+            println!("       Schema is compatible");
         } else {
-            println!("      ❌ Schema compatibility issues found");
+            println!("       Schema compatibility issues found");
         }
         
         for issue in &result.issues {
             let icon = match issue.severity.as_str() {
-                "error" => "❌",
-                "warning" => "⚠️",
+                "error" => "",
+                "warning" => "️",
                 _ => "ℹ️",
             };
             println!("      {} {}: {}", icon, issue.severity.to_uppercase(), issue.message);
@@ -92,7 +92,7 @@ impl DeExecutor {
         join_keys: &HashMap<String, String>,
         join_type: &str,
     ) -> Result<JoinValidationResult> {
-        println!("\n   ✅ VALIDATING JOIN KEYS");
+        println!("\n    VALIDATING JOIN KEYS");
         println!("      Left Table: {}", table_a);
         println!("      Right Table: {}", table_b);
         println!("      Join Type: {}", join_type);
@@ -102,15 +102,15 @@ impl DeExecutor {
         
         // Log results
         if result.can_join {
-            println!("      ✅ Join keys are valid - join can proceed");
+            println!("       Join keys are valid - join can proceed");
         } else {
-            println!("      ❌ Join keys have issues - join may fail");
+            println!("       Join keys have issues - join may fail");
         }
         
         for issue in &result.issues {
             let icon = match issue.severity.as_str() {
-                "error" => "❌",
-                "warning" => "⚠️",
+                "error" => "",
+                "warning" => "️",
                 "info" => "ℹ️",
                 _ => "•",
             };
@@ -127,7 +127,7 @@ impl DeExecutor {
         columns: Option<&[String]>,
         checks: &[String],
     ) -> Result<AnomalyDetectionResult> {
-        println!("\n   🔍 DETECTING ANOMALIES");
+        println!("\n    DETECTING ANOMALIES");
         println!("      Table: {}", table_name);
         if let Some(cols) = columns {
             println!("      Columns: {:?}", cols);
@@ -140,13 +140,13 @@ impl DeExecutor {
         
         // Log results
         if result.anomalies.is_empty() {
-            println!("      ✅ No anomalies detected");
+            println!("       No anomalies detected");
         } else {
-            println!("      ⚠️  Found {} anomaly/ies:", result.anomalies.len());
+            println!("      ️  Found {} anomaly/ies:", result.anomalies.len());
             for anomaly in &result.anomalies {
                 let icon = match anomaly.severity.as_str() {
-                    "error" => "❌",
-                    "warning" => "⚠️",
+                    "error" => "",
+                    "warning" => "️",
                     _ => "ℹ️",
                 };
                 println!("      {} [{}] {}: {}", 
@@ -164,14 +164,14 @@ impl DeExecutor {
         columns: &[String],
         operations: &[String],
     ) -> Result<DataFrame> {
-        println!("\n   🧹 CLEANING DATA");
+        println!("\n    CLEANING DATA");
         println!("      Table: {}", table_name);
         println!("      Columns: {:?}", columns);
         println!("      Operations: {:?}", operations);
-        println!("      ⚠️  Note: Full cleaning implementation requires Polars string operation support");
+        println!("      ️  Note: Full cleaning implementation requires Polars string operation support");
         
         let result = clean_dataframe(df, columns, operations)?;
-        println!("      ✅ Data cleaning completed (simplified implementation)");
+        println!("       Data cleaning completed (simplified implementation)");
         
         Ok(result)
     }
@@ -182,12 +182,12 @@ impl DeExecutor {
         table_name: &str,
         type_mapping: &HashMap<String, String>,
     ) -> Result<DataFrame> {
-        println!("\n   🔄 CASTING TYPES");
+        println!("\n    CASTING TYPES");
         println!("      Table: {}", table_name);
         println!("      Type Mappings: {:?}", type_mapping);
         
         let result = cast_dataframe_types(df, type_mapping)?;
-        println!("      ✅ Type casting completed");
+        println!("       Type casting completed");
         
         Ok(result)
     }

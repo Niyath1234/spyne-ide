@@ -4,7 +4,7 @@
 
 Spyne IDE is a production-ready natural language to SQL query engine with advanced features including proactive clarification for ambiguous queries, comprehensive metadata management, and intelligent query planning.
 
-## 🚀 Features
+##  Features
 
 ### Core Capabilities
 - **Natural Language to SQL** - Convert natural language queries to optimized SQL
@@ -14,12 +14,12 @@ Spyne IDE is a production-ready natural language to SQL query engine with advanc
 - **Intelligent Planning** - Multi-stage planning with intent extraction and schema selection
 
 ### Production Features
-- ✅ **Rate Limiting** - Token bucket algorithm for API protection
-- ✅ **Structured Logging** - JSON logs with correlation IDs
-- ✅ **Metrics & Monitoring** - Golden signals, Prometheus metrics
-- ✅ **Error Handling** - Graceful degradation and fallbacks
-- ✅ **Health Checks** - Comprehensive health endpoints
-- ✅ **Security** - CORS, request validation, SQL injection protection
+-  **Rate Limiting** - Token bucket algorithm for API protection
+-  **Structured Logging** - JSON logs with correlation IDs
+-  **Metrics & Monitoring** - Golden signals, Prometheus metrics
+-  **Error Handling** - Graceful degradation and fallbacks
+-  **Health Checks** - Comprehensive health endpoints
+-  **Security** - CORS, request validation, SQL injection protection
 
 ### Clarification System
 - **Proactive Questions** - Detects ambiguities and asks clarifying questions
@@ -27,7 +27,7 @@ Spyne IDE is a production-ready natural language to SQL query engine with advanc
 - **LLM-Powered** - Natural, context-aware question generation
 - **Metrics Tracking** - Monitors clarification usage and success rates
 
-## 📋 Table of Contents
+##  Table of Contents
 
 - [Quick Start](#quick-start)
 - [Architecture](#architecture)
@@ -37,7 +37,7 @@ Spyne IDE is a production-ready natural language to SQL query engine with advanc
 - [Development](#development)
 - [Documentation](#documentation)
 
-## 🏃 Quick Start
+##  Quick Start
 
 ### Prerequisites
 
@@ -91,7 +91,7 @@ python -m pytest tests/ -v
 python -m pytest tests/test_clarification_agent.py -v
 ```
 
-## 🏗️ Architecture
+## ️ Architecture
 
 ### Four-Plane Architecture
 
@@ -122,7 +122,7 @@ python -m pytest tests/test_clarification_agent.py -v
 - **Metadata System** - Node-level metadata isolation
 - **Clarification Agent** - Proactive question generation
 
-## 📡 API Documentation
+##  API Documentation
 
 ### Main Endpoints
 
@@ -168,7 +168,7 @@ GET /api/v1/metrics/prometheus
 
 See [CLARIFICATION_API_GUIDE.md](./docs/CLARIFICATION_API_GUIDE.md) for detailed API documentation.
 
-## ⚙️ Configuration
+## ️ Configuration
 
 ### Environment Variables
 
@@ -209,7 +209,7 @@ SPYNE_CLARIFICATION_MODE=true
 
 See `env.example` for all available options.
 
-## 🚢 Production Deployment
+##  Production Deployment
 
 ### Docker Deployment
 
@@ -243,7 +243,7 @@ docker-compose up -d
 
 See [PRODUCTION_READINESS.md](./docs/PRODUCTION_READINESS.md) for detailed checklist.
 
-## 🛠️ Development
+## ️ Development
 
 ### Project Structure
 
@@ -300,7 +300,7 @@ pytest --cov=backend --cov-report=html
 pytest tests/test_clarification_agent.py -v
 ```
 
-## 📚 Documentation
+##  Documentation
 
 ### Core Documentation
 - [END_TO_END_PIPELINE.md](./docs/END_TO_END_PIPELINE.md) - Complete pipeline flow
@@ -317,7 +317,7 @@ pytest tests/test_clarification_agent.py -v
 - [INTEGRATION_STATUS.md](./docs/INTEGRATION_STATUS.md) - Integration status
 - [SHIP_READY_CHECKLIST.md](./docs/SHIP_READY_CHECKLIST.md) - Pre-deployment checklist
 
-## 🎯 Key Features Explained
+##  Key Features Explained
 
 ### Proactive Clarification
 
@@ -358,7 +358,7 @@ Automatically selects the best execution engine:
 - Polars for data transformations
 - Traditional DB for simple queries
 
-## 🔒 Security
+##  Security
 
 - Rate limiting per API key/IP
 - SQL injection protection
@@ -367,7 +367,7 @@ Automatically selects the best execution engine:
 - Input validation
 - Error message sanitization
 
-## 📊 Monitoring
+##  Monitoring
 
 ### Metrics Available
 
@@ -386,7 +386,7 @@ Structured JSON logs with:
 - Performance metrics
 - Error details
 
-## 🤝 Contributing
+##  Contributing
 
 1. Fork the repository
 2. Create a feature branch
@@ -394,11 +394,11 @@ Structured JSON logs with:
 4. Add tests
 5. Submit a pull request
 
-## 📝 License
+##  License
 
 [Add your license here]
 
-## 🙏 Acknowledgments
+##  Acknowledgments
 
 Built with:
 - Flask (Python web framework)
@@ -406,7 +406,7 @@ Built with:
 - OpenAI GPT (LLM)
 - DuckDB/Trino/Polars (Query engines)
 
-## 📞 Support
+##  Support
 
 For issues and questions:
 - GitHub Issues: [Link to issues]
@@ -415,7 +415,7 @@ For issues and questions:
 
 ---
 
-**Status:** ✅ Production Ready
+**Status:**  Production Ready
 
 **Version:** 2.0.0
 

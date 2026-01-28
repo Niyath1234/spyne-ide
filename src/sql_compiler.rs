@@ -160,7 +160,7 @@ impl SqlCompiler {
     
     /// Compile SQL intent to actual SQL query
     pub fn compile(&self, intent: &SqlIntent) -> Result<String> {
-        info!("🔧 Compiling SQL intent to query...");
+        info!(" Compiling SQL intent to query...");
         
         // Step 1: Resolve table names
         let tables = self.resolve_tables(&intent.tables)?;
@@ -212,7 +212,7 @@ impl SqlCompiler {
         }
         
         let sql = sql_parts.join(" ");
-        info!("✅ Generated SQL: {}", sql);
+        info!(" Generated SQL: {}", sql);
         
         Ok(sql)
     }
@@ -520,7 +520,7 @@ impl SqlCompiler {
         intent: &SemanticSqlIntent,
         semantic_registry: Arc<dyn SemanticRegistry>,
     ) -> Result<String> {
-        info!("🔧 Compiling semantic SQL intent to query...");
+        info!(" Compiling semantic SQL intent to query...");
 
         // Get the first metric (for now, support single metric)
         let metric_name = intent.metrics.first()
@@ -617,7 +617,7 @@ impl SqlCompiler {
                         
                         join_clauses.push(join_sql);
                         
-                        info!("📋 Join plan: {}", plan.explanation);
+                        info!(" Join plan: {}", plan.explanation);
                     }
                     Err(e) => {
                         return Err(RcaError::Execution(format!(
@@ -822,7 +822,7 @@ impl SqlCompiler {
         }
 
         let sql = sql_parts.join(" ");
-        info!("✅ Generated SQL from semantic intent: {}", sql);
+        info!(" Generated SQL from semantic intent: {}", sql);
 
         Ok(sql)
     }

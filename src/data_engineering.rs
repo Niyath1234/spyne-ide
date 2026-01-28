@@ -231,8 +231,8 @@ pub fn clean_dataframe(
 ) -> Result<DataFrame> {
     // For now, return the dataframe as-is and log the cleaning request
     // Full implementation would require more complex Polars operations or version upgrade
-    println!("   📝 Data cleaning requested for columns: {:?} with operations: {:?}", columns, operations);
-    println!("   ⚠️  Note: Full cleaning implementation requires Polars string operation support");
+    println!("    Data cleaning requested for columns: {:?} with operations: {:?}", columns, operations);
+    println!("   ️  Note: Full cleaning implementation requires Polars string operation support");
     
     // Return original dataframe - actual cleaning would be implemented with proper Polars API
     Ok(df)

@@ -4,19 +4,19 @@
 
 This document describes the complete end-to-end flow when a user submits a complex natural language query to Spyne IDE. The system processes queries through multiple planes (Ingress → Planning → Execution → Presentation) with sophisticated reasoning, metadata retrieval, and intelligent engine selection.
 
-## ⚠️ Implementation Status
+## ️ Implementation Status
 
 **Current State:** The Python backend pipeline works end-to-end, but some advanced features (Rust execution engines, NodeRegistry search) are not fully integrated. See `PIPELINE_REALITY_CHECK.md` for details.
 
 **What Works:**
-- ✅ Query → Intent → Schema → SQL → Execution → Results (Python backend)
-- ✅ Node-level metadata isolation
-- ✅ Knowledge retrieval (RAG, graph, rules)
-- ✅ Schema selection based on metrics/intent
+-  Query → Intent → Schema → SQL → Execution → Results (Python backend)
+-  Node-level metadata isolation
+-  Knowledge retrieval (RAG, graph, rules)
+-  Schema selection based on metrics/intent
 
 **What's Partially Integrated:**
-- ⚠️ NodeRegistry search (exists in Rust, not called from Python)
-- ⚠️ Execution engine selection (exists in Rust, Python uses traditional DB executor)
+- ️ NodeRegistry search (exists in Rust, not called from Python)
+- ️ Execution engine selection (exists in Rust, Python uses traditional DB executor)
 
 This document describes the **ideal/complete architecture**. The actual implementation may differ in some areas.
 
@@ -362,7 +362,7 @@ This query involves:
 │  │                                                          │  │
 │  │ Execution Flow:                                          │  │
 │  │ 1. Router receives SQL + EngineSelection                  │  │
-│  │ 2. Validates DuckDB can handle query (CTEs ✓)            │  │
+│  │ 2. Validates DuckDB can handle query (CTEs )            │  │
 │  │ 3. Creates ExecutionContext:                            │  │
 │  │    {                                                      │  │
 │  │      user: { user_id: "...", roles: [...] },            │  │

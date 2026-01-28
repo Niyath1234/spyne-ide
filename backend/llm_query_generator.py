@@ -92,12 +92,12 @@ class LLMQueryGenerator:
             # Test connection
             health = self.kb_client.health_check()
             if health.get("status") == "healthy":
-                print(f"✅ KnowledgeBase RAG enabled ({health.get('concepts_count', 0)} concepts)")
+                print(f" KnowledgeBase RAG enabled ({health.get('concepts_count', 0)} concepts)")
             else:
-                print("⚠️  KnowledgeBase server not available, RAG disabled")
+                print("️  KnowledgeBase server not available, RAG disabled")
                 self.kb_client = None
         except Exception as e:
-            print(f"⚠️  KnowledgeBase client initialization failed: {e}, RAG disabled")
+            print(f"️  KnowledgeBase client initialization failed: {e}, RAG disabled")
             self.kb_client = None
         
         # Initialize cache
@@ -744,7 +744,7 @@ class LLMQueryGenerator:
         
         reasoning_steps = []
         
-        reasoning_steps.append("🔍 Analyzing query: " + query)
+        reasoning_steps.append(" Analyzing query: " + query)
         
         # Count knowledge base terms
         kb_path = Path(__file__).parent.parent / "metadata" / "knowledge_base.json"
@@ -776,7 +776,7 @@ class LLMQueryGenerator:
         except Exception:
             hybrid_info = ""
         
-        reasoning_steps.append(f"📊 Loaded context: {len(metadata.get('tables', {}).get('tables', []))} tables, {len(metadata.get('semantic_registry', {}).get('metrics', []))} metrics, {len(metadata.get('semantic_registry', {}).get('dimensions', []))} dimensions, {kb_terms_count} business terms, {len(metadata.get('rules', []))} business rules{rag_info}{hybrid_info}")
+        reasoning_steps.append(f" Loaded context: {len(metadata.get('tables', {}).get('tables', []))} tables, {len(metadata.get('semantic_registry', {}).get('metrics', []))} metrics, {len(metadata.get('semantic_registry', {}).get('dimensions', []))} dimensions, {kb_terms_count} business terms, {len(metadata.get('rules', []))} business rules{rag_info}{hybrid_info}")
         
         # Build conversational context if available
         conversational_prompt = ""
@@ -979,9 +979,9 @@ Return ONLY the JSON object:"""
         logger.debug(f"Token counts: context={context_tokens}, system={system_tokens}, total={context_tokens + system_tokens}")
         
         try:
-            reasoning_steps.append("🤖 Calling LLM to analyze query with comprehensive context...")
+            reasoning_steps.append(" Calling LLM to analyze query with comprehensive context...")
             response = self.call_llm(user_prompt, system_prompt)
-            reasoning_steps.append("✅ LLM response received, parsing...")
+            reasoning_steps.append(" LLM response received, parsing...")
             
             # Clean JSON response
             response = response.strip()
@@ -1019,7 +1019,7 @@ Return ONLY the JSON object:"""
                                 'is_computed': True
                             })
                             computed_dim_map[dim_name] = computed_dims[-1]
-                            reasoning_steps.append(f"   🔧 Extracted computed dimension '{dim_name}' from columns field")
+                            reasoning_steps.append(f"    Extracted computed dimension '{dim_name}' from columns field")
                 
                 # Update intent with extracted computed dimensions
                 if computed_dims:
@@ -1027,19 +1027,19 @@ Return ONLY the JSON object:"""
             
             # Convert reasoning to list of steps
             if reasoning_data:
-                reasoning_steps.append("\n📝 LLM Reasoning Chain:")
+                reasoning_steps.append("\n LLM Reasoning Chain:")
                 for step_key, step_value in reasoning_data.items():
                     step_name = step_key.replace("step", "").replace("_", " ").title()
                     reasoning_steps.append(f"   {step_name}: {step_value}")
             
-            reasoning_steps.append(f"\n✅ Intent resolved: {intent.get('query_type', 'unknown')} query on {intent.get('base_table', 'unknown')}")
+            reasoning_steps.append(f"\n Intent resolved: {intent.get('query_type', 'unknown')} query on {intent.get('base_table', 'unknown')}")
             
             return intent, reasoning_steps
         except json.JSONDecodeError as e:
-            reasoning_steps.append(f"❌ Failed to parse LLM response: {e}")
+            reasoning_steps.append(f" Failed to parse LLM response: {e}")
             raise Exception(f"Failed to parse LLM response as JSON: {e}\nResponse: {response[:500]}")
         except Exception as e:
-            reasoning_steps.append(f"❌ LLM generation failed: {e}")
+            reasoning_steps.append(f" LLM generation failed: {e}")
             raise Exception(f"LLM query generation failed: {e}")
     
     def intent_to_sql(self, intent: Dict[str, Any], metadata: Dict[str, Any], query_text: Optional[str] = None) -> Tuple[str, Optional[str], Optional[str]]:
@@ -1115,7 +1115,7 @@ Return ONLY the JSON object:"""
         builder = SQLBuilder(resolver)
         sql, explain_plan = builder.build(intent, include_explain=True)
         
-        warnings_str = "\n".join([f"⚠️  {w}" for w in warnings]) if warnings else None
+        warnings_str = "\n".join([f"️  {w}" for w in warnings]) if warnings else None
         
         return sql, explain_plan, warnings_str
 
@@ -1130,13 +1130,13 @@ def generate_sql_with_llm(query: str, use_llm: bool = True) -> dict:
             # Pass query text for node-level isolation
             sql, explain_plan, warnings = generator.intent_to_sql(intent, metadata, query_text=query)
             
-            reasoning_steps.append(f"\n🔧 Generated SQL:\n{sql}")
+            reasoning_steps.append(f"\n Generated SQL:\n{sql}")
             
             if explain_plan:
-                reasoning_steps.append(f"\n📋 Query Explain Plan:\n{explain_plan}")
+                reasoning_steps.append(f"\n Query Explain Plan:\n{explain_plan}")
             
             if warnings:
-                reasoning_steps.append(f"\n⚠️  Warnings:\n{warnings}")
+                reasoning_steps.append(f"\n️  Warnings:\n{warnings}")
             
             result = {
                 "success": True,

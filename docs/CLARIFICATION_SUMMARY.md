@@ -1,6 +1,6 @@
 # Proactive Clarification: Answer to "Can it proactively ask doubts?"
 
-## ✅ YES! The system can now proactively ask clarifying questions
+##  YES! The system can now proactively ask clarifying questions
 
 ## What Was Added
 
@@ -118,9 +118,9 @@ if result.needs_clarification:
 
 | Mode | Behavior | Example Response |
 |------|----------|------------------|
-| **Fail-Closed** | ❌ Rejects | "Error: Ambiguous intent: metric not specified" |
-| **Fail-Open (Assumption)** | ⚠️ Assumes + Warns | "Warning: Assuming relational query" |
-| **Fail-Open (Clarification)** | ❓ **Asks Questions** | **"What would you like to see about customers?"** |
+| **Fail-Closed** |  Rejects | "Error: Ambiguous intent: metric not specified" |
+| **Fail-Open (Assumption)** | ️ Assumes + Warns | "Warning: Assuming relational query" |
+| **Fail-Open (Clarification)** |  **Asks Questions** | **"What would you like to see about customers?"** |
 
 ## Integration Points
 
@@ -169,11 +169,11 @@ def handle_query():
 
 ## Benefits
 
-✅ **Better UX** - Users get helpful questions instead of errors  
-✅ **More Accurate** - No guessing, get exact requirements  
-✅ **Context-Aware** - Questions use available tables/metrics  
-✅ **Natural Language** - LLM generates conversational questions  
-✅ **Flexible** - Can proceed with suggested intent if user prefers  
+ **Better UX** - Users get helpful questions instead of errors  
+ **More Accurate** - No guessing, get exact requirements  
+ **Context-Aware** - Questions use available tables/metrics  
+ **Natural Language** - LLM generates conversational questions  
+ **Flexible** - Can proceed with suggested intent if user prefers  
 
 ## Next Steps
 

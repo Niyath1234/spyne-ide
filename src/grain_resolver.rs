@@ -46,7 +46,7 @@ impl GrainResolver {
             return Ok(None);
         }
 
-        println!("   🔍 Detecting grain mismatch:");
+        println!("    Detecting grain mismatch:");
         println!("      Source Grain: {:?}", source_grain);
         println!("      Target Grain: {:?}", target_grain);
         println!("      Root Table: {}", root_table);
@@ -109,7 +109,7 @@ impl GrainResolver {
             }
         }
 
-        println!("   ⚠️  Missing columns for target grain: {:?}", missing_columns);
+        println!("   ️  Missing columns for target grain: {:?}", missing_columns);
 
         // Find join paths to get missing columns
         // Strategy: For each missing column, find which entity/table has it
@@ -119,7 +119,7 @@ impl GrainResolver {
         found_columns.extend(source_grain.iter().cloned());
 
         for missing_col in &missing_columns {
-            println!("   🔍 Looking for column '{}' in system '{}'", missing_col, system);
+            println!("    Looking for column '{}' in system '{}'", missing_col, system);
             
             // First: Find tables that actually have this column in their column metadata
             let tables_with_column: Vec<&crate::metadata::Table> = self.metadata.tables
@@ -141,7 +141,7 @@ impl GrainResolver {
                     println!("      Trying join path from {} to {}", current_table, target_table.name);
                     
                     if let Ok(Some(path)) = self.graph.find_join_path(&current_table, &target_table.name) {
-                        println!("      ✅ Found join path with {} steps", path.len());
+                        println!("       Found join path with {} steps", path.len());
                         join_path.extend(path);
                         current_table = target_table.name.clone();
                         found_columns.insert(missing_col.clone());
@@ -161,7 +161,7 @@ impl GrainResolver {
                                     .collect();
                                 
                                 if !common_cols.is_empty() {
-                                    println!("      🔗 Found common columns for direct join: {:?}", common_cols);
+                                    println!("       Found common columns for direct join: {:?}", common_cols);
                                     let mut keys = std::collections::HashMap::new();
                                     for key in &common_cols {
                                         keys.insert(key.clone(), key.clone());
@@ -290,7 +290,7 @@ impl GrainResolver {
         // For now, we'll log the plan and let the rule compiler handle joins
         // The joins should ideally be done during pipeline construction, not here
         if !plan.join_path.is_empty() {
-            println!("   🔗 Join path required ({} steps):", plan.join_path.len());
+            println!("    Join path required ({} steps):", plan.join_path.len());
             for (idx, join_step) in plan.join_path.iter().enumerate() {
                 println!("      {}. {} → {} on {:?}", 
                     idx + 1,
@@ -299,13 +299,13 @@ impl GrainResolver {
                     join_step.keys
                 );
             }
-            println!("   ⚠️  Note: Joins should be handled during pipeline construction");
+            println!("   ️  Note: Joins should be handled during pipeline construction");
             println!("   ℹ️  This grain resolution plan will be used to modify the pipeline");
         }
 
         // Step 2: Apply aggregation if needed
         if plan.aggregation_required {
-            println!("   📊 Aggregating from {:?} to {:?}", 
+            println!("    Aggregating from {:?} to {:?}", 
                 plan.source_grain, 
                 plan.target_grain
             );
@@ -325,7 +325,7 @@ impl GrainResolver {
                 
                 if has_source_grain && !plan.join_path.is_empty() {
                     // Use the join path to get the missing columns
-                    println!("   🔗 Executing join path to get target grain columns:");
+                    println!("    Executing join path to get target grain columns:");
                     
                     for (idx, join_step) in plan.join_path.iter().enumerate() {
                         println!("      {}. {} → {} on {:?}", 
@@ -370,10 +370,10 @@ impl GrainResolver {
                             )
                             .collect()?;
                         
-                        println!("      ✅ Joined to {} successfully", join_step.to);
+                        println!("       Joined to {} successfully", join_step.to);
                     }
                     
-                    println!("   ✅ Join path completed - target grain columns should now be available");
+                    println!("    Join path completed - target grain columns should now be available");
                     
                 } else if has_source_grain && plan.join_path.is_empty() {
                     // Columns should be available in the root table - load it and join
@@ -414,10 +414,10 @@ impl GrainResolver {
                         )
                         .collect()?;
                     
-                    println!("   🔗 Joined back to {} to get target grain columns", root_table);
+                    println!("    Joined back to {} to get target grain columns", root_table);
                 } else {
                     // Try to find a mapping table that can provide the missing columns
-                    println!("   🔍 Looking for mapping table to provide missing columns: {:?}", missing_cols);
+                    println!("    Looking for mapping table to provide missing columns: {:?}", missing_cols);
                     
                     // Search for a table in the same system that has both the source grain and target grain columns
                     let mut mapping_table_found = false;
@@ -428,7 +428,7 @@ impl GrainResolver {
                             let has_target = plan.target_grain.iter().all(|c| table_col_names.contains(c));
                             
                             if has_source && has_target {
-                                println!("   ✅ Found mapping table: {}", table.name);
+                                println!("    Found mapping table: {}", table.name);
                                 
                                 let mapping_table_path = data_dir.join(&table.path);
                                 let mapping_df = if mapping_table_path.extension().and_then(|s| s.to_str()) == Some("csv") {
@@ -461,7 +461,7 @@ impl GrainResolver {
                                     )
                                     .collect()?;
                                 
-                                println!("   🔗 Joined to mapping table {} to get target grain columns", table.name);
+                                println!("    Joined to mapping table {} to get target grain columns", table.name);
                                 mapping_table_found = true;
                                 break;
                             }
@@ -529,7 +529,7 @@ impl GrainResolver {
             return Ok(grain_a.to_vec());
         }
 
-        println!("   🔍 Finding common grain between:");
+        println!("    Finding common grain between:");
         println!("      System A Grain: {:?} (table: {})", grain_a, root_table_a);
         println!("      System B Grain: {:?} (table: {})", grain_b, root_table_b);
 
@@ -539,13 +539,13 @@ impl GrainResolver {
 
         // If grain_a is subset of grain_b, we can aggregate B to A
         if grain_a_set.is_subset(&grain_b_set) {
-            println!("   ✅ System A grain is subset of System B - can aggregate B to A");
+            println!("    System A grain is subset of System B - can aggregate B to A");
             return Ok(grain_a.to_vec());
         }
 
         // If grain_b is subset of grain_a, we can aggregate A to B
         if grain_b_set.is_subset(&grain_a_set) {
-            println!("   ✅ System B grain is subset of System A - can aggregate A to B");
+            println!("    System B grain is subset of System A - can aggregate A to B");
             return Ok(grain_b.to_vec());
         }
 
@@ -557,7 +557,7 @@ impl GrainResolver {
             .collect();
 
         if !intersection.is_empty() {
-            println!("   ✅ Found common columns: {:?}", intersection);
+            println!("    Found common columns: {:?}", intersection);
             // Check if both systems can resolve to this grain
             let can_resolve_a = self.can_resolve_to_grain(system_a, grain_a, &intersection, root_table_a)?;
             let can_resolve_b = self.can_resolve_to_grain(system_b, grain_b, &intersection, root_table_b)?;
@@ -578,19 +578,19 @@ impl GrainResolver {
             // In case of loan_id vs customer_id, customer_id is coarser (one customer can have many loans)
             // We'll prefer the grain with fewer columns as it's typically coarser
             if grain_b.len() <= grain_a.len() {
-                println!("   ✅ Both systems can resolve to each other's grain - using System B grain (coarser)");
+                println!("    Both systems can resolve to each other's grain - using System B grain (coarser)");
                 return Ok(grain_b.to_vec());
             } else {
-                println!("   ✅ Both systems can resolve to each other's grain - using System A grain (coarser)");
+                println!("    Both systems can resolve to each other's grain - using System A grain (coarser)");
                 return Ok(grain_a.to_vec());
             }
         } else if can_resolve_a_to_b {
             // Only System A can resolve to System B's grain
-            println!("   ✅ System A can resolve to System B grain - using System B grain");
+            println!("    System A can resolve to System B grain - using System B grain");
             return Ok(grain_b.to_vec());
         } else if can_resolve_b_to_a {
             // Only System B can resolve to System A's grain
-            println!("   ✅ System B can resolve to System A grain - using System A grain");
+            println!("    System B can resolve to System A grain - using System A grain");
             return Ok(grain_a.to_vec());
         }
 

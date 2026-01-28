@@ -12,7 +12,7 @@ use serde_json;
 /// Load concepts from knowledge_base.json if it exists
 fn load_concepts_from_json(kb: &mut KnowledgeBase, vs: &mut VectorStore, json_path: &Path) {
     if !json_path.exists() {
-        println!("⚠️  Knowledge base JSON not found at: {:?}", json_path);
+        println!("️  Knowledge base JSON not found at: {:?}", json_path);
         println!("   Starting with empty knowledge base.");
         return;
     }
@@ -57,25 +57,25 @@ fn load_concepts_from_json(kb: &mut KnowledgeBase, vs: &mut VectorStore, json_pa
                                 count += 1;
                             }
                         }
-                        println!("✅ Loaded {} business terms from knowledge base", count);
+                        println!(" Loaded {} business terms from knowledge base", count);
                     } else {
-                        println!("⚠️  No 'terms' key found in knowledge base JSON");
+                        println!("️  No 'terms' key found in knowledge base JSON");
                     }
                 }
                 Err(e) => {
-                    eprintln!("❌ Failed to parse knowledge base JSON: {}", e);
+                    eprintln!(" Failed to parse knowledge base JSON: {}", e);
                 }
             }
         }
         Err(e) => {
-            eprintln!("❌ Failed to read knowledge base JSON: {}", e);
+            eprintln!(" Failed to read knowledge base JSON: {}", e);
         }
     }
 }
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    println!("🚀 Starting KnowledgeBase REST API Server...");
+    println!(" Starting KnowledgeBase REST API Server...");
     
     // Initialize KnowledgeBase and VectorStore
     let kb = Arc::new(RwLock::new(KnowledgeBase::new()));
@@ -122,7 +122,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                                         count += 1;
                                     }
                                 }
-                                println!("✅ Loaded {} metrics from semantic registry", count);
+                                println!(" Loaded {} metrics from semantic registry", count);
                             }
                             
                             // Load dimensions
@@ -150,16 +150,16 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                                         count += 1;
                                     }
                                 }
-                                println!("✅ Loaded {} dimensions from semantic registry", count);
+                                println!(" Loaded {} dimensions from semantic registry", count);
                             }
                         }
                         Err(e) => {
-                            eprintln!("⚠️  Failed to parse semantic registry: {}", e);
+                            eprintln!("️  Failed to parse semantic registry: {}", e);
                         }
                     }
                 }
                 Err(e) => {
-                    eprintln!("⚠️  Failed to read semantic registry: {}", e);
+                    eprintln!("️  Failed to read semantic registry: {}", e);
                 }
             }
         }

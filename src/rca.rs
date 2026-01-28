@@ -37,14 +37,14 @@ impl RcaEngine {
     
     pub async fn run(&self, query: &str) -> Result<RcaResult> {
         println!("\n{}", "=".repeat(80));
-        println!("🔍 RCA ENGINE: CHAIN OF THOUGHT EXECUTION");
+        println!(" RCA ENGINE: CHAIN OF THOUGHT EXECUTION");
         println!("{}\n", "=".repeat(80));
         
-        println!("📥 INPUT QUERY: \"{}\"", query);
+        println!(" INPUT QUERY: \"{}\"", query);
         println!("\n{}\n", "-".repeat(80));
         
         // Step 1: LLM interprets query
-        println!("🤖 STEP 1: LLM QUERY INTERPRETATION");
+        println!(" STEP 1: LLM QUERY INTERPRETATION");
         println!("   Knowledge Base Context:");
         println!("   - Available Systems: {:?}", 
             self.metadata.business_labels.systems.iter()
@@ -65,7 +65,7 @@ impl RcaEngine {
             &self.metadata.metrics,
         ).await?;
         
-        println!("   ✅ LLM Interpretation:");
+        println!("    LLM Interpretation:");
         println!("      - System A: {} (confidence: {:.2}%)", interpretation.system_a, interpretation.confidence * 100.0);
         println!("      - System B: {} (confidence: {:.2}%)", interpretation.system_b, interpretation.confidence * 100.0);
         println!("      - Metric: {}", interpretation.metric);
@@ -75,10 +75,10 @@ impl RcaEngine {
         println!("\n{}\n", "-".repeat(80));
         
         // Step 2: Resolve ambiguities (max 3 questions)
-        println!("🔍 STEP 2: AMBIGUITY RESOLUTION");
+        println!(" STEP 2: AMBIGUITY RESOLUTION");
         let ambiguity_resolver = AmbiguityResolver::new(self.metadata.clone());
         let resolved = ambiguity_resolver.resolve(&interpretation, None)?;
-        println!("   ✅ Ambiguity Resolution Complete");
+        println!("    Ambiguity Resolution Complete");
         println!("      - Final System A: {}", resolved.system_a);
         println!("      - Final System B: {}", resolved.system_b);
         if let Some(ref metric) = resolved.metric {
@@ -95,7 +95,7 @@ impl RcaEngine {
         println!("\n{}\n", "-".repeat(80));
         
         // Step 3: Resolve rules and subgraph
-        println!("🕸️  STEP 3: HYPERGRAPH TRAVERSAL & SUBGRAPH EXTRACTION");
+        println!("️  STEP 3: HYPERGRAPH TRAVERSAL & SUBGRAPH EXTRACTION");
         println!("   Analyzing knowledge graph to find relevant nodes...");
         println!("   - Total nodes (tables) in graph: {}", self.metadata.tables.len());
         
@@ -111,7 +111,7 @@ impl RcaEngine {
             metric_name,
         )?;
         
-        println!("   ✅ Subgraph Extracted:");
+        println!("    Subgraph Extracted:");
         println!("      - System A Tables: {} ({:?})", subgraph.tables_a.len(), subgraph.tables_a);
         println!("      - System B Tables: {} ({:?})", subgraph.tables_b.len(), subgraph.tables_b);
         println!("      - System A Rules: {} ({:?})", subgraph.rules_a.len(), subgraph.rules_a);
@@ -126,14 +126,14 @@ impl RcaEngine {
             .cloned()
             .collect();
         
-        println!("   📊 Graph Node Analysis:");
+        println!("    Graph Node Analysis:");
         println!("      - Participating Nodes: {} ({:?})", participating_tables.len(), 
             participating_tables.iter().collect::<Vec<_>>());
         println!("      - Non-Participating Nodes: {} ({:?})", non_participating.len(), non_participating);
         println!("\n{}\n", "-".repeat(80));
         
         // Step 4: Get rules (use resolved rule IDs or first available)
-        println!("📋 STEP 4: RULE SELECTION");
+        println!(" STEP 4: RULE SELECTION");
         let rule_a_id = resolved.rule_a
             .unwrap_or_else(|| subgraph.rules_a[0].clone());
         let rule_b_id = resolved.rule_b
@@ -144,7 +144,7 @@ impl RcaEngine {
         let rule_b = self.metadata.get_rule(&rule_b_id)
             .ok_or_else(|| RcaError::Execution(format!("Rule not found: {}", rule_b_id)))?;
         
-        println!("   ✅ Selected Rules:");
+        println!("    Selected Rules:");
         println!("      - System A Rule: {} ({})", rule_a_id, rule_a.computation.description);
         println!("        * Source Entities: {:?}", rule_a.computation.source_entities);
         println!("        * Formula: {}", rule_a.computation.formula);
@@ -156,56 +156,56 @@ impl RcaEngine {
         println!("\n{}\n", "-".repeat(80));
         
         // Step 5: Get metric metadata
-        println!("📏 STEP 5: METRIC METADATA");
+        println!(" STEP 5: METRIC METADATA");
         let metric_name = resolved.metric.as_ref().ok_or_else(|| RcaError::Execution("Metric not found in resolved interpretation".to_string()))?;
         let metric = self.metadata
             .get_metric(metric_name)
             .ok_or_else(|| RcaError::Execution(format!("Metric not found: {}", metric_name)))?;
-        println!("   ✅ Metric: {} ({})", metric.name, metric.id);
+        println!("    Metric: {} ({})", metric.name, metric.id);
         println!("      - Grain: {:?}", metric.grain);
         println!("      - Precision: {}", metric.precision);
         println!("      - Null Policy: {}", metric.null_policy);
         println!("\n{}\n", "-".repeat(80));
         
         // Step 6: Parse as-of date
-        println!("📅 STEP 6: TIME RESOLUTION");
+        println!(" STEP 6: TIME RESOLUTION");
         let as_of_date = resolved.as_of_date
             .and_then(|d| NaiveDate::parse_from_str(&d, "%Y-%m-%d").ok());
         if let Some(date) = as_of_date {
-            println!("   ✅ As-of Date: {}", date);
+            println!("    As-of Date: {}", date);
         } else {
             println!("   ℹ️  No as-of date specified (using latest data)");
         }
         println!("\n{}\n", "-".repeat(80));
         
         // Step 7: Execute both pipelines
-        println!("⚙️  STEP 7: PIPELINE EXECUTION");
+        println!("️  STEP 7: PIPELINE EXECUTION");
         println!("   Compiling execution plans from rules...");
         
         let compiler = RuleCompiler::new(self.metadata.clone(), self.data_dir.clone());
         let compiler_clone = RuleCompiler::new(self.metadata.clone(), self.data_dir.clone());
         let executor = RuleExecutor::new(compiler_clone);
         
-        println!("   🔄 Executing System A Pipeline (Rule: {})...", rule_a_id);
+        println!("    Executing System A Pipeline (Rule: {})...", rule_a_id);
         println!("      Graph Traversal Path:");
         let compiler = RuleCompiler::new(self.metadata.clone(), self.data_dir.clone());
         let plan_a = compiler.compile(&rule_a_id)?;
         for (idx, step) in plan_a.steps.iter().enumerate() {
             match step {
                 crate::metadata::PipelineOp::Scan { table } => {
-                    println!("         Step {}: 📖 SCAN table '{}'", idx + 1, table);
+                    println!("         Step {}:  SCAN table '{}'", idx + 1, table);
                 }
                 crate::metadata::PipelineOp::Join { table, on, join_type } => {
-                    println!("         Step {}: 🔗 JOIN table '{}' ON {:?} (type: {})", idx + 1, table, on, join_type);
+                    println!("         Step {}:  JOIN table '{}' ON {:?} (type: {})", idx + 1, table, on, join_type);
                 }
                 crate::metadata::PipelineOp::Derive { expr, r#as } => {
-                    println!("         Step {}: 🧮 DERIVE {} AS {}", idx + 1, expr, r#as);
+                    println!("         Step {}:  DERIVE {} AS {}", idx + 1, expr, r#as);
                 }
                 crate::metadata::PipelineOp::Group { by, agg } => {
-                    println!("         Step {}: 📊 GROUP BY {:?} AGGREGATE {:?}", idx + 1, by, agg);
+                    println!("         Step {}:  GROUP BY {:?} AGGREGATE {:?}", idx + 1, by, agg);
                 }
                 crate::metadata::PipelineOp::Select { columns } => {
-                    println!("         Step {}: ✅ SELECT {:?}", idx + 1, columns);
+                    println!("         Step {}:  SELECT {:?}", idx + 1, columns);
                 }
                 _ => {
                     println!("         Step {}: {:?}", idx + 1, step);
@@ -214,26 +214,26 @@ impl RcaEngine {
         }
         
         let df_a = executor.execute(&rule_a_id, as_of_date).await?;
-        println!("      ✅ System A Result: {} rows, {} columns", df_a.height(), df_a.width());
+        println!("       System A Result: {} rows, {} columns", df_a.height(), df_a.width());
         
-        println!("   🔄 Executing System B Pipeline (Rule: {})...", rule_b_id);
+        println!("    Executing System B Pipeline (Rule: {})...", rule_b_id);
         let plan_b = compiler.compile(&rule_b_id)?;
         for (idx, step) in plan_b.steps.iter().enumerate() {
             match step {
                 crate::metadata::PipelineOp::Scan { table } => {
-                    println!("         Step {}: 📖 SCAN table '{}'", idx + 1, table);
+                    println!("         Step {}:  SCAN table '{}'", idx + 1, table);
                 }
                 crate::metadata::PipelineOp::Join { table, on, join_type } => {
-                    println!("         Step {}: 🔗 JOIN table '{}' ON {:?} (type: {})", idx + 1, table, on, join_type);
+                    println!("         Step {}:  JOIN table '{}' ON {:?} (type: {})", idx + 1, table, on, join_type);
                 }
                 crate::metadata::PipelineOp::Derive { expr, r#as } => {
-                    println!("         Step {}: 🧮 DERIVE {} AS {}", idx + 1, expr, r#as);
+                    println!("         Step {}:  DERIVE {} AS {}", idx + 1, expr, r#as);
                 }
                 crate::metadata::PipelineOp::Group { by, agg } => {
-                    println!("         Step {}: 📊 GROUP BY {:?} AGGREGATE {:?}", idx + 1, by, agg);
+                    println!("         Step {}:  GROUP BY {:?} AGGREGATE {:?}", idx + 1, by, agg);
                 }
                 crate::metadata::PipelineOp::Select { columns } => {
-                    println!("         Step {}: ✅ SELECT {:?}", idx + 1, columns);
+                    println!("         Step {}:  SELECT {:?}", idx + 1, columns);
                 }
                 _ => {
                     println!("         Step {}: {:?}", idx + 1, step);
@@ -242,11 +242,11 @@ impl RcaEngine {
         }
         
         let df_b = executor.execute(&rule_b_id, as_of_date).await?;
-        println!("      ✅ System B Result: {} rows, {} columns", df_b.height(), df_b.width());
+        println!("       System B Result: {} rows, {} columns", df_b.height(), df_b.width());
         println!("\n{}\n", "-".repeat(80));
         
         // Step 8: Intelligent Grain Normalization
-        println!("🔑 STEP 8: INTELLIGENT GRAIN NORMALIZATION");
+        println!(" STEP 8: INTELLIGENT GRAIN NORMALIZATION");
         let identity_resolver = IdentityResolver::new(self.metadata.clone(), self.data_dir.clone());
         let grain_resolver = GrainResolver::new(self.metadata.clone());
         
@@ -269,10 +269,10 @@ impl RcaEngine {
         
         // Find common grain using intelligent resolver
         let common_grain = if grain_a == grain_b {
-            println!("   ✅ Grains match - no normalization needed");
+            println!("    Grains match - no normalization needed");
             grain_a.clone()
         } else {
-            println!("   🔍 Grains differ - finding common grain...");
+            println!("    Grains differ - finding common grain...");
             match grain_resolver.find_common_grain(
                 &rule_a.system,
                 &grain_a,
@@ -282,11 +282,11 @@ impl RcaEngine {
                 &table_b.name,
             ) {
                 Ok(common) => {
-                    println!("   ✅ Found common grain: {:?}", common);
+                    println!("    Found common grain: {:?}", common);
                     common
                 }
                 Err(e) => {
-                    println!("   ⚠️  Could not find common grain automatically: {}", e);
+                    println!("   ️  Could not find common grain automatically: {}", e);
                     // Try to use metric grain only if both systems can resolve to it
                     let can_a_resolve_to_metric = grain_resolver.can_resolve_to_grain(
                         &rule_a.system, &grain_a, &metric.grain, &table_a.name
@@ -309,7 +309,7 @@ impl RcaEngine {
         };
         
         // Resolve grain mismatches for each system
-        println!("\n   📊 Resolving System A grain...");
+        println!("\n    Resolving System A grain...");
         let mut df_a_normalized = df_a.clone();
         if grain_a != common_grain {
             if let Ok(Some(plan_a)) = grain_resolver.resolve_grain_mismatch(
@@ -318,7 +318,7 @@ impl RcaEngine {
                 &common_grain,
                 &table_a.name,
             ) {
-                println!("   ✅ Resolution plan for System A: {}", plan_a.description);
+                println!("    Resolution plan for System A: {}", plan_a.description);
                 // Apply grain resolution
                 df_a_normalized = grain_resolver.apply_grain_resolution(
                     df_a_normalized,
@@ -335,7 +335,7 @@ impl RcaEngine {
             df_a_normalized = identity_resolver.normalize_keys(df_a_normalized, &table_a.name, &common_grain).await?;
         }
         
-        println!("\n   📊 Resolving System B grain...");
+        println!("\n    Resolving System B grain...");
         let mut df_b_normalized = df_b.clone();
         if grain_b != common_grain {
             if let Ok(Some(plan_b)) = grain_resolver.resolve_grain_mismatch(
@@ -344,7 +344,7 @@ impl RcaEngine {
                 &common_grain,
                 &table_b.name,
             ) {
-                println!("   ✅ Resolution plan for System B: {}", plan_b.description);
+                println!("    Resolution plan for System B: {}", plan_b.description);
                 // Apply grain resolution
                 df_b_normalized = grain_resolver.apply_grain_resolution(
                     df_b_normalized,
@@ -361,7 +361,7 @@ impl RcaEngine {
             df_b_normalized = identity_resolver.normalize_keys(df_b_normalized, &table_b.name, &common_grain).await?;
         }
         
-        println!("   ✅ Grain Normalization Complete");
+        println!("    Grain Normalization Complete");
         println!("\n{}\n", "-".repeat(80));
         
         // Step 9: Apply time logic
@@ -374,7 +374,7 @@ impl RcaEngine {
             &subgraph.tables_b[0],
         )?;
         if let Some(ref misalignment) = temporal_misalignment {
-            println!("   ⚠️  Temporal Misalignment Detected:");
+            println!("   ️  Temporal Misalignment Detected:");
             let description = format!(
                 "Table {} date range: {:?} to {:?}, Table {} date range: {:?} to {:?}",
                 misalignment.table_a,
@@ -386,12 +386,12 @@ impl RcaEngine {
             );
             println!("      - {}", description);
         } else {
-            println!("   ✅ No temporal misalignment detected");
+            println!("    No temporal misalignment detected");
         }
         println!("\n{}\n", "-".repeat(80));
         
         // Step 9.5: LLM Tool Selection (NEW)
-        println!("🔧 STEP 9.5: LLM TOOL SELECTION");
+        println!(" STEP 9.5: LLM TOOL SELECTION");
         let execution_context = ExecutionContext {
             system_a: resolved.system_a.clone(),
             system_b: resolved.system_b.clone(),
@@ -413,7 +413,7 @@ impl RcaEngine {
         println!("\n{}\n", "-".repeat(80));
         
         // Step 10: Compare results
-        println!("🔍 STEP 10: COMPARISON & DIFF ANALYSIS");
+        println!(" STEP 10: COMPARISON & DIFF ANALYSIS");
         
         // Enrich dataframes with entities from all tables in the system that have the target grain
         // This ensures we detect entities that exist in other tables (e.g., L999 in system_c_extra_loans)
@@ -442,7 +442,7 @@ impl RcaEngine {
         
         // Use tool context to configure diff engine (LLM may have selected fuzzy matching)
         let diff_engine = if !tool_context.fuzzy_columns.is_empty() {
-            println!("   🔍 Using fuzzy matching (selected by LLM) for columns: {:?}", tool_context.fuzzy_columns);
+            println!("    Using fuzzy matching (selected by LLM) for columns: {:?}", tool_context.fuzzy_columns);
             DiffEngine::new().with_fuzzy_matching(
                 tool_context.fuzzy_threshold,
                 tool_context.fuzzy_columns.clone()
@@ -461,7 +461,7 @@ impl RcaEngine {
                 .collect();
             
             if !fuzzy_columns.is_empty() {
-                println!("   🔍 Auto-detected string columns for fuzzy matching: {:?}", fuzzy_columns);
+                println!("    Auto-detected string columns for fuzzy matching: {:?}", fuzzy_columns);
                 DiffEngine::new().with_fuzzy_matching(0.85, fuzzy_columns)
             } else {
                 DiffEngine::new()
@@ -475,7 +475,7 @@ impl RcaEngine {
             metric_name,
             metric.precision,
         ).await?;
-        println!("   ✅ Comparison Complete:");
+        println!("    Comparison Complete:");
         println!("      - Population Match: {} common entities", comparison.population_diff.common_count);
         println!("      - Missing in B: {} entities", comparison.population_diff.missing_in_b.len());
         println!("      - Extra in B: {} entities", comparison.population_diff.extra_in_b.len());
@@ -484,9 +484,9 @@ impl RcaEngine {
         println!("\n{}\n", "-".repeat(80));
         
         // Step 11: Classify mismatches
-        println!("🏷️  STEP 11: ROOT CAUSE CLASSIFICATION");
+        println!("️  STEP 11: ROOT CAUSE CLASSIFICATION");
         let classifications = self.classify_mismatches(&comparison, temporal_misalignment.as_ref(), rule_a, rule_b)?;
-        println!("   ✅ Classifications:");
+        println!("    Classifications:");
         for (idx, classification) in classifications.iter().enumerate() {
             println!("      {}. {} - {}: {} (count: {})", 
                 idx + 1, 
@@ -498,7 +498,7 @@ impl RcaEngine {
         println!("\n{}\n", "-".repeat(80));
         
         // Step 12: Drill-down for mismatched keys
-        println!("🔬 STEP 12: DRILL-DOWN ANALYSIS");
+        println!(" STEP 12: DRILL-DOWN ANALYSIS");
         let mismatched_keys: Vec<Vec<String>> = if comparison.data_diff.mismatches > 0 {
             println!("   Analyzing {} mismatched entities...", comparison.data_diff.mismatches);
             let mut keys = Vec::new();
@@ -535,23 +535,23 @@ impl RcaEngine {
         };
         
         let divergence = if !mismatched_keys.is_empty() {
-            println!("   🔍 Finding divergence points...");
+            println!("    Finding divergence points...");
             let mut drilldown = DrilldownEngine::new(executor)
                 .with_llm(self.llm.clone())
                 .with_metadata(self.metadata.clone())
                 .with_data_dir(self.data_dir.clone());
             
             let mut div = drilldown.find_divergence(&rule_a_id, &rule_b_id, &mismatched_keys, as_of_date).await?;
-            println!("   ✅ Divergence Found:");
+            println!("    Divergence Found:");
             println!("      - Step Index: {}", div.step_index);
             println!("      - Divergence Type: {}", div.divergence_type);
             
             // Step 12.5: Analyze root causes with LLM to identify specific issues
-            println!("\n   🤖 Analyzing root causes with LLM...");
+            println!("\n    Analyzing root causes with LLM...");
             match drilldown.analyze_root_causes(&rule_a_id, &rule_b_id, &mismatched_keys, as_of_date).await {
                 Ok(root_causes) => {
                     if !root_causes.is_empty() {
-                        println!("   ✅ Root Cause Analysis Complete:");
+                        println!("    Root Cause Analysis Complete:");
                         for (idx, root_cause) in root_causes.iter().enumerate() {
                             println!("      {}. Loan {}: Difference of {:.2}", 
                                 idx + 1, root_cause.loan_id, root_cause.difference);
@@ -559,7 +559,7 @@ impl RcaEngine {
                                 root_cause.system_a_value, root_cause.system_b_value);
                             
                             if !root_cause.specific_issues.is_empty() {
-                                println!("         🔍 Specific Issues Identified:");
+                                println!("          Specific Issues Identified:");
                                 for issue in &root_cause.specific_issues {
                                     println!("            • {}", issue);
                                 }
@@ -571,7 +571,7 @@ impl RcaEngine {
                     }
                 }
                 Err(e) => {
-                    println!("   ⚠️  Root cause analysis failed: {}", e);
+                    println!("   ️  Root cause analysis failed: {}", e);
                     println!("   ℹ️  Continuing with divergence point only");
                 }
             }
@@ -583,7 +583,7 @@ impl RcaEngine {
         println!("\n{}\n", "-".repeat(80));
         
         // Step 13: Generate explanation
-        println!("📊 STEP 13: FINAL RESULT SUMMARY");
+        println!(" STEP 13: FINAL RESULT SUMMARY");
         let result = RcaResult {
             query: query.to_string(),
             system_a: resolved.system_a.clone(),
@@ -597,7 +597,7 @@ impl RcaEngine {
         };
         
         println!("{}", "=".repeat(80));
-        println!("✅ RCA EXECUTION COMPLETE");
+        println!(" RCA EXECUTION COMPLETE");
         println!("{}\n", "=".repeat(80));
         
         Ok(result)

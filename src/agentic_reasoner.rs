@@ -152,7 +152,7 @@ impl AgenticReasoner {
     /// Main agentic reasoning loop - explores graph and knowledge base to solve a problem
     /// Works like Cursor: builds plans stage-wise and adapts based on results
     pub async fn reason(&mut self, problem: &str) -> Result<AgenticSolution> {
-        info!("🤖 Starting agentic reasoning for problem: {}", problem);
+        info!(" Starting agentic reasoning for problem: {}", problem);
         
         let mut solution = AgenticSolution {
             problem: problem.to_string(),
@@ -169,23 +169,23 @@ impl AgenticReasoner {
         // Stage-wise planning and execution (like Cursor)
         loop {
             if stage >= self.max_iterations {
-                warn!("⚠️  Reached max iterations ({})", self.max_iterations);
+                warn!("️  Reached max iterations ({})", self.max_iterations);
                 break;
             }
 
             stage += 1;
             info!("\n{}", "=".repeat(80));
-            info!("📋 STAGE {}: Planning and Exploration", stage);
+            info!(" STAGE {}: Planning and Exploration", stage);
             info!("{}", "=".repeat(80));
 
             // Stage 1: Create or refine plan based on current understanding
             let plan = if current_plan.is_none() {
-                info!("🎯 Creating initial plan...");
+                info!(" Creating initial plan...");
                 let new_plan = self.create_plan(problem, &current_understanding).await?;
                 current_plan = Some(new_plan.clone());
                 new_plan
             } else {
-                info!("🔄 Refining plan based on discoveries...");
+                info!(" Refining plan based on discoveries...");
                 let refined_plan = self.refine_plan(problem, &current_plan.unwrap(), &current_understanding).await?;
                 current_plan = Some(refined_plan.clone());
                 refined_plan
@@ -195,7 +195,7 @@ impl AgenticReasoner {
                 solution.plan = Some(plan.clone());
             }
 
-            info!("✅ Plan has {} steps", plan.steps.len());
+            info!(" Plan has {} steps", plan.steps.len());
             for (i, step) in plan.steps.iter().enumerate() {
                 info!("   Step {}: {:?} - {}", i + 1, step.action, step.reasoning);
             }
@@ -204,11 +204,11 @@ impl AgenticReasoner {
             let steps_to_execute = self.determine_steps_to_execute(&plan, &current_understanding);
             
             if steps_to_execute.is_empty() {
-                info!("✅ All planned steps completed or no more steps needed");
+                info!(" All planned steps completed or no more steps needed");
                 break;
             }
 
-            info!("🔍 Executing {} step(s) from plan", steps_to_execute.len());
+            info!(" Executing {} step(s) from plan", steps_to_execute.len());
             
             let mut stage_results = Vec::new();
             for step_idx in steps_to_execute {
@@ -240,24 +240,24 @@ impl AgenticReasoner {
             }
 
             // Stage 3: Evaluate results and decide next steps
-            info!("📊 Evaluating stage results...");
+            info!(" Evaluating stage results...");
             let should_continue = self.evaluate_stage_results(&stage_results, &current_understanding).await?;
             
             if !should_continue {
-                info!("✅ Sufficient information gathered, proceeding to synthesis");
+                info!(" Sufficient information gathered, proceeding to synthesis");
                 break;
             }
 
             // Check if we need to explore more or if plan is complete
             if self.is_plan_complete(&plan, &current_understanding) {
-                info!("✅ Plan execution complete");
+                info!(" Plan execution complete");
                 break;
             }
         }
 
         // Final stage: Synthesize answer
         info!("\n{}", "=".repeat(80));
-        info!("📝 FINAL STAGE: Synthesizing answer");
+        info!(" FINAL STAGE: Synthesizing answer");
         info!("{}", "=".repeat(80));
         solution.final_answer = Some(self.synthesize_answer(problem, &current_understanding).await?);
         if let Some(ref plan) = current_plan {
@@ -274,7 +274,7 @@ impl AgenticReasoner {
         
         // Use appropriate prompt based on task complexity
         let system_prompt = if use_deep_reasoning {
-            info!("🧠 Using deep reasoning prompt for non-direct task");
+            info!(" Using deep reasoning prompt for non-direct task");
             agentic_prompts::get_deep_reasoning_prompt()
         } else {
             self.get_planning_prompt()
@@ -345,7 +345,7 @@ impl AgenticReasoner {
 
     /// Explore a table - get its structure, grain, relationships
     async fn explore_table(&mut self, table_name: &str) -> Result<ExplorationResult> {
-        info!("🔍 Exploring table: {}", table_name);
+        info!(" Exploring table: {}", table_name);
         
         let table = self.metadata.tables
             .iter()
@@ -385,7 +385,7 @@ impl AgenticReasoner {
 
     /// Explore a column in a table
     async fn explore_column(&mut self, table_name: &str, column_name: Option<&str>) -> Result<ExplorationResult> {
-        info!("🔍 Exploring column: {}.{}", table_name, column_name.unwrap_or("*"));
+        info!(" Exploring column: {}.{}", table_name, column_name.unwrap_or("*"));
         
         let table = self.metadata.tables
             .iter()
@@ -420,7 +420,7 @@ impl AgenticReasoner {
 
     /// Find a path between two tables
     async fn find_path(&mut self, from: &str, to: &str) -> Result<ExplorationResult> {
-        info!("🛤️  Finding path from {} to {}", from, to);
+        info!("️  Finding path from {} to {}", from, to);
         
         let adapter = self.graph.adapter()?;
         let path = adapter.find_join_path(from, to)?;
@@ -434,7 +434,7 @@ impl AgenticReasoner {
 
     /// Search for concepts in knowledge base
     async fn search_concept(&mut self, term: &str) -> Result<ExplorationResult> {
-        info!("🔎 Searching concept: {}", term);
+        info!(" Searching concept: {}", term);
         
         if let Some(ref kb) = self.knowledge_base {
             let concepts = kb.search_by_name(term);
@@ -456,7 +456,7 @@ impl AgenticReasoner {
 
     /// Find relationships for a table
     async fn find_relationships(&mut self, table_name: &str) -> Result<ExplorationResult> {
-        info!("🔗 Finding relationships for: {}", table_name);
+        info!(" Finding relationships for: {}", table_name);
         
         let mut relationships = Vec::new();
         for edge in &self.metadata.lineage.edges {
@@ -475,7 +475,7 @@ impl AgenticReasoner {
 
     /// Discover rules for a metric
     async fn discover_rules(&mut self, metric: &str, system: Option<&str>) -> Result<ExplorationResult> {
-        info!("📜 Discovering rules for metric: {} (system: {:?})", metric, system);
+        info!(" Discovering rules for metric: {} (system: {:?})", metric, system);
         
         let mut rules = Vec::new();
         for rule in &self.metadata.rules {
@@ -500,7 +500,7 @@ impl AgenticReasoner {
 
     /// Query the graph with natural language
     async fn query_graph(&mut self, query: &str) -> Result<ExplorationResult> {
-        info!("💬 Querying graph: {}", query);
+        info!(" Querying graph: {}", query);
         
         // Use LLM to interpret the query and determine what to explore
         // For now, do simple keyword matching
@@ -535,7 +535,7 @@ impl AgenticReasoner {
 
     /// Query the knowledge base
     async fn query_knowledge_base(&mut self, query: &str) -> Result<ExplorationResult> {
-        info!("📚 Querying knowledge base: {}", query);
+        info!(" Querying knowledge base: {}", query);
         self.search_concept(query).await
     }
 
@@ -624,7 +624,7 @@ Create a step-by-step plan that explores the necessary information to solve the 
                                  self.has_ambiguous_columns(understanding);
         
         let system_prompt = if use_deep_reasoning {
-            info!("🧠 Using deep reasoning for plan refinement");
+            info!(" Using deep reasoning for plan refinement");
             agentic_prompts::get_deep_reasoning_prompt()
         } else {
             "You are refining an exploration plan based on new discoveries. Update the plan to incorporate new findings and adjust priorities."

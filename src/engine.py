@@ -277,7 +277,7 @@ Answer:"""
                 "reranked_chunks": 0
             }
         
-        print(f"  ✓ Retrieved {len(retrieved_chunks)} chunks")
+        print(f"   Retrieved {len(retrieved_chunks)} chunks")
         
         # Step 2: Rerank
         print(f"Step 2: Reranking to top {top_k_rerank} chunks...")
@@ -287,7 +287,7 @@ Answer:"""
             top_n=top_k_rerank
         )
         
-        print(f"  ✓ Reranked to {len(reranked_chunks)} chunks")
+        print(f"   Reranked to {len(reranked_chunks)} chunks")
         
         # Display rerank scores
         print("\nRerank Scores:")
@@ -303,7 +303,7 @@ Answer:"""
             context_chunks=reranked_chunks
         )
         
-        print("  ✓ Answer generated")
+        print("   Answer generated")
         
         # Combine results
         return {

@@ -89,7 +89,7 @@ impl SqlEngine {
     /// 
     /// This executes a full SQL query and returns all results.
     pub async fn execute_sql(&self, sql: &str) -> Result<SqlQueryResult> {
-        info!("🔍 Executing SQL query: {}", sql);
+        info!(" Executing SQL query: {}", sql);
         
         let result = self.execute_with_polars(sql, usize::MAX).await?;
         
@@ -105,7 +105,7 @@ impl SqlEngine {
     /// Used in the dynamic traversal pattern.
     pub async fn execute_probe(&self, sql: &str, max_rows: Option<usize>) -> Result<SqlProbeResult> {
         let start_time = std::time::Instant::now();
-        info!("🔍 Executing SQL probe: {}", sql);
+        info!(" Executing SQL probe: {}", sql);
         
         // Parse SQL to determine what we're querying
         // For now, we'll use Polars to execute SQL-like operations
@@ -115,7 +115,7 @@ impl SqlEngine {
         
         let execution_time = start_time.elapsed().as_millis() as u64;
         
-        info!("✅ Probe completed in {}ms, returned {} rows", execution_time, result.row_count);
+        info!(" Probe completed in {}ms, returned {} rows", execution_time, result.row_count);
         
         Ok(result)
     }
@@ -422,7 +422,7 @@ impl SqlEngine {
         join_keys: &HashMap<String, String>, // left_col -> right_col mapping
         join_type: &str,
     ) -> Result<SqlProbeResult> {
-        info!("🔗 Probing join: {} JOIN {} ON {:?}", left_table, right_table, join_keys);
+        info!(" Probing join: {} JOIN {} ON {:?}", left_table, right_table, join_keys);
         
         // Build SQL-like query to test the join
         // For now, use Polars to execute the join

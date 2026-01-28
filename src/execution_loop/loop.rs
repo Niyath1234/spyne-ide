@@ -131,7 +131,7 @@ impl ExecutionLoop {
                 "base_table" // Will be resolved from metric in integration
             );
 
-            info!("✅ Execution succeeded on attempt {}", attempt);
+            info!(" Execution succeeded on attempt {}", attempt);
             return Ok(ExecutionResult {
                 intent,
                 sql,

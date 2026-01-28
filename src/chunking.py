@@ -162,7 +162,7 @@ class HierarchicalChunker:
             
             enhanced_nodes.append(node)
         
-        print(f"✓ Created {len(enhanced_nodes)} chunks from {file_path.name}")
+        print(f" Created {len(enhanced_nodes)} chunks from {file_path.name}")
         return enhanced_nodes
     
     def chunk_all(self) -> List[BaseNode]:
@@ -184,9 +184,9 @@ class HierarchicalChunker:
                 nodes = self.chunk_file(file_path)
                 all_nodes.extend(nodes)
             except Exception as e:
-                print(f"✗ Error chunking {file_path.name}: {e}")
+                print(f" Error chunking {file_path.name}: {e}")
         
-        print(f"\n✓ Total chunks created: {len(all_nodes)}")
+        print(f"\n Total chunks created: {len(all_nodes)}")
         return all_nodes
     
     def save_chunks(self, nodes: List[BaseNode], output_file: str = "data/processed/chunks.json"):
@@ -212,7 +212,7 @@ class HierarchicalChunker:
             chunks_data.append(chunk_data)
         
         output_path.write_text(json.dumps(chunks_data, indent=2), encoding='utf-8')
-        print(f"✓ Saved {len(chunks_data)} chunks to {output_path}")
+        print(f" Saved {len(chunks_data)} chunks to {output_path}")
     
     def get_chunk_summary(self, nodes: List[BaseNode]) -> Dict:
         """
@@ -261,7 +261,7 @@ def main():
         # Chunk single file
         file_path = Path(args.file)
         nodes = chunker.chunk_file(file_path)
-        print(f"\n✓ Created {len(nodes)} chunks")
+        print(f"\n Created {len(nodes)} chunks")
         
         if args.save:
             chunker.save_chunks(nodes, args.output)

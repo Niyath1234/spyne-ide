@@ -61,7 +61,7 @@ impl AmbiguityResolver {
                     }
                     Err(e) => {
                         // Error checking similarity - log but continue with original interpretation
-                        eprintln!("   ⚠️  Warning: Could not check metric similarity via contracts: {}", e);
+                        eprintln!("   ️  Warning: Could not check metric similarity via contracts: {}", e);
                     }
                 }
         }

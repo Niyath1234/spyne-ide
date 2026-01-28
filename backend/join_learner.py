@@ -39,7 +39,7 @@ class JoinLearner:
                 with open(self.storage_path, 'r') as f:
                     self.learned_joins = json.load(f)
             except Exception as e:
-                print(f"⚠️  Warning: Could not load learned joins: {e}")
+                print(f"️  Warning: Could not load learned joins: {e}")
                 self.learned_joins = {}
         else:
             self.learned_joins = {}
@@ -53,7 +53,7 @@ class JoinLearner:
             with open(self.storage_path, 'w') as f:
                 json.dump(self.learned_joins, f, indent=2)
         except Exception as e:
-            print(f"⚠️  Warning: Could not save learned joins: {e}")
+            print(f"️  Warning: Could not save learned joins: {e}")
     
     def _normalize_table_name(self, table: str) -> str:
         """Normalize table name for storage."""
@@ -124,16 +124,16 @@ class JoinLearner:
             Join information dict or None if user cancels
         """
         print("\n" + "=" * 80)
-        print("🔗 JOIN PATH NOT FOUND - NEED YOUR HELP")
+        print(" JOIN PATH NOT FOUND - NEED YOUR HELP")
         print("=" * 80)
         
         if context:
-            print(f"\n📋 Context: {context}")
+            print(f"\n Context: {context}")
         
-        print(f"\n❓ How do I join these two tables? Any idea?")
+        print(f"\n How do I join these two tables? Any idea?")
         print(f"   Table 1: {from_table}")
         print(f"   Table 2: {to_table}")
-        print("\n💡 I need to know:")
+        print("\n I need to know:")
         print("   1. Join condition (e.g., 'customers.customer_id = loans.customer_id')")
         print("   2. Join type (LEFT, INNER, RIGHT) - default: LEFT")
         print("   3. Relationship type (one_to_one, one_to_many, many_to_one) - default: many_to_one")
@@ -142,19 +142,19 @@ class JoinLearner:
         
         try:
             # Get join condition
-            join_on = input("\n🔗 Join condition (ON clause): ").strip()
+            join_on = input("\n Join condition (ON clause): ").strip()
             
             if join_on.lower() in ['skip', 'cancel', '']:
                 print("⏭️  Skipping this join")
                 return None
             
             # Get join type
-            join_type = input("📊 Join type (LEFT/INNER/RIGHT) [default: LEFT]: ").strip().upper()
+            join_type = input(" Join type (LEFT/INNER/RIGHT) [default: LEFT]: ").strip().upper()
             if not join_type or join_type not in ['LEFT', 'INNER', 'RIGHT']:
                 join_type = 'LEFT'
             
             # Get relationship type
-            rel_type = input("🔀 Relationship (one_to_one/one_to_many/many_to_one) [default: many_to_one]: ").strip().lower()
+            rel_type = input(" Relationship (one_to_one/one_to_many/many_to_one) [default: many_to_one]: ").strip().lower()
             if not rel_type or rel_type not in ['one_to_one', 'one_to_many', 'many_to_one']:
                 rel_type = 'many_to_one'
             
@@ -178,7 +178,7 @@ class JoinLearner:
             self.learned_joins[str(self._create_join_key(from_table, to_table))] = [join_info]
             self._save_learned_joins()
             
-            print(f"\n✅ Join learned and saved!")
+            print(f"\n Join learned and saved!")
             print(f"   {from_table} --[{join_type}]--> {to_table}")
             print(f"   ON: {join_on}")
             
@@ -188,7 +188,7 @@ class JoinLearner:
             print("\n\n⏭️  Skipping join (user cancelled)")
             return None
         except Exception as e:
-            print(f"\n❌ Error learning join: {e}")
+            print(f"\n Error learning join: {e}")
             return None
     
     def add_learned_join(self, from_table: str, to_table: str, on_clause: str, 
@@ -233,7 +233,7 @@ class JoinLearner:
         """Clear all learned joins (use with caution)."""
         self.learned_joins = {}
         self._save_learned_joins()
-        print("✅ All learned joins cleared")
+        print(" All learned joins cleared")
 
 
 # Global instance (singleton pattern)

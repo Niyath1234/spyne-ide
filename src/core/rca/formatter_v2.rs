@@ -4,14 +4,14 @@
 //! 
 //! ## Phase 4 Implementation:
 //! 
-//! ### 4.1 Strict Input Contract ✅
+//! ### 4.1 Strict Input Contract 
 //! - All input fields validated before sending to LLM
 //! - Type checking (strings, numbers, arrays, objects)
 //! - Constraint validation (ranges, non-empty, etc.)
 //! - Data consistency checks (delta = value_b - value_a, impact = abs(delta))
 //! - Comprehensive error messages for validation failures
 //! 
-//! ### 4.2 Strict Output Contract ✅
+//! ### 4.2 Strict Output Contract 
 //! - All output fields validated after receiving from LLM
 //! - Type checking (strings, numbers, arrays, objects)
 //! - Constraint validation (non-empty strings, valid enums, etc.)

@@ -70,7 +70,7 @@ impl GranularityUnderstanding {
         &self,
         rule_text: &str,
     ) -> Result<GranularityRule> {
-        println!("\n🧠 GRANULARITY UNDERSTANDING ENGINE");
+        println!("\n GRANULARITY UNDERSTANDING ENGINE");
         println!("   Parsing business rule: \"{}\"", rule_text);
         
         // Step 1: Extract entities and relationships from natural language
@@ -119,17 +119,17 @@ impl GranularityUnderstanding {
             Vec::new()
         };
         
-        println!("   ✅ Parsed hierarchy:");
+        println!("    Parsed hierarchy:");
         for (parent, children) in &chain_of_thought.final_hierarchy.relationships {
             println!("      {} -> {:?}", parent, children);
         }
-        println!("   ✅ Entity grains:");
+        println!("    Entity grains:");
         for (entity, grain) in &chain_of_thought.final_hierarchy.entity_grains {
             println!("      {} -> {:?}", entity, grain);
         }
         chain_of_thought.confidence = chain_of_thought.final_hierarchy.confidence;
-        println!("   ✅ Confidence: {:.2}%", chain_of_thought.confidence * 100.0);
-        println!("   ✅ Ambiguity level: {}", ambiguity_assessment.ambiguity_level);
+        println!("    Confidence: {:.2}%", chain_of_thought.confidence * 100.0);
+        println!("    Ambiguity level: {}", ambiguity_assessment.ambiguity_level);
         
         Ok(GranularityRule {
             description: rule_text.to_string(),
@@ -196,7 +196,7 @@ impl GranularityUnderstanding {
 
     /// Use LLM to reason about granularity when patterns don't provide enough info
     async fn llm_reason_about_granularity(&self, rule_text: &str) -> Result<(ThoughtStep, HashMap<String, Vec<String>>)> {
-        println!("   🤖 Using LLM reasoning to understand granularity...");
+        println!("    Using LLM reasoning to understand granularity...");
         
         // Get available entities from metadata
         let available_entities: Vec<String> = self.metadata.entities
@@ -252,7 +252,7 @@ Return JSON only:"#,
 
     /// Cross-reference extracted hierarchy with knowledge base (metadata)
     async fn cross_reference_with_kb(&self, hierarchy: &EntityHierarchy) -> Result<ThoughtStep> {
-        println!("   📚 Cross-referencing with knowledge base...");
+        println!("    Cross-referencing with knowledge base...");
         
         let mut validated_relationships = HashMap::new();
         let mut evidence = Vec::new();
@@ -294,7 +294,7 @@ Return JSON only:"#,
 
     /// Determine grain columns for each entity based on metadata
     async fn determine_entity_grains(&self, hierarchy: &mut EntityHierarchy) -> Result<ThoughtStep> {
-        println!("   🔍 Determining entity grains from metadata...");
+        println!("    Determining entity grains from metadata...");
         
         let mut entity_grains = HashMap::new();
         let mut evidence = Vec::new();
@@ -419,7 +419,7 @@ Return JSON only:"#,
         system_b: &str,
         metric: &str,
     ) -> Result<ChainOfThought> {
-        println!("\n🧠 CHAIN OF THOUGHT: Granularity Reasoning");
+        println!("\n CHAIN OF THOUGHT: Granularity Reasoning");
         println!("   Query: \"{}\"", query);
         println!("   Systems: {} vs {}", system_a, system_b);
         println!("   Metric: {}", metric);

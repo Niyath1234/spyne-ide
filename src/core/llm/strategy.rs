@@ -130,7 +130,7 @@ impl LlmStrategyEngine {
         system_b: &str,
         available_rules: &[&Rule],
     ) -> Result<MetricStrategy> {
-        info!("🤖 LLM selecting metric strategy for: {}", problem_description);
+        info!(" LLM selecting metric strategy for: {}", problem_description);
         
         // Build context about available rules
         let rules_context: Vec<_> = available_rules.iter().map(|r| {
@@ -195,7 +195,7 @@ Return JSON:
         let strategy: MetricStrategy = serde_json::from_str(&cleaned)
             .map_err(|e| RcaError::Llm(format!("Failed to parse metric strategy: {}. Response: {}", e, cleaned)))?;
         
-        info!("✅ Selected metric strategy: {} (confidence: {:.2})", strategy.metric, strategy.confidence);
+        info!(" Selected metric strategy: {} (confidence: {:.2})", strategy.metric, strategy.confidence);
         
         Ok(strategy)
     }
@@ -210,7 +210,7 @@ Return JSON:
         rca_summary: &RcaSummary,
         available_columns: &[String],
     ) -> Result<DrilldownStrategy> {
-        info!("🤖 LLM generating drilldown strategy for metric: {}", metric);
+        info!(" LLM generating drilldown strategy for metric: {}", metric);
         
         let prompt = format!(
             r#"You are a data analyst suggesting drilldown strategies for root cause analysis.
@@ -269,7 +269,7 @@ Return JSON:
         let strategy: DrilldownStrategy = serde_json::from_str(&cleaned)
             .map_err(|e| RcaError::Llm(format!("Failed to parse drilldown strategy: {}. Response: {}", e, cleaned)))?;
         
-        info!("✅ Generated drilldown strategy with {} dimensions", strategy.dimensions.len());
+        info!(" Generated drilldown strategy with {} dimensions", strategy.dimensions.len());
         
         Ok(strategy)
     }
@@ -283,7 +283,7 @@ Return JSON:
         rca_summary: &RcaSummary,
         explanations: &[String],
     ) -> Result<Vec<InvestigationPath>> {
-        info!("🤖 LLM suggesting investigation paths");
+        info!(" LLM suggesting investigation paths");
         
         let explanations_text = if explanations.is_empty() {
             "No specific explanations available yet".to_string()
@@ -347,7 +347,7 @@ Return JSON array:
         let paths: Vec<InvestigationPath> = serde_json::from_str(&cleaned)
             .map_err(|e| RcaError::Llm(format!("Failed to parse investigation paths: {}. Response: {}", e, cleaned)))?;
         
-        info!("✅ Suggested {} investigation paths", paths.len());
+        info!(" Suggested {} investigation paths", paths.len());
         
         Ok(paths)
     }
@@ -399,7 +399,7 @@ mod tests {
         let metadata = match Metadata::load("metadata") {
             Ok(m) => m,
             Err(_) => {
-                eprintln!("⚠️  Skipping test: metadata folder not found");
+                eprintln!("️  Skipping test: metadata folder not found");
                 return;
             }
         };

@@ -639,7 +639,7 @@ class ConfluenceKnowledgeBaseIntegrator:
                 )
                 
                 if response.status_code != 200:
-                    print(f"  ⚠ Could not fetch full content for page {page_id}: {response.status_code}")
+                    print(f"   Could not fetch full content for page {page_id}: {response.status_code}")
                     continue
                 
                 full_page = response.json()
@@ -676,14 +676,14 @@ class ConfluenceKnowledgeBaseIntegrator:
                     "tables": len(knowledge.get("tables", []))
                 })
                 
-                print(f"  ✓ Processed: {knowledge.get('title')} ({product})")
+                print(f"   Processed: {knowledge.get('title')} ({product})")
                 print(f"    Entities: {len(knowledge.get('entities', []))}, "
                       f"Events: {len(knowledge.get('events', []))}, "
                       f"Tables: {len(knowledge.get('tables', []))}")
             
             except Exception as e:
                 results["failed"] += 1
-                print(f"  ✗ Error processing page {page.get('id')}: {e}")
+                print(f"   Error processing page {page.get('id')}: {e}")
                 import traceback
                 traceback.print_exc()
         
@@ -744,9 +744,9 @@ def main():
     )
     
     if results.get("success"):
-        print("\n✓ Knowledge Base populated!")
-        print(f"✓ Knowledge Register: {integrator.knowledge_register_path}")
-        print(f"✓ Product Index: {integrator.product_index.index_file}")
+        print("\n Knowledge Base populated!")
+        print(f" Knowledge Register: {integrator.knowledge_register_path}")
+        print(f" Product Index: {integrator.product_index.index_file}")
         print("\nNext: Documents are now searchable via vector search")
 
 

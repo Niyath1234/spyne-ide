@@ -134,7 +134,7 @@ impl RelationalEngine {
                         &join_keys,
                         join_type,
                     ) {
-                        println!("      ⚠️  Join validation warning: {}", e);
+                        println!("      ️  Join validation warning: {}", e);
                     }
                 }
             }
@@ -152,7 +152,7 @@ impl RelationalEngine {
                     &validation.right_table,
                     &join_keys,
                 ) {
-                    println!("      ⚠️  Schema validation warning: {}", e);
+                    println!("      ️  Schema validation warning: {}", e);
                 }
             }
         }

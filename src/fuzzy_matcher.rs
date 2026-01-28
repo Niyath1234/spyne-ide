@@ -170,7 +170,7 @@ impl FuzzyMatcher {
         df_b: &DataFrame,
         grain: &[String],
     ) -> Result<FuzzyPopulationDiff> {
-        println!("   🔍 Performing fuzzy matching for grain columns: {:?}", grain);
+        println!("    Performing fuzzy matching for grain columns: {:?}", grain);
         
         // Extract keys from both dataframes
         let keys_a: HashSet<Vec<String>> = self.extract_keys(df_a, grain)?;
@@ -178,7 +178,7 @@ impl FuzzyMatcher {
         
         // First, find exact matches
         let exact_matches: Vec<Vec<String>> = keys_a.intersection(&keys_b).cloned().collect();
-        println!("   ✅ Found {} exact matches", exact_matches.len());
+        println!("    Found {} exact matches", exact_matches.len());
         
         // Find keys in A that don't have exact matches in B
         let unmatched_a: Vec<Vec<String>> = keys_a
@@ -192,8 +192,8 @@ impl FuzzyMatcher {
             .cloned()
             .collect();
         
-        println!("   🔍 Attempting fuzzy matching for {} unmatched keys in A", unmatched_a.len());
-        println!("   🔍 Attempting fuzzy matching for {} unmatched keys in B", unmatched_b.len());
+        println!("    Attempting fuzzy matching for {} unmatched keys in A", unmatched_a.len());
+        println!("    Attempting fuzzy matching for {} unmatched keys in B", unmatched_b.len());
         
         // Try to find fuzzy matches
         let mut fuzzy_matches: Vec<FuzzyMatch> = Vec::new();
@@ -217,7 +217,7 @@ impl FuzzyMatcher {
             }
         }
         
-        println!("   ✅ Found {} fuzzy matches", fuzzy_matches.len());
+        println!("    Found {} fuzzy matches", fuzzy_matches.len());
         
         // Remaining unmatched keys
         let missing_in_b: Vec<Vec<String>> = unmatched_a

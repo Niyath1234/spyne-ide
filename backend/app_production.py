@@ -764,20 +764,20 @@ def reasoning_query():
         steps = []
         steps.append({
             'type': 'thought',
-            'content': f'🔍 Analyzing query: "{query_text}"',
+            'content': f' Analyzing query: "{query_text}"',
             'timestamp': datetime.utcnow().isoformat() + 'Z',
         })
         
         if result.get('reasoning_steps'):
             for i, step_content in enumerate(result['reasoning_steps']):
                 step_type = 'thought'
-                if '✅' in step_content or 'Generated' in step_content:
+                if '' in step_content or 'Generated' in step_content:
                     step_type = 'result'
-                elif '❌' in step_content or 'Error' in step_content:
+                elif '' in step_content or 'Error' in step_content:
                     step_type = 'error'
-                elif '🔧' in step_content or 'Building' in step_content:
+                elif '' in step_content or 'Building' in step_content:
                     step_type = 'action'
-                elif '📊' in step_content or 'SQL' in step_content:
+                elif '' in step_content or 'SQL' in step_content:
                     step_type = 'result'
                 
                 steps.append({
@@ -788,34 +788,34 @@ def reasoning_query():
         else:
             steps.append({
                 'type': 'thought',
-                'content': '📊 Loading metadata and analyzing available tables...',
+                'content': ' Loading metadata and analyzing available tables...',
                 'timestamp': datetime.utcnow().isoformat() + 'Z',
             })
             
             if result.get('success'):
                 steps.append({
                     'type': 'action',
-                    'content': '🤖 Generating SQL using LLM with comprehensive context...',
+                    'content': ' Generating SQL using LLM with comprehensive context...',
                     'timestamp': datetime.utcnow().isoformat() + 'Z',
                 })
                 
                 if result.get('sql'):
                     steps.append({
                         'type': 'result',
-                        'content': f'✅ Generated SQL:\n\n```sql\n{result["sql"]}\n```',
+                        'content': f' Generated SQL:\n\n```sql\n{result["sql"]}\n```',
                         'timestamp': datetime.utcnow().isoformat() + 'Z',
                     })
             else:
                 steps.append({
                     'type': 'error',
-                    'content': f'❌ Error: {result.get("error", "Unknown error")}',
+                    'content': f' Error: {result.get("error", "Unknown error")}',
                     'timestamp': datetime.utcnow().isoformat() + 'Z',
                 })
         
         if result.get('warnings'):
             steps.append({
                 'type': 'thought',
-                'content': f'⚠️  Warnings: {result["warnings"]}',
+                'content': f'️  Warnings: {result["warnings"]}',
                 'timestamp': datetime.utcnow().isoformat() + 'Z',
             })
         
@@ -834,7 +834,7 @@ def reasoning_query():
             'result': f'Error: {str(e)}',
             'steps': [{
                 'type': 'error',
-                'content': f'❌ Error processing query: {str(e)}',
+                'content': f' Error processing query: {str(e)}',
                 'timestamp': datetime.utcnow().isoformat() + 'Z',
             }],
             'error': str(e),

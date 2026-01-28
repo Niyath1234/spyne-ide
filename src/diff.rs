@@ -60,7 +60,7 @@ impl DiffEngine {
         
         // Population diff (with fuzzy matching if enabled)
         let population_diff = if has_fuzzy_columns && self.fuzzy_matcher.is_some() {
-            println!("   🔍 Fuzzy matching enabled for columns: {:?}", 
+            println!("    Fuzzy matching enabled for columns: {:?}", 
                 grain.iter().filter(|c| self.fuzzy_columns.contains(*c)).collect::<Vec<_>>());
             self.population_diff_with_fuzzy(&df_a, &df_b, grain)?
         } else {
@@ -194,7 +194,7 @@ impl DiffEngine {
         let llm_matcher = self.llm_value_matcher.as_ref()
             .ok_or_else(|| RcaError::Execution("LLM value matcher not initialized".to_string()))?;
         
-        println!("   🔤 Performing multi-stage string matching for column: {}", metric_col);
+        println!("    Performing multi-stage string matching for column: {}", metric_col);
         
         // Step 1: Multi-stage value matching (exact -> fuzzy -> LLM prompt)
         let matching_result = llm_matcher.match_values(
@@ -205,7 +205,7 @@ impl DiffEngine {
             Some(&format!("Comparing {} values between two systems", metric_col)),
         ).await?;
         
-        println!("   ✅ Matched {} values ({} exact, {} fuzzy)", 
+        println!("    Matched {} values ({} exact, {} fuzzy)", 
             matching_result.matches.len(),
             matching_result.matches.iter().filter(|m| m.match_type == crate::llm_value_matcher::MatchType::Exact).count(),
             matching_result.matches.iter().filter(|m| m.match_type == crate::llm_value_matcher::MatchType::Fuzzy).count());
@@ -341,7 +341,7 @@ impl DiffEngine {
         
         // Log fuzzy matches
         if !fuzzy_diff.fuzzy_matches.is_empty() {
-            println!("   ✅ Fuzzy matches found:");
+            println!("    Fuzzy matches found:");
             for fm in &fuzzy_diff.fuzzy_matches {
                 println!("      {:?} <-> {:?} (similarity: {:.2}%)", 
                     fm.key_a, fm.key_b, fm.similarity * 100.0);

@@ -86,28 +86,28 @@ class AgenticSQLOrchestrator:
             }
         """
         self.execution_steps = []
-        self.execution_steps.append(f"🔍 Analyzing query: {query}")
+        self.execution_steps.append(f" Analyzing query: {query}")
         
         try:
             # Step 1: Intent Agent
-            self.execution_steps.append("📋 Step 1: Intent Classification...")
+            self.execution_steps.append(" Step 1: Intent Classification...")
             intent_output = self.intent_agent.classify(query)
-            self.execution_steps.append(f"   ✅ Query type: {intent_output.get('query_type')}")
-            self.execution_steps.append(f"   ✅ Requested metrics: {intent_output.get('requested_metrics')}")
+            self.execution_steps.append(f"    Query type: {intent_output.get('query_type')}")
+            self.execution_steps.append(f"    Requested metrics: {intent_output.get('requested_metrics')}")
             
             # Step 2: Metric Agent (CRITICAL)
-            self.execution_steps.append("📊 Step 2: Metric Resolution...")
+            self.execution_steps.append(" Step 2: Metric Resolution...")
             try:
                 metric_output = self.metric_agent.resolve(intent_output, query)
-                self.execution_steps.append(f"   ✅ Status: {metric_output.get('status')}")
-                self.execution_steps.append(f"   ✅ Resolved metrics: {len(metric_output.get('resolved_metrics', []))}")
+                self.execution_steps.append(f"    Status: {metric_output.get('status')}")
+                self.execution_steps.append(f"    Resolved metrics: {len(metric_output.get('resolved_metrics', []))}")
                 
                 if metric_output.get('status') == 'UNRESOLVED':
                     raise ValueError("Metric resolution failed - cannot proceed")
                     
             except ValueError as e:
                 # Golden Invariant: If Metric Agent fails, STOP THE PIPELINE
-                self.execution_steps.append(f"   ❌ CRITICAL: {str(e)}")
+                self.execution_steps.append(f"    CRITICAL: {str(e)}")
                 return {
                     "success": False,
                     "error": str(e),
@@ -116,28 +116,28 @@ class AgenticSQLOrchestrator:
                 }
             
             # Step 3: Table Agent
-            self.execution_steps.append("🗂️  Step 3: Table Resolution...")
+            self.execution_steps.append("️  Step 3: Table Resolution...")
             table_output = self.table_agent.resolve(metric_output, query)
-            self.execution_steps.append(f"   ✅ Base table: {table_output.get('base_table')}")
+            self.execution_steps.append(f"    Base table: {table_output.get('base_table')}")
             
             # Step 4: Filter Agent
-            self.execution_steps.append("🔍 Step 4: Filter Generation...")
+            self.execution_steps.append(" Step 4: Filter Generation...")
             filter_output = self.filter_agent.generate(intent_output, metric_output, table_output, query)
-            self.execution_steps.append(f"   ✅ Filters: {len(filter_output.get('filters', []))}")
+            self.execution_steps.append(f"    Filters: {len(filter_output.get('filters', []))}")
             
             # Step 5: Shape Agent
-            self.execution_steps.append("📐 Step 5: Shape Generation...")
+            self.execution_steps.append(" Step 5: Shape Generation...")
             shape_output = self.shape_agent.generate(intent_output, metric_output, query)
-            self.execution_steps.append(f"   ✅ Dimensions: {len(shape_output.get('dimensions', []))}")
+            self.execution_steps.append(f"    Dimensions: {len(shape_output.get('dimensions', []))}")
             
             # Step 6: Verifier Agent
-            self.execution_steps.append("✅ Step 6: Verification...")
+            self.execution_steps.append(" Step 6: Verification...")
             verification = self.verifier_agent.verify(
                 intent_output, metric_output, table_output, filter_output, shape_output
             )
             
             if verification.get('status') == 'REJECTED':
-                self.execution_steps.append(f"   ❌ REJECTED: {verification.get('reason')}")
+                self.execution_steps.append(f"    REJECTED: {verification.get('reason')}")
                 return {
                     "success": False,
                     "error": verification.get('reason'),
@@ -150,19 +150,19 @@ class AgenticSQLOrchestrator:
                     "shape_output": shape_output
                 }
             
-            self.execution_steps.append(f"   ✅ ACCEPTED: {verification.get('reason')}")
+            self.execution_steps.append(f"    ACCEPTED: {verification.get('reason')}")
             
             # Step 7: SQL Renderer
-            self.execution_steps.append("🔧 Step 7: SQL Rendering...")
+            self.execution_steps.append(" Step 7: SQL Rendering...")
             sql = self.sql_renderer.render(
                 intent_output, metric_output, table_output, filter_output, shape_output
             )
-            self.execution_steps.append(f"   ✅ SQL generated ({len(sql)} chars)")
+            self.execution_steps.append(f"    SQL generated ({len(sql)} chars)")
             
             # Final SQL verification
             sql_verification = self.verifier_agent.verify_sql(sql, intent_output, metric_output)
             if sql_verification.get('status') == 'REJECTED':
-                self.execution_steps.append(f"   ❌ SQL REJECTED: {sql_verification.get('reason')}")
+                self.execution_steps.append(f"    SQL REJECTED: {sql_verification.get('reason')}")
                 return {
                     "success": False,
                     "error": f"SQL verification failed: {sql_verification.get('reason')}",
@@ -171,7 +171,7 @@ class AgenticSQLOrchestrator:
                     "sql": sql
                 }
             
-            self.execution_steps.append(f"   ✅ SQL VERIFIED: {sql_verification.get('reason')}")
+            self.execution_steps.append(f"    SQL VERIFIED: {sql_verification.get('reason')}")
             
             # Success!
             return {
@@ -188,7 +188,7 @@ class AgenticSQLOrchestrator:
             }
             
         except Exception as e:
-            self.execution_steps.append(f"❌ ERROR: {str(e)}")
+            self.execution_steps.append(f" ERROR: {str(e)}")
             import traceback
             self.execution_steps.append(traceback.format_exc())
             

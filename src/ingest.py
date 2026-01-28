@@ -149,7 +149,7 @@ class DocumentIngester:
         metadata_path = self.processed_dir / f"{file_path.stem}_metadata.json"
         metadata_path.write_text(json.dumps(metadata, indent=2), encoding='utf-8')
         
-        print(f"✓ Processed {file_path.name} -> {output_path}")
+        print(f" Processed {file_path.name} -> {output_path}")
         
         return {
             "success": True,
@@ -184,7 +184,7 @@ class DocumentIngester:
                 result = self.process_file(file_path)
                 results.append(result)
             except Exception as e:
-                print(f"✗ Error processing {file_path.name}: {e}")
+                print(f" Error processing {file_path.name}: {e}")
                 results.append({
                     "success": False,
                     "input_file": str(file_path),
@@ -223,12 +223,12 @@ def main():
         # Process single file
         file_path = Path(args.file)
         result = ingester.process_file(file_path)
-        print(f"\n✓ Processing complete: {result['output_file']}")
+        print(f"\n Processing complete: {result['output_file']}")
     else:
         # Process all files in directory
         results = ingester.process_all()
         successful = sum(1 for r in results if r.get("success", False))
-        print(f"\n✓ Processed {successful}/{len(results)} files successfully")
+        print(f"\n Processed {successful}/{len(results)} files successfully")
 
 
 if __name__ == "__main__":

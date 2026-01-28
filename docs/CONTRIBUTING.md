@@ -147,5 +147,5 @@ Thank you for your interest in contributing to Spyne IDE! This document provides
 - Check existing documentation
 - Ask in discussions
 
-Thank you for contributing! 🎉
+Thank you for contributing! 
 

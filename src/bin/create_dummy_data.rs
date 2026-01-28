@@ -20,7 +20,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     
     let mut file = std::fs::File::create("data/khatabook/loans.parquet")?;
     ParquetWriter::new(&mut file).finish(&mut khatabook_loans.clone())?;
-    println!("✅ Created data/khatabook/loans.parquet");
+    println!(" Created data/khatabook/loans.parquet");
 
     // Create dummy khatabook_emis data
     let khatabook_emis = df! [
@@ -33,7 +33,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     
     let mut file = std::fs::File::create("data/khatabook/emis.parquet")?;
     ParquetWriter::new(&mut file).finish(&mut khatabook_emis.clone())?;
-    println!("✅ Created data/khatabook/emis.parquet");
+    println!(" Created data/khatabook/emis.parquet");
 
     // Create dummy khatabook_transactions data
     let khatabook_transactions = df! [
@@ -47,7 +47,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     
     let mut file = std::fs::File::create("data/khatabook/transactions.parquet")?;
     ParquetWriter::new(&mut file).finish(&mut khatabook_transactions.clone())?;
-    println!("✅ Created data/khatabook/transactions.parquet");
+    println!(" Created data/khatabook/transactions.parquet");
 
     // Create dummy tb_loans data
     let tb_loans = df! [
@@ -60,7 +60,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     
     let mut file = std::fs::File::create("data/tb/loans.parquet")?;
     ParquetWriter::new(&mut file).finish(&mut tb_loans.clone())?;
-    println!("✅ Created data/tb/loans.parquet");
+    println!(" Created data/tb/loans.parquet");
 
     // Create dummy tb_loan_summary data (with different values to create mismatch)
     let tb_loan_summary = df! [
@@ -74,8 +74,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     
     let mut file = std::fs::File::create("data/tb/loan_summary.parquet")?;
     ParquetWriter::new(&mut file).finish(&mut tb_loan_summary.clone())?;
-    println!("✅ Created data/tb/loan_summary.parquet");
+    println!(" Created data/tb/loan_summary.parquet");
 
-    println!("\n✅ All dummy data files created successfully!");
+    println!("\n All dummy data files created successfully!");
     Ok(())
 }

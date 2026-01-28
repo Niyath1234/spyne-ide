@@ -382,7 +382,7 @@ impl ToolSystem {
         query: &str,
         context: &ExecutionContext,
     ) -> Result<ToolExecutionPlan> {
-        println!("\n🤖 LLM TOOL SELECTION");
+        println!("\n LLM TOOL SELECTION");
         println!("   Query: \"{}\"", query);
         println!("   Available tools: {}", self.available_tools.len());
         
@@ -464,7 +464,7 @@ Return JSON only:"#,
         let plan: ToolExecutionPlan = serde_json::from_str(&cleaned_response)
             .map_err(|e| RcaError::Llm(format!("Failed to parse LLM tool plan: {}. Response (first 500 chars): {}", e, &cleaned_response.chars().take(500).collect::<String>())))?;
         
-        println!("   ✅ LLM selected {} tool(s):", plan.steps.len());
+        println!("    LLM selected {} tool(s):", plan.steps.len());
         for (idx, step) in plan.steps.iter().enumerate() {
             println!("      {}. {} (confidence: {:.2}%)", 
                 idx + 1, step.tool_name, step.confidence * 100.0);
@@ -490,7 +490,7 @@ Return JSON only:"#,
         tool_call: &ToolCall,
         context: &mut ToolExecutionContext,
     ) -> Result<ToolExecutionResult> {
-        println!("\n🔧 EXECUTING TOOL: {}", tool_call.tool_name);
+        println!("\n EXECUTING TOOL: {}", tool_call.tool_name);
         println!("   Parameters: {:?}", tool_call.parameters);
         println!("   Reasoning: {}", tool_call.reasoning);
         
@@ -529,7 +529,7 @@ Return JSON only:"#,
             .and_then(|v| v.as_f64())
             .unwrap_or(0.85);
         
-        println!("   ✅ Fuzzy matching enabled for columns: {:?} (threshold: {:.2})", columns, threshold);
+        println!("    Fuzzy matching enabled for columns: {:?} (threshold: {:.2})", columns, threshold);
         
         // Store fuzzy matching configuration in context
         context.fuzzy_columns = columns;
@@ -549,7 +549,7 @@ Return JSON only:"#,
     ) -> Result<ToolExecutionResult> {
         // This would be implemented to actually perform the group by operation
         // For now, just acknowledge the tool call
-        println!("   ✅ Group by operation queued");
+        println!("    Group by operation queued");
         Ok(ToolExecutionResult {
             success: true,
             message: "Group by operation configured".to_string(),
@@ -562,7 +562,7 @@ Return JSON only:"#,
         tool_call: &ToolCall,
         context: &mut ToolExecutionContext,
     ) -> Result<ToolExecutionResult> {
-        println!("   ✅ Join operation queued");
+        println!("    Join operation queued");
         Ok(ToolExecutionResult {
             success: true,
             message: "Join operation configured".to_string(),
@@ -575,7 +575,7 @@ Return JSON only:"#,
         tool_call: &ToolCall,
         context: &mut ToolExecutionContext,
     ) -> Result<ToolExecutionResult> {
-        println!("   ✅ Filter operation queued");
+        println!("    Filter operation queued");
         Ok(ToolExecutionResult {
             success: true,
             message: "Filter operation configured".to_string(),
@@ -588,7 +588,7 @@ Return JSON only:"#,
         tool_call: &ToolCall,
         context: &mut ToolExecutionContext,
     ) -> Result<ToolExecutionResult> {
-        println!("   ✅ Key normalization queued");
+        println!("    Key normalization queued");
         Ok(ToolExecutionResult {
             success: true,
             message: "Key normalization configured".to_string(),
@@ -601,7 +601,7 @@ Return JSON only:"#,
         tool_call: &ToolCall,
         context: &mut ToolExecutionContext,
     ) -> Result<ToolExecutionResult> {
-        println!("   ✅ Compare operation queued");
+        println!("    Compare operation queued");
         Ok(ToolExecutionResult {
             success: true,
             message: "Compare operation configured".to_string(),
@@ -632,7 +632,7 @@ Return JSON only:"#,
             .and_then(|v| v.as_u64())
             .unwrap_or(10) as usize;
         
-        println!("   🔍 Inspecting columns {:?} in table '{}' (top {} values)", columns, table, top_n);
+        println!("    Inspecting columns {:?} in table '{}' (top {} values)", columns, table, top_n);
         
         // Store inspection request in context
         context.inspection_requests.push(InspectionRequest {
@@ -672,7 +672,7 @@ Return JSON only:"#,
             .and_then(|v| v.as_object())
             .ok_or_else(|| RcaError::Execution("Missing 'join_columns' parameter".to_string()))?;
         
-        println!("   ✅ Validating schema compatibility between '{}' and '{}'", left_table, right_table);
+        println!("    Validating schema compatibility between '{}' and '{}'", left_table, right_table);
         println!("      Join columns: {:?}", join_columns);
         
         // Store validation request
@@ -717,7 +717,7 @@ Return JSON only:"#,
             .and_then(|arr| arr.iter().map(|v| v.as_str().map(|s| s.to_string())).collect::<Option<Vec<_>>>())
             .unwrap_or_else(|| vec!["remove_commas".to_string(), "trim_whitespace".to_string()]);
         
-        println!("   🧹 Cleaning data in table '{}' for columns {:?}", table, columns);
+        println!("    Cleaning data in table '{}' for columns {:?}", table, columns);
         println!("      Operations: {:?}", operations);
         
         // Store cleaning request
@@ -753,7 +753,7 @@ Return JSON only:"#,
             .and_then(|v| v.as_object())
             .ok_or_else(|| RcaError::Execution("Missing 'type_mapping' parameter".to_string()))?;
         
-        println!("   🔄 Casting types in table '{}'", table);
+        println!("    Casting types in table '{}'", table);
         println!("      Type mappings: {:?}", type_mapping);
         
         // Store type casting request
@@ -801,7 +801,7 @@ Return JSON only:"#,
             .and_then(|v| v.as_str())
             .unwrap_or("inner");
         
-        println!("   ✅ Validating join keys between '{}' and '{}' (join type: {})", 
+        println!("    Validating join keys between '{}' and '{}' (join type: {})", 
             left_table, right_table, join_type);
         println!("      Join keys: {:?}", join_keys);
         
@@ -848,7 +848,7 @@ Return JSON only:"#,
             .and_then(|arr| arr.iter().map(|v| v.as_str().map(|s| s.to_string())).collect::<Option<Vec<_>>>())
             .unwrap_or_else(|| vec!["nulls".to_string(), "duplicates".to_string(), "formats".to_string()]);
         
-        println!("   🔍 Detecting anomalies in table '{}'", table);
+        println!("    Detecting anomalies in table '{}'", table);
         if let Some(ref cols) = columns {
             println!("      Columns: {:?}", cols);
         }

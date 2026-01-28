@@ -422,7 +422,7 @@ impl ContractRegistry {
             // Check if primary keys match
             if this_contract.primary_key == other_contract.primary_key {
                 // Exact PK match - 100% join
-                eprintln!("DEBUG: ✅ EXACT PK MATCH! {} PK {:?} == {} PK {:?}", 
+                eprintln!("DEBUG:  EXACT PK MATCH! {} PK {:?} == {} PK {:?}", 
                     table_name, this_contract.primary_key, 
                     other_contract.table_name, other_contract.primary_key);
                 matches.push((
@@ -438,13 +438,13 @@ impl ContractRegistry {
                     .collect();
                 
                 if !common_pk.is_empty() {
-                    eprintln!("DEBUG: ✅ PARTIAL PK MATCH! Common keys: {:?}", common_pk);
+                    eprintln!("DEBUG:  PARTIAL PK MATCH! Common keys: {:?}", common_pk);
                     matches.push((
                         other_contract.table_name.clone(),
                         common_pk,
                     ));
                 } else {
-                    eprintln!("DEBUG: ❌ No PK match between {} and {}", table_name, other_contract.table_name);
+                    eprintln!("DEBUG:  No PK match between {} and {}", table_name, other_contract.table_name);
                 }
             }
         }

@@ -552,7 +552,7 @@ class ConfluenceIngester:
         with open(mapping_file, 'w', encoding='utf-8') as f:
             yaml.dump(existing, f, default_flow_style=False, sort_keys=False)
         
-        print(f"\n✓ Updated document mapping: {len(mappings)} new documents")
+        print(f"\n Updated document mapping: {len(mappings)} new documents")
 
 
 def main():
@@ -584,9 +584,9 @@ def main():
     )
     
     if results.get("success"):
-        print("\n✓ Documents downloaded to data/raw/")
-        print("✓ Product index created/updated")
-        print("✓ Document mapping updated")
+        print("\n Documents downloaded to data/raw/")
+        print(" Product index created/updated")
+        print(" Document mapping updated")
         print("\nNext steps:")
         print("  1. Review product_index.json")
         print("  2. Run: python src/pipeline.py --step ingest")

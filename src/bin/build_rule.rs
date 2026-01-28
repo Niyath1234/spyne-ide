@@ -41,7 +41,7 @@ struct Args {
 async fn main() -> Result<()> {
     let args = Args::parse();
     
-    println!("🔍 Intelligent Rule Builder");
+    println!(" Intelligent Rule Builder");
     println!("==========================\n");
     println!("Business Rule: \"{}\"", args.business_rule);
     println!("System: {}", args.system);
@@ -67,9 +67,9 @@ async fn main() -> Result<()> {
     
     if let Some(output_path) = args.output {
         std::fs::write(&output_path, rule_json)?;
-        println!("\n✅ Rule saved to: {}", output_path.display());
+        println!("\n Rule saved to: {}", output_path.display());
     } else {
-        println!("\n📋 Generated Rule:");
+        println!("\n Generated Rule:");
         println!("{}", rule_json);
     }
     

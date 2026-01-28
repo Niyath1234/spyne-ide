@@ -117,7 +117,7 @@ impl QueryEngine {
     
     /// Execute a direct query from an IntentSpec
     pub async fn execute(&self, intent: &IntentSpec) -> Result<QueryResult> {
-        info!("🔍 Executing direct query: system={:?}, metric={:?}", 
+        info!(" Executing direct query: system={:?}, metric={:?}", 
             intent.systems, intent.target_metrics);
         
         // Validate intent is QUERY type
@@ -136,14 +136,14 @@ impl QueryEngine {
         let start_time = std::time::Instant::now();
         
         // Step 1: Find rule for this system and metric
-        info!("📋 Finding rule for system={}, metric={}", system, metric);
+        info!(" Finding rule for system={}, metric={}", system, metric);
         
         // Find rules for this system and metric
         let rules = self.metadata.get_rules_for_system_metric(system, metric);
         
         if rules.is_empty() {
             // No rule found - try LLM fallback for general queries
-            warn!("⚠️  No rule found for system={}, metric={}. Attempting LLM fallback...", system, metric);
+            warn!("️  No rule found for system={}, metric={}. Attempting LLM fallback...", system, metric);
             
             if let Some(ref llm) = self.llm_client {
                 return self.execute_with_llm_fallback(intent, system, metric, start_time).await;
@@ -158,7 +158,7 @@ impl QueryEngine {
         let rule = self.metadata.get_rule(&rule_id)
             .ok_or_else(|| RcaError::Execution(format!("Rule not found: {}", rule_id)))?;
         
-        info!("✅ Found rule: {} - {}", rule_id, rule.computation.description);
+        info!(" Found rule: {} - {}", rule_id, rule.computation.description);
         
         // Step 2: Parse as-of date if specified
         let as_of_date = intent.time_scope.as_ref()
@@ -166,32 +166,32 @@ impl QueryEngine {
             .and_then(|d| NaiveDate::parse_from_str(d, "%Y-%m-%d").ok());
         
         if let Some(date) = as_of_date {
-            info!("📅 As-of date: {}", date);
+            info!(" As-of date: {}", date);
         }
         
         // Step 3: Compile and execute rule
-        info!("⚙️  Compiling execution plan...");
+        info!("️  Compiling execution plan...");
         let compiler = RuleCompiler::new(self.metadata.clone(), self.data_dir.clone());
         let plan = compiler.compile(&rule_id)?;
         
-        info!("📊 Execution plan has {} steps", plan.steps.len());
+        info!(" Execution plan has {} steps", plan.steps.len());
         for (idx, step) in plan.steps.iter().enumerate() {
             debug!("   Step {}: {:?}", idx + 1, step);
         }
         
         // Step 4: Execute pipeline
-        info!("🚀 Executing pipeline...");
+        info!(" Executing pipeline...");
         let executor = RuleExecutor::new(compiler);
         let df = executor.execute(&rule_id, as_of_date).await?;
         
-        info!("✅ Query executed: {} rows, {} columns", df.height(), df.width());
+        info!(" Query executed: {} rows, {} columns", df.height(), df.width());
         
         // Step 5: Apply constraints if specified
         let mut filtered_df = df;
         if !intent.constraints.is_empty() {
-            info!("🔍 Applying {} constraints...", intent.constraints.len());
+            info!(" Applying {} constraints...", intent.constraints.len());
             filtered_df = self.apply_constraints(filtered_df, &intent.constraints)?;
-            info!("✅ After constraints: {} rows", filtered_df.height());
+            info!(" After constraints: {} rows", filtered_df.height());
         }
         
         // Step 6: Extract metric column (usually the last column or named after metric)
@@ -479,7 +479,7 @@ impl QueryEngine {
         let llm = self.llm_client.as_ref()
             .ok_or_else(|| RcaError::Execution("LLM client not available".to_string()))?;
         
-        info!("🤖 Using LLM to answer general query: system={}, metric={}", system, metric);
+        info!(" Using LLM to answer general query: system={}, metric={}", system, metric);
         
         // Step 1: Find relevant tables for this system
         let system_tables: Vec<_> = self.metadata.tables.iter()
@@ -494,7 +494,7 @@ impl QueryEngine {
             ));
         }
         
-        info!("📊 Found {} tables for system {}", system_tables.len(), system);
+        info!(" Found {} tables for system {}", system_tables.len(), system);
         
         // Step 2: Build context for LLM
         let table_info: Vec<String> = system_tables.iter().map(|t| {
@@ -578,7 +578,7 @@ Be specific and use actual table/column names from the available tables."#,
             .ok_or_else(|| RcaError::Llm("Missing metric_column in LLM response".to_string()))?;
         let aggregation = query_plan["aggregation"].as_str().unwrap_or("sum");
         
-        info!("✅ LLM query plan: table={}, metric_column={}, aggregation={}", 
+        info!(" LLM query plan: table={}, metric_column={}, aggregation={}", 
             table_name, metric_column, aggregation);
         
         // Step 6: Find the table
@@ -592,21 +592,21 @@ Be specific and use actual table/column names from the available tables."#,
             return Err(RcaError::Execution(format!("CSV file not found: {}", csv_path.display())));
         }
         
-        info!("📂 Loading CSV: {}", csv_path.display());
+        info!(" Loading CSV: {}", csv_path.display());
         let mut df = LazyCsvReader::new(&csv_path)
             .with_has_header(true)
             .finish()
             .map_err(|e| RcaError::Execution(format!("Failed to load CSV {}: {}", csv_path.display(), e)))?
             .collect()?;
         
-        info!("✅ Loaded {} rows, {} columns", df.height(), df.width());
+        info!(" Loaded {} rows, {} columns", df.height(), df.width());
         
         // Step 8: Apply date filter if specified
         if let Some(date_str) = as_of_date_str {
             if let Some(date_col) = query_plan["date_filter_column"].as_str() {
                 let col_names = df.get_column_names();
                 if col_names.iter().any(|c| c.eq_ignore_ascii_case(date_col)) {
-                    info!("📅 Filtering by {} = {}", date_col, date_str);
+                    info!(" Filtering by {} = {}", date_col, date_str);
                     // Try to parse date and filter
                     if let Ok(filter_date) = NaiveDate::parse_from_str(date_str, "%Y-%m-%d") {
                         df = df.lazy()
@@ -652,7 +652,7 @@ Be specific and use actual table/column names from the available tables."#,
         
         // Step 10: Apply constraints if specified
         if !intent.constraints.is_empty() {
-            info!("🔍 Applying {} constraints...", intent.constraints.len());
+            info!(" Applying {} constraints...", intent.constraints.len());
             df = self.apply_constraints(df, &intent.constraints)?;
         }
         
@@ -662,7 +662,7 @@ Be specific and use actual table/column names from the available tables."#,
         let metric_col = self.find_metric_column(&df, metric_column)?;
         let summary = self.calculate_summary(&df, &metric_col)?;
         
-        info!("✅ LLM query executed: {} rows, {} columns", df.height(), df.width());
+        info!(" LLM query executed: {} rows, {} columns", df.height(), df.width());
         
         Ok(QueryResult {
             system: system.to_string(),

@@ -657,7 +657,7 @@ Examples:
         // Check for finish_reason - if it's "length" or "content_filter", content might be truncated
         if let Some(finish_reason) = choices[0].get("finish_reason").and_then(|r| r.as_str()) {
             if finish_reason == "length" {
-                eprintln!("⚠️  Warning: LLM response was truncated due to length limit");
+                eprintln!("️  Warning: LLM response was truncated due to length limit");
             } else if finish_reason == "content_filter" {
                 return Err(RcaError::Llm("LLM response was filtered by content policy".to_string()));
             }

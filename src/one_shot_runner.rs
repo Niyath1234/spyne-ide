@@ -68,7 +68,7 @@ impl OneShotRunner {
 
     /// Run one-shot query - main entry point
     pub async fn run(&self, query: &str) -> Result<OneShotResult> {
-        info!("🚀 One-Shot Runner: {}", query);
+        info!(" One-Shot Runner: {}", query);
         
         let mut failures = Vec::new();
         

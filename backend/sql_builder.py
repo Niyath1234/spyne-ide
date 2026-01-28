@@ -2057,13 +2057,13 @@ class QueryExplainPlan:
             for note in self.inference_notes:
                 # Format note based on content
                 if "UNSAFE" in note or "BLOCKED" in note:
-                    lines.append(f"  ⚠️  {note}")
+                    lines.append(f"  ️  {note}")
                 elif "AMBIGUOUS" in note:
-                    lines.append(f"  ⚡ {note}")
+                    lines.append(f"   {note}")
                 elif "Duplicate" in note:
                     lines.append(f"  ℹ️  {note}")
                 else:
-                    lines.append(f"  ✓ {note}")
+                    lines.append(f"   {note}")
         
         if self.intent.get('columns'):
             lines.append("\nCOLUMNS:")

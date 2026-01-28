@@ -167,7 +167,7 @@ impl HybridReasoner {
         &self,
         query: &str,
     ) -> Result<HybridReasoningResult> {
-        info!("🔄 Starting hybrid reasoning with oscillation");
+        info!(" Starting hybrid reasoning with oscillation");
         
         // Step 1: Compile intent (uses LLM for NLP)
         let intent = self.intent_compiler.compile(query).await?;
@@ -200,7 +200,7 @@ impl HybridReasoner {
         intent: &IntentSpec,
         context: &ReasoningContext,
     ) -> Result<HybridReasoningResult> {
-        info!("🧮 Using logical deterministic reasoning");
+        info!(" Using logical deterministic reasoning");
         
         let mut steps = Vec::new();
         steps.push(ReasoningStep {
@@ -238,7 +238,7 @@ impl HybridReasoner {
         intent: &IntentSpec,
         context: &ReasoningContext,
     ) -> Result<HybridReasoningResult> {
-        info!("🤖 Using LLM reasoning");
+        info!(" Using LLM reasoning");
         
         let mut steps = Vec::new();
         steps.push(ReasoningStep {
@@ -276,7 +276,7 @@ impl HybridReasoner {
         intent: &IntentSpec,
         context: &ReasoningContext,
     ) -> Result<HybridReasoningResult> {
-        info!("🔄 Using hybrid reasoning (oscillating between LLM and logical)");
+        info!(" Using hybrid reasoning (oscillating between LLM and logical)");
         
         let mut steps = Vec::new();
         
@@ -345,7 +345,7 @@ impl HybridReasoner {
         &self,
         query: &str,
     ) -> Result<DetailedRcaResult> {
-        info!("🔍 Performing detailed RCA with multi-level drill-down");
+        info!(" Performing detailed RCA with multi-level drill-down");
         
         // Step 1: Hybrid reasoning to select rules
         let reasoning_result = self.reason_with_oscillation(query).await?;
@@ -378,7 +378,7 @@ impl HybridReasoner {
         &self,
         rca_result: &crate::rca::RcaResult,
     ) -> Result<Vec<DrilldownLevel>> {
-        info!("🔬 Performing drill-down analysis");
+        info!(" Performing drill-down analysis");
         
         let mut levels = Vec::new();
         
@@ -413,7 +413,7 @@ impl HybridReasoner {
         &self,
         rca_result: &crate::rca::RcaResult,
     ) -> Result<ValidationResult> {
-        info!("✅ Performing data validation");
+        info!(" Performing data validation");
         
         // Use validation engine
         let validation_engine = ValidationEngine::new(

@@ -281,24 +281,24 @@ impl IntentCompiler {
     /// }
     /// ```
     pub async fn compile_with_clarification(&self, query: &str) -> Result<IntentCompilationResult> {
-        info!("🔍 Assessing query confidence: {}", query);
+        info!(" Assessing query confidence: {}", query);
         
         // Step 1: Assess confidence (fail-fast check)
         if self.fail_fast_enabled {
             let assessment = self.assess_confidence(query).await?;
             
-            info!("📊 Confidence assessment: {:.0}% (threshold: {:.0}%)", 
+            info!(" Confidence assessment: {:.0}% (threshold: {:.0}%)", 
                   assessment.confidence * 100.0, 
                   self.confidence_threshold * 100.0);
             
             if !assessment.is_sufficient {
                 // FAIL FAST: Generate clarification question
-                info!("⚠️  Confidence below threshold. Generating clarification question...");
+                info!("️  Confidence below threshold. Generating clarification question...");
                 let clarification = self.generate_clarification_question(&assessment, query).await?;
                 return Ok(IntentCompilationResult::NeedsClarification(clarification));
             }
             
-            info!("✅ Confidence sufficient. Proceeding with compilation...");
+            info!(" Confidence sufficient. Proceeding with compilation...");
         }
         
         // Step 2: Proceed with compilation
@@ -317,7 +317,7 @@ impl IntentCompiler {
         original_query: &str, 
         user_answer: &str
     ) -> Result<IntentCompilationResult> {
-        info!("📝 Compiling with clarification answer");
+        info!(" Compiling with clarification answer");
         
         // Combine original query with answer
         let enhanced_query = format!(
