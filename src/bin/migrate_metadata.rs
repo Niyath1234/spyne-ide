@@ -2,8 +2,8 @@
 //! 
 //! Run with: cargo run --bin migrate_metadata
 
-use rca_engine::metadata::Metadata;
-use rca_engine::db::{init_pool, MetadataRepository};
+use spyne_ide::metadata::Metadata;
+use spyne_ide::db::{init_pool, MetadataRepository};
 use std::path::PathBuf;
 
 #[tokio::main]

@@ -26,6 +26,16 @@ pub struct SqlEngine {
     // In production, you'd use duckdb crate: duckdb = "0.10"
 }
 
+/// Result of a SQL query execution
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SqlQueryResult {
+    /// Rows returned (as JSON objects)
+    pub rows: Vec<HashMap<String, serde_json::Value>>,
+    
+    /// Column names
+    pub columns: Vec<String>,
+}
+
 /// Result of a SQL probe query
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SqlProbeResult {
@@ -73,6 +83,20 @@ impl SqlEngine {
             metadata,
             data_dir,
         }
+    }
+    
+    /// Execute a SQL query and return results
+    /// 
+    /// This executes a full SQL query and returns all results.
+    pub async fn execute_sql(&self, sql: &str) -> Result<SqlQueryResult> {
+        info!("🔍 Executing SQL query: {}", sql);
+        
+        let result = self.execute_with_polars(sql, usize::MAX).await?;
+        
+        Ok(SqlQueryResult {
+            rows: result.sample_rows,
+            columns: result.columns,
+        })
     }
     
     /// Execute a SQL probe query

@@ -1,11 +1,10 @@
 // Import from library crate
-use rca_engine::metadata::Metadata;
-use rca_engine::llm::{LlmClient, CsvAnalysis};
-use rca_engine::rca::RcaEngine;
-use rca_engine::validation::ValidationEngine;
-use rca_engine::agentic_reasoner::{AgenticReasoner, ExplorationResult};
-use rca_engine::graph::Hypergraph;
-use rca_engine::one_shot_runner::OneShotRunner;
+use spyne_ide::metadata::Metadata;
+use spyne_ide::llm::LlmClient;
+use spyne_ide::rca::RcaEngine;
+use spyne_ide::agentic_reasoner::{AgenticReasoner, ExplorationResult};
+use spyne_ide::graph::Hypergraph;
+use spyne_ide::one_shot_runner::OneShotRunner;
 
 use anyhow::Result;
 use clap::{Parser, Subcommand};
@@ -306,6 +305,7 @@ async fn run_with_metadata(
     match task_type {
         "validation" => {
             info!("Running Data Validation...");
+            use spyne_ide::validation::ValidationEngine;
             let engine = ValidationEngine::new(metadata, llm, data_dir);
             let result = engine.run(actual_query).await?;
             
@@ -417,8 +417,8 @@ async fn run_csv_rca(
     
     // Round all Float64 columns to integers for normalization
     // This ensures values like -3.97E+07 and -3.9695424E7 are compared as integers
-    let df_a = rca_engine::data_utils::round_float64_to_integers(df_a)?;
-    let df_b = rca_engine::data_utils::round_float64_to_integers(df_b)?;
+    let df_a = spyne_ide::data_utils::round_float64_to_integers(df_a)?;
+    let df_b = spyne_ide::data_utils::round_float64_to_integers(df_b)?;
     
     println!("  ✓ Loaded {} rows from System A ({} columns)", df_a.height(), df_a.width());
     println!("  ✓ Loaded {} rows from System B ({} columns)", df_b.height(), df_b.width());
@@ -1213,8 +1213,8 @@ async fn upload_csv(
     metadata_dir: PathBuf,
     data_dir: PathBuf,
 ) -> Result<()> {
-    use rca_engine::ingestion::{CsvConnector, IngestionOrchestrator};
-    use rca_engine::world_state::WorldState;
+    use spyne_ide::ingestion::{CsvConnector, IngestionOrchestrator};
+    use spyne_ide::world_state::WorldState;
     use std::io::{self, Write};
     
     println!("\n{}", "=".repeat(80));
@@ -1390,7 +1390,7 @@ async fn upload_csv(
     // Create entity if it doesn't exist
     let entity_exists = metadata.entities.iter().any(|e| e.id == entity_name);
     if !entity_exists {
-        let entity = rca_engine::metadata::Entity {
+        let entity = spyne_ide::metadata::Entity {
             id: entity_name.to_string(),
             name: entity_name.to_string(),
             description: table_description.to_string(),
@@ -1405,7 +1405,7 @@ async fn upload_csv(
     }
     
     // Create table metadata
-    let table_metadata = rca_engine::metadata::Table {
+    let table_metadata = spyne_ide::metadata::Table {
         name: table_name.clone(),
         entity: entity_name.to_string(),
         primary_key: primary_keys.clone(),
@@ -1413,7 +1413,7 @@ async fn upload_csv(
         system: system_name.to_string(),
         path: format!("{}.parquet", table_name),
         columns: Some(headers.iter().map(|col| {
-            rca_engine::metadata::ColumnMetadata {
+            spyne_ide::metadata::ColumnMetadata {
                 name: col.clone(),
                 description: column_descriptions.get(col).cloned(),
                 data_type: None,

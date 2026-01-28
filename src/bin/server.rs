@@ -6,20 +6,20 @@ use tokio::net::{TcpListener, TcpStream};
 use std::collections::HashMap;
 use std::path::PathBuf;
 use serde::Deserialize;
-use rca_engine::rca::RcaEngine;
-use rca_engine::metadata::Metadata;
-use rca_engine::llm::LlmClient;
-use rca_engine::graph_traversal::GraphTraversalAgent;
-use rca_engine::sql_engine::SqlEngine;
-use rca_engine::graph::Hypergraph;
-use rca_engine::intent_compiler::{IntentCompiler, IntentCompilationResult, IntentSpec, TaskType};
-use rca_engine::error::RcaError;
-use rca_engine::agent::contracts::{AgentRequest, AgentContinueRequest};
-use rca_engine::agent::service::run_agent;
-use rca_engine::node_registry::NodeRegistry;
-use rca_engine::query_engine::QueryEngine;
-use rca_engine::data_assistant::DataAssistant;
-use rca_engine::learning_store::LearningStore;
+use spyne_ide::metadata::Metadata;
+use spyne_ide::llm::LlmClient;
+use spyne_ide::graph_traversal::GraphTraversalAgent;
+use spyne_ide::sql_engine::SqlEngine;
+use spyne_ide::graph::Hypergraph;
+use spyne_ide::intent_compiler::{IntentCompiler, IntentCompilationResult, IntentSpec, TaskType};
+use spyne_ide::error::RcaError;
+use spyne_ide::agent::contracts::{AgentRequest, AgentContinueRequest};
+use spyne_ide::agent::service::run_agent;
+use spyne_ide::data_assistant::DataAssistant;
+use spyne_ide::node_registry::NodeRegistry;
+use spyne_ide::query_engine::QueryEngine;
+use spyne_ide::learning_store::LearningStore;
+use spyne_ide::rca::RcaEngine;
 use std::sync::Arc;
 use tokio::sync::Mutex;
 
@@ -1069,7 +1069,7 @@ async fn execute_graph_traverse(
     query: &str,
     metadata_dir: &PathBuf,
     data_dir: &PathBuf,
-) -> Result<rca_engine::graph_traversal::TraversalState, Box<dyn std::error::Error>> {
+) -> Result<spyne_ide::graph_traversal::TraversalState, Box<dyn std::error::Error>> {
     let metadata = Metadata::load_auto(metadata_dir).await
         .map_err(|e| format!("Failed to load metadata: {}", e))?;
     

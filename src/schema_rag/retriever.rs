@@ -40,7 +40,7 @@ impl SchemaRAG {
         semantic_registry: Arc<dyn SemanticRegistry>,
     ) -> Self {
         Self {
-            vector_store: InMemoryVectorStore::new(),
+            vector_store: InMemoryVectorStore::new(1536), // Default dimension for OpenAI embeddings
             embedder,
             metadata,
             semantic_registry,

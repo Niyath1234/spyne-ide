@@ -42,6 +42,7 @@ python-dateutil>=2.8.2
 # Utilities
 python-multipart>=0.0.6
 typing-extensions>=4.8.0
+PyYAML>=6.0.0
 
 # Testing (dev only)
 pytest>=7.4.0

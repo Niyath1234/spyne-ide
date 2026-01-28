@@ -46,10 +46,6 @@ ENV PATH="/opt/venv/bin:$PATH"
 # Copy application code
 COPY --chown=appuser:appuser . .
 
-# Copy project root files needed by backend
-COPY --chown=appuser:appuser ../metadata /app/../metadata
-COPY --chown=appuser:appuser ../test_outstanding_daily_regeneration.py /app/../test_outstanding_daily_regeneration.py 2>/dev/null || true
-
 # Set environment variables
 ENV PYTHONUNBUFFERED=1 \
     PYTHONDONTWRITEBYTECODE=1 \

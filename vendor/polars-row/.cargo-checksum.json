@@ -1,1 +1,16 @@
-{"files":{"Cargo.toml":"4bc6b2fb72e84b5973448fe34c853158908e179ffd3de3b27b346edf4fbaa53e","Cargo.toml.orig":"85ed0631019adfe53f78c3821f0993827494afe6e2ff5869ff4f677b6808f696","LICENSE":"8dc96ad1d6b79f3005a1c6efa4a1303da32743fe5e6826a9cb4ec3baec0ef2e4","README.md":"d27615ca9ad4cc6ba4c8251f00aa7087d70001508d708a35e93eb7c3c7abe810","src/decode.rs":"3e4d811cd5cc9e0992050c449ae3511084bcfbfaa03003a0dd9cb023794c4022","src/encode.rs":"245c8cccdea0d334efab99ff35113117539ea0dfd0542c930f98ecfc7ef6e37d","src/fixed.rs":"620a2fb12cde7634a843fd0f53b857767403e1dc0088bce36d1a1399d02cf24d","src/lib.rs":"1c5ec0ae8cc6da88febad12163950cef2dedc43f0e0e5ef81ee25b1505a154d7","src/row.rs":"5c8aecadaed83f033ec93c2186e837659affa0d1b9a6752894bb38223769328c","src/utils.rs":"1e3976b58df0064acc8594c28b0da784f2894b203494ec0784a3f35a63430fca","src/variable.rs":"165cba88cf73cbaa4a11cfaf399ffb132ecc9399572e74a92df452fad34e0e57"},"package":"deb285f2f3a65b00dd06bef16bb9f712dbb5478f941dab5cf74f9f016d382e40"}
+{
+  "files": {
+    "Cargo.toml": "4bc6b2fb72e84b5973448fe34c853158908e179ffd3de3b27b346edf4fbaa53e",
+    "Cargo.toml.orig": "85ed0631019adfe53f78c3821f0993827494afe6e2ff5869ff4f677b6808f696",
+    "LICENSE": "8dc96ad1d6b79f3005a1c6efa4a1303da32743fe5e6826a9cb4ec3baec0ef2e4",
+    "README.md": "22e3f1ded8f4873470d196c16459c633ae85d574b87206ce7495445e67750327",
+    "src/decode.rs": "3e4d811cd5cc9e0992050c449ae3511084bcfbfaa03003a0dd9cb023794c4022",
+    "src/encode.rs": "245c8cccdea0d334efab99ff35113117539ea0dfd0542c930f98ecfc7ef6e37d",
+    "src/fixed.rs": "620a2fb12cde7634a843fd0f53b857767403e1dc0088bce36d1a1399d02cf24d",
+    "src/lib.rs": "1c5ec0ae8cc6da88febad12163950cef2dedc43f0e0e5ef81ee25b1505a154d7",
+    "src/row.rs": "5c8aecadaed83f033ec93c2186e837659affa0d1b9a6752894bb38223769328c",
+    "src/utils.rs": "1e3976b58df0064acc8594c28b0da784f2894b203494ec0784a3f35a63430fca",
+    "src/variable.rs": "165cba88cf73cbaa4a11cfaf399ffb132ecc9399572e74a92df452fad34e0e57"
+  },
+  "package": "deb285f2f3a65b00dd06bef16bb9f712dbb5478f941dab5cf74f9f016d382e40"
+}

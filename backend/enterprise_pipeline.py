@@ -272,7 +272,7 @@ class Stage1LinguisticIntentExtractor:
         Returns:
             (success, entities_dict, error_message)
         """
-            if state.tracer:
+        if state.tracer:
                 state.tracer.log_stage(1, "Extracting linguistic intent...")
                 state.tracer.log_tool_call(
                     stage=1,

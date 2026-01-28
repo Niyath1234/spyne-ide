@@ -1,1 +1,27 @@
-{"files":{".cargo_vcs_info.json":"cf221f33ec5a698ab072242faed7c7831608fe9c1169c14cc2e88f0d3453e72a","Cargo.toml":"2b551247c60382d58bb57ced9aa93e9de96248b09616049b0b395cbad8767d27","Cargo.toml.orig":"63c6031abadc7e63f52eb4a94702ce5a6907cf49ec1788b9510a1f1c99adff5a","LICENSE-APACHE":"154397a08d0cb342110281129971868cd562542d0780b0d10722788cd11a1399","LICENSE-MIT":"72af89a828df52a9dcc42512ed64663b3b8d7961dd7a5586d44478eede82bc7a","src/common.rs":"e0baf2a52a1e90f5ce6c47c0c9fb9aa5fe7cd85ef3cd1511e90a6f6d9ceca8bc","src/database/impls.rs":"1aadc1a23fe6e76c98abe3095e114581d541ca437281fdbdf84409fa46102703","src/database/mod.rs":"6a6061d0a8d21245ae0b7418deb516eb82dd3cd79a5422a6ba077797d1a172e1","src/derives/attributes.rs":"729d38fd9f01a4cd131880fca82965e9b75fb2405af12baf229aa41aa72674db","src/derives/decode.rs":"72d3db766ee7d7bb5cad439f7a7dcf72c201daab93e73101c2830bc4b2c49a1a","src/derives/encode.rs":"7a0d35ea88e91ebc43d45248ae88a42edad21de4f301e6a74ee4a3bf90114e2a","src/derives/mod.rs":"26c75643943c95316b47b65324fa8864dedb8150f0e35f2b2514df90acb1624a","src/derives/row.rs":"a45fe92f26c0c59aa844a4c2247ffd13c527993f9179a93940db635a060e091b","src/derives/type.rs":"fd1640a7b99e54d81dcb8c642b3875a4e7f719afd8f8c255e666afaa494376c8","src/lib.rs":"483684adf96996b3cc7dd9dd2816c980b9b83ed5cce4818f547dcb96c8da9206","src/migrate.rs":"e425c282ff84c8c3cc891395c119942b8df6e4833775ffb7e4ba2bf38acee26d","src/query/args.rs":"5b5e1bb5650ef10715fee4b17f7ec78e644769795d3ccb8f19148b18aa1970e3","src/query/data.rs":"2f9f49177c1e905d5c7dc63059c2e073bb9658409b76d4ce8bf8d68603d3d57b","src/query/input.rs":"86e5aa8584847949834c14257da2e465b442b7e7bc58a2a9d20f3d0eb1d26ee4","src/query/mod.rs":"82bfe96bb43e18bb693b0b1354beaf6e584d334b06ecee63314188dc5cac6438","src/query/output.rs":"f212905dc1ce3f09097249c643817016f64b4cdf384e9844cc86ce36e7d1abf6","src/test_attr.rs":"8a1b926c094662ea2e8b9852404cabebce57dff559db93cc959ccf124d4b9dc7"},"package":"1a099220ae541c5db479c6424bdf1b200987934033c2584f79a0e1693601e776"}
+{
+  "files": {
+    ".cargo_vcs_info.json": "cf221f33ec5a698ab072242faed7c7831608fe9c1169c14cc2e88f0d3453e72a",
+    "Cargo.toml": "2b551247c60382d58bb57ced9aa93e9de96248b09616049b0b395cbad8767d27",
+    "Cargo.toml.orig": "63c6031abadc7e63f52eb4a94702ce5a6907cf49ec1788b9510a1f1c99adff5a",
+    "LICENSE-APACHE": "154397a08d0cb342110281129971868cd562542d0780b0d10722788cd11a1399",
+    "LICENSE-MIT": "72af89a828df52a9dcc42512ed64663b3b8d7961dd7a5586d44478eede82bc7a",
+    "src/common.rs": "e0baf2a52a1e90f5ce6c47c0c9fb9aa5fe7cd85ef3cd1511e90a6f6d9ceca8bc",
+    "src/database/impls.rs": "1aadc1a23fe6e76c98abe3095e114581d541ca437281fdbdf84409fa46102703",
+    "src/database/mod.rs": "6a6061d0a8d21245ae0b7418deb516eb82dd3cd79a5422a6ba077797d1a172e1",
+    "src/derives/attributes.rs": "729d38fd9f01a4cd131880fca82965e9b75fb2405af12baf229aa41aa72674db",
+    "src/derives/decode.rs": "72d3db766ee7d7bb5cad439f7a7dcf72c201daab93e73101c2830bc4b2c49a1a",
+    "src/derives/encode.rs": "7a0d35ea88e91ebc43d45248ae88a42edad21de4f301e6a74ee4a3bf90114e2a",
+    "src/derives/mod.rs": "26c75643943c95316b47b65324fa8864dedb8150f0e35f2b2514df90acb1624a",
+    "src/derives/row.rs": "a45fe92f26c0c59aa844a4c2247ffd13c527993f9179a93940db635a060e091b",
+    "src/derives/type.rs": "fd1640a7b99e54d81dcb8c642b3875a4e7f719afd8f8c255e666afaa494376c8",
+    "src/lib.rs": "483684adf96996b3cc7dd9dd2816c980b9b83ed5cce4818f547dcb96c8da9206",
+    "src/migrate.rs": "e425c282ff84c8c3cc891395c119942b8df6e4833775ffb7e4ba2bf38acee26d",
+    "src/query/args.rs": "5b5e1bb5650ef10715fee4b17f7ec78e644769795d3ccb8f19148b18aa1970e3",
+    "src/query/data.rs": "2f9f49177c1e905d5c7dc63059c2e073bb9658409b76d4ce8bf8d68603d3d57b",
+    "src/query/input.rs": "86e5aa8584847949834c14257da2e465b442b7e7bc58a2a9d20f3d0eb1d26ee4",
+    "src/query/mod.rs": "82bfe96bb43e18bb693b0b1354beaf6e584d334b06ecee63314188dc5cac6438",
+    "src/query/output.rs": "f212905dc1ce3f09097249c643817016f64b4cdf384e9844cc86ce36e7d1abf6",
+    "src/test_attr.rs": "8a1b926c094662ea2e8b9852404cabebce57dff559db93cc959ccf124d4b9dc7"
+  },
+  "package": "1a099220ae541c5db479c6424bdf1b200987934033c2584f79a0e1693601e776"
+}

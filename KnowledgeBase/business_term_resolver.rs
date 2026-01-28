@@ -4,7 +4,7 @@
 //! For standalone usage, implement a trait/interface pattern or provide
 //! your own schema registry implementation.
 
-use crate::concepts::BusinessConcept;
+use super::concepts::BusinessConcept;
 use anyhow::Result;
 
 // Placeholder - requires SchemaRegistry integration

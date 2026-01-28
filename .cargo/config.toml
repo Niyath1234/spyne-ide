@@ -1,3 +1,5 @@
+# Cargo configuration for Spyne IDE
+# Uses vendored dependencies, but allows specific packages from crates.io via patches
 
 [source.crates-io]
 replace-with = "vendored-sources"

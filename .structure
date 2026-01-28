@@ -1,0 +1,72 @@
+# Repository Structure
+
+This file documents the clean, organized structure of the Spyne IDE repository.
+
+## Root Level Files (Essential Only)
+
+- `README.md` - Main project documentation
+- `Cargo.toml` - Rust dependencies
+- `package.json` - Node.js dependencies (minimal)
+- `requirements.txt` - Python dependencies
+- `docker-compose.yml` - Docker Compose configuration
+- `env.example` - Environment variables template
+- `.gitignore` - Git ignore patterns
+- `.dockerignore` - Docker build optimization
+
+## Directory Structure
+
+### `/backend` - Python Backend
+Production-ready Flask application with all core functionality.
+
+### `/src` - Rust Core
+High-performance Rust components for query execution and processing.
+
+### `/docs` - Documentation ✨
+All documentation files organized in one place:
+- API guides
+- Setup instructions
+- Production guides
+- Architecture documentation
+- Feature documentation
+
+### `/database` - Database Schemas ✨
+SQL schema files for database initialization:
+- `schema.sql` - Main schema
+- `schema_advanced_planner.sql` - Advanced planner schema
+- `schema_uploads.sql` - Uploads schema
+
+### `/scripts` - Utility Scripts ✨
+Helper scripts for development and maintenance:
+- `fix_vendor_checksums.py` - Vendor checksum fixes
+
+### `/tests` - Test Suite
+Unit and integration tests.
+
+### `/config` - Configuration Files
+Application configuration files.
+
+### `/metadata` - Metadata Definitions
+Metadata files and definitions.
+
+### `/data` - Data Files
+Sample data and data files.
+
+### `/vendor` - Vendor Dependencies
+Vendored Rust dependencies.
+
+### Other Directories
+- `/airflow` - Airflow DAGs
+- `/ui` - Frontend UI
+- `/hypergraph-visualizer` - Visualization tools
+- `/KnowledgeBase` - Knowledge base components
+- `/WorldState` - World state management
+- `/Hypergraph` - Hypergraph components
+
+## Benefits of This Structure
+
+1. **Clean Root** - Only essential files at root level
+2. **Organized Docs** - All documentation in `/docs`
+3. **Clear Separation** - Database, scripts, and docs separated
+4. **Easy Navigation** - Logical grouping of related files
+5. **Professional** - Industry-standard structure
+

@@ -7,25 +7,65 @@ for a specific query rather than loading all tables/registers/pages/indexes.
 """
 
 import json
+import os
+import logging
 from pathlib import Path
 from typing import Dict, List, Any, Optional, Set
 from collections import defaultdict
+
+logger = logging.getLogger(__name__)
+
+# Try to import NodeRegistry client
+try:
+    from backend.node_registry_client import NodeRegistryClient
+    NODE_REGISTRY_AVAILABLE = True
+except ImportError:
+    NODE_REGISTRY_AVAILABLE = False
+    NodeRegistryClient = None
+    logger.warning("NodeRegistry client not available")
 
 
 class NodeLevelMetadataAccessor:
     """Provides isolated node-level metadata access."""
     
-    def __init__(self, metadata_dir: Optional[str] = None):
+    def __init__(
+        self,
+        metadata_dir: Optional[str] = None,
+        use_node_registry: Optional[bool] = None,
+    ):
         """
         Initialize node-level metadata accessor.
         
         Args:
             metadata_dir: Directory containing metadata files
+            use_node_registry: Whether to use NodeRegistry (defaults to env var)
         """
         if metadata_dir:
             self.metadata_dir = Path(metadata_dir)
         else:
             self.metadata_dir = Path(__file__).parent.parent / "metadata"
+        
+        # Initialize NodeRegistry client if available
+        self.node_registry_client = None
+        self.use_node_registry = (
+            use_node_registry
+            if use_node_registry is not None
+            else os.getenv('USE_NODE_REGISTRY', 'false').lower() == 'true'
+        ) and NODE_REGISTRY_AVAILABLE
+        
+        if self.use_node_registry:
+            try:
+                self.node_registry_client = NodeRegistryClient()
+                # Test connection
+                health = self.node_registry_client.health_check()
+                if health.get('status') != 'ok':
+                    logger.warning("NodeRegistry server not healthy, falling back to JSON")
+                    self.use_node_registry = False
+                else:
+                    logger.info("NodeRegistry client initialized successfully")
+            except Exception as e:
+                logger.warning(f"NodeRegistry not available: {e}, falling back to JSON")
+                self.use_node_registry = False
         
         # Cache for loaded metadata (lazy loading)
         self._tables_cache: Dict[str, Dict[str, Any]] = {}
@@ -50,11 +90,46 @@ class NodeLevelMetadataAccessor:
         Returns:
             Dictionary of table_name -> table_metadata
         """
-        # Extract table names from query if not provided
+        # Try NodeRegistry first if available
+        if self.use_node_registry and self.node_registry_client:
+            try:
+                # Search NodeRegistry
+                results = self.node_registry_client.search(query_text)
+                nodes = results.get('nodes', [])
+                metadata_pages = results.get('metadata_pages', [])
+                
+                # Extract table nodes
+                table_nodes = [n for n in nodes if n.get('node_type') == 'table']
+                
+                if table_nodes:
+                    # Convert metadata pages to table format
+                    relevant_tables = {}
+                    for node in table_nodes:
+                        ref_id = node.get('ref_id')
+                        table_name = node.get('name')
+                        
+                        # Find corresponding metadata page
+                        metadata_page = next(
+                            (p for p in metadata_pages if p.get('node_ref_id') == ref_id),
+                            None
+                        )
+                        
+                        if metadata_page:
+                            # Convert metadata page to table format
+                            table_metadata = self._convert_metadata_page_to_table(metadata_page, node)
+                            if table_metadata:
+                                relevant_tables[table_name] = table_metadata
+                    
+                    if relevant_tables:
+                        return relevant_tables
+            except Exception as e:
+                logger.warning(f"NodeRegistry search failed: {e}, falling back to JSON")
+        
+        # Fallback: Extract table names from query if not provided
         if not mentioned_tables:
             mentioned_tables = self._extract_table_names_from_query(query_text)
         
-        # Load only mentioned tables
+        # Load only mentioned tables from JSON
         relevant_tables = {}
         for table_name in mentioned_tables:
             table_metadata = self.get_table(table_name)
@@ -62,6 +137,26 @@ class NodeLevelMetadataAccessor:
                 relevant_tables[table_name] = table_metadata
         
         return relevant_tables
+    
+    def _convert_metadata_page_to_table(
+        self,
+        metadata_page: Dict[str, Any],
+        node: Dict[str, Any],
+    ) -> Optional[Dict[str, Any]]:
+        """Convert metadata page to table format."""
+        try:
+            schema = metadata_page.get('schema', {})
+            return {
+                'name': node.get('name'),
+                'ref_id': node.get('ref_id'),
+                'node_type': node.get('node_type'),
+                'schema': schema,
+                'columns': schema.get('columns', []),
+                'metadata': node.get('metadata', {}),
+            }
+        except Exception as e:
+            logger.warning(f"Failed to convert metadata page: {e}")
+            return None
     
     def get_table(self, table_name: str) -> Optional[Dict[str, Any]]:
         """

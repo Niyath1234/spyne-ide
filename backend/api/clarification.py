@@ -172,7 +172,8 @@ def resolve_clarification():
         # Generate SQL from resolved intent
         # We'll use the resolved intent to generate SQL
         # For now, regenerate from clarified query text
-        # TODO: Could directly use resolved_intent to build SQL
+        # NOTE: Future enhancement - could directly use resolved_intent to build SQL
+        # for better performance and accuracy
         
         # Build a clarified query string that includes the answers
         clarified_query = resolver._build_clarified_query_text(query, answers)

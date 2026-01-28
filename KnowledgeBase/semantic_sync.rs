@@ -3,7 +3,7 @@
 //! NOTE: This module requires SchemaRegistry from the worldstate module.
 //! For standalone usage, implement a trait/interface pattern.
 
-use crate::concepts::KnowledgeBase;
+use super::concepts::KnowledgeBase;
 use anyhow::Result;
 use std::sync::{Arc, RwLock};
 

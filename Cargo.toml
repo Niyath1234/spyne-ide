@@ -1,7 +1,11 @@
 [package]
 name = "spyne-ide"
-version = "0.1.0"
+version = "2.0.0"
 edition = "2021"
+
+[lib]
+name = "spyne_ide"
+crate-type = ["cdylib", "rlib"]
 
 [dependencies]
 # Data processing
@@ -47,7 +51,28 @@ lazy_static = "1.4"
 # Database and caching for learning store
 rusqlite = { version = "0.31", features = ["bundled"] }
 
+# Async traits
+async-trait = "0.1"
+
+# DuckDB support
+# To enable DuckDB:
+# 1. Install DuckDB via Homebrew: brew install duckdb
+# 2. Uncomment the line below:
+# duckdb = { version = "0.10", features = ["bundled"] }
+# For now, DuckDB engine uses Polars as fallback
+
+# Trino client (using HTTP REST API)
+# Note: We'll use reqwest (already in dependencies) for Trino REST API
+
 # HTTP server for UI - using tokio directly (no external HTTP framework needed)
+
+# Python bindings (PyO3) - Optional, only needed for Python bindings
+# Note: PyO3 not in vendor - will be fetched from crates.io when needed
+# Uncomment when ready to build Python bindings:
+# pyo3 = { version = "0.20", features = ["auto-initialize"] }
+
+# HTTP server for NodeRegistry - using tokio directly (no axum needed)
+# axum, tower, tower-http removed - using tokio-based HTTP server instead
 
 # Hypergraph module dependencies  
 dashmap = "7.0.0-rc2"
@@ -57,6 +82,9 @@ dashmap = "7.0.0-rc2"
 
 # PostgreSQL support
 sqlx = { version = "0.8", features = ["runtime-tokio-rustls", "postgres", "chrono", "uuid", "macros"], default-features = false }
+
+# SQL parser for query profiling
+sqlparser = "0.39"
 
 # Vector database optimization - HNSW for approximate nearest neighbor search
 # To add: Download from https://github.com/rusty-celery/hnsw-rs and add to vendor/
@@ -79,4 +107,8 @@ path = "src/bin/server.rs"
 [[bin]]
 name = "migrate_metadata"
 path = "src/bin/migrate_metadata.rs"
+
+[[bin]]
+name = "node_registry_server"
+path = "src/bin/node_registry_server.rs"
 

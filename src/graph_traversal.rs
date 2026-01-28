@@ -867,10 +867,11 @@ impl GraphTraversalAgent {
                 if let Some(date) = date_constraint {
                     // Try to find date column
                     if let Some(table) = self.metadata.tables.iter().find(|t| t.name == *table_name) {
-                        if !table.time_column.is_empty() {
-                            let date_col = &table.time_column;
-                            let condition = format!("{} = '{}'", date_col, date);
-                            return self.sql_engine.probe_filter(table_name, &condition).await;
+                        if let Some(ref date_col) = table.time_column {
+                            if !date_col.is_empty() {
+                                let condition = format!("{} = '{}'", date_col, date);
+                                return self.sql_engine.probe_filter(table_name, &condition).await;
+                            }
                         }
                     }
                 }
@@ -996,8 +997,10 @@ impl GraphTraversalAgent {
     fn find_time_column_for_rule(&self, rule: &crate::metadata::Rule) -> Option<String> {
         if let Some(ref source_table) = rule.computation.source_table {
             if let Some(table) = self.metadata.tables.iter().find(|t| t.name == *source_table) {
-                if !table.time_column.is_empty() {
-                    return Some(table.time_column.clone());
+                if let Some(ref time_col) = table.time_column {
+                    if !time_col.is_empty() {
+                        return Some(time_col.clone());
+                    }
                 }
             }
         }
@@ -1005,8 +1008,10 @@ impl GraphTraversalAgent {
         for entity in &rule.computation.source_entities {
             if let Some(table) = self.metadata.tables.iter()
                 .find(|t| t.entity == *entity && t.system == rule.system) {
-                if !table.time_column.is_empty() {
-                    return Some(table.time_column.clone());
+                if let Some(ref time_col) = table.time_column {
+                    if !time_col.is_empty() {
+                        return Some(time_col.clone());
+                    }
                 }
             }
         }
@@ -1446,7 +1451,7 @@ impl GraphTraversalAgent {
                 system: table.system.clone(),
                 entity: table.entity.clone(),
                 primary_key: table.primary_key.clone(),
-                time_column: if table.time_column.is_empty() { None } else { Some(table.time_column.clone()) },
+                time_column: table.time_column.clone(),
                 columns,
                 labels: table.labels.as_ref().cloned().unwrap_or_default(),
                 grain,

@@ -3,7 +3,7 @@
 //! NOTE: This module requires TableContract from the worldstate module.
 //! For standalone usage, implement a trait/interface pattern.
 
-use crate::concepts::KnowledgeBase;
+use super::concepts::KnowledgeBase;
 
 // Placeholder - requires TableContract integration
 pub struct ContractTableExtractor;

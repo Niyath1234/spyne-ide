@@ -2,8 +2,8 @@
 //! 
 //! Exposes RAG retrieval endpoints for Python backend integration
 
-use crate::concepts::{KnowledgeBase, BusinessConcept};
-use crate::vector_store::{VectorStore, ConceptSearchResult};
+use super::concepts::{KnowledgeBase, BusinessConcept};
+use super::vector_store::{VectorStore, ConceptSearchResult};
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 use tokio::sync::RwLock;

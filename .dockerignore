@@ -1,0 +1,122 @@
+# Git
+.git
+.gitignore
+.gitattributes
+.git/
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+venv/
+env/
+ENV/
+.venv
+*.egg-info/
+dist/
+build/
+.pytest_cache/
+.coverage
+htmlcov/
+.mypy_cache/
+.dmypy.json
+
+# Node
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+.npm
+.yarn/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+*.code-workspace
+*.sublime-*
+
+# Logs
+*.log
+logs/
+*.log.*
+
+# Environment
+.env
+.env.local
+.env.*.local
+.env.production
+.env.development
+
+# Documentation (keep only essential)
+*.md
+!README.md
+!SETUP.md
+!CHANGELOG.md
+
+# Tests
+tests/
+.pytest_cache/
+test-results/
+junit.xml
+
+# Data (exclude large files)
+data/*.parquet
+tables/
+*.db
+*.sqlite
+*.sqlite3
+
+# Build artifacts
+target/
+*.o
+*.so
+*.dylib
+*.dll
+*.pdb
+
+# Rust
+**/*.rs.bk
+Cargo.lock
+
+# Temporary
+*.tmp
+*.temp
+*.bak
+*.backup
+*.old
+*.orig
+*.rej
+
+# Airflow
+airflow/logs/
+airflow/airflow.db
+airflow/airflow-webserver.pid
+
+# Jupyter
+.ipynb_checkpoints
+*.ipynb_checkpoints
+
+# Docker
+docker-compose.override.yml
+.dockerignore.bak
+
+# CI/CD
+.github/
+.gitlab-ci.yml
+.travis.yml
+.circleci/
+
+# Vendor (keep vendor directory but exclude unnecessary files)
+vendor/**/*.md
+vendor/**/tests/
+vendor/**/examples/
+vendor/**/benches/
+vendor/**/target/
+

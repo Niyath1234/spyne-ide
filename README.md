@@ -1,173 +1,423 @@
 # Spyne IDE
 
-A production-grade SQL query generation system using LLM and comprehensive metadata context.
+**Intelligent Data Assistant with Proactive Clarification System**
 
-## Features
+Spyne IDE is a production-ready natural language to SQL query engine with advanced features including proactive clarification for ambiguous queries, comprehensive metadata management, and intelligent query planning.
 
-- **LLM-based Query Generation**: Uses OpenAI GPT models to generate SQL from natural language
-- **Comprehensive Context**: Builds context from tables, metrics, dimensions, relationships, and business rules
-- **Metadata Caching**: Centralized metadata provider with process-level caching
-- **Token Budget Management**: Intelligent token counting and truncation
-- **Retry Logic**: Automatic retry with exponential backoff for transient failures
-- **Query Caching**: Semantic caching to reduce API calls and costs
-- **Parallel Knowledge Retrieval**: Parallel execution of RAG, graph, and rule searches
-- **Dynamic Rule Discovery**: Automatically discovers relevant business rules
-- **Context Compression**: Reduces token usage by 30-50% while maintaining accuracy
+## 🚀 Features
 
-## Architecture
+### Core Capabilities
+- **Natural Language to SQL** - Convert natural language queries to optimized SQL
+- **Proactive Clarification** - Asks intelligent questions for ambiguous queries
+- **Context-Aware LLM** - Uses comprehensive metadata for accurate query generation
+- **Multi-Engine Execution** - Supports DuckDB, Trino, Polars, and traditional databases
+- **Intelligent Planning** - Multi-stage planning with intent extraction and schema selection
 
-### Module Structure
+### Production Features
+- ✅ **Rate Limiting** - Token bucket algorithm for API protection
+- ✅ **Structured Logging** - JSON logs with correlation IDs
+- ✅ **Metrics & Monitoring** - Golden signals, Prometheus metrics
+- ✅ **Error Handling** - Graceful degradation and fallbacks
+- ✅ **Health Checks** - Comprehensive health endpoints
+- ✅ **Security** - CORS, request validation, SQL injection protection
+
+### Clarification System
+- **Proactive Questions** - Detects ambiguities and asks clarifying questions
+- **Answer Resolution** - Merges user answers into query intent
+- **LLM-Powered** - Natural, context-aware question generation
+- **Metrics Tracking** - Monitors clarification usage and success rates
+
+## 📋 Table of Contents
+
+- [Quick Start](#quick-start)
+- [Architecture](#architecture)
+- [API Documentation](#api-documentation)
+- [Configuration](#configuration)
+- [Production Deployment](#production-deployment)
+- [Development](#development)
+- [Documentation](#documentation)
+
+## 🏃 Quick Start
+
+### Prerequisites
+
+- Python 3.10+
+- Rust 1.70+
+- Node.js 18+ (for UI)
+- PostgreSQL/MySQL/SQLite (for data)
+
+### Installation
+
+```bash
+# Clone repository
+git clone https://github.com/Niyath1234/spyne-ide.git
+cd spyne-ide
+
+# Install Python dependencies
+pip install -r requirements.txt
+
+# Install Rust dependencies (automatic on build)
+cargo build --release
+
+# Copy environment template
+cp env.example .env
+
+# Edit .env with your configuration
+# - Set OPENAI_API_KEY for LLM features
+# - Configure database connections
+# - Set other environment variables
+```
+
+### Running the Application
+
+```bash
+# Start backend server
+cd backend
+python app_production.py
+
+# Or use gunicorn for production
+gunicorn -c gunicorn.conf.py app_production:app
+
+# Server runs on http://localhost:8080
+```
+
+### Testing
+
+```bash
+# Run unit tests
+python -m pytest tests/ -v
+
+# Run specific test suite
+python -m pytest tests/test_clarification_agent.py -v
+```
+
+## 🏗️ Architecture
+
+### Four-Plane Architecture
 
 ```
-spyne-ide/
-├── backend/
-├── __init__.py              # Module exports
-├── metadata_provider.py     # Centralized metadata loading with caching
-├── llm_query_generator.py  # LLM-based query generation
-├── sql_builder.py          # SQL query builder
-├── hybrid_knowledge_retriever.py  # Hybrid knowledge retrieval
-├── knowledge_base_client.py # KnowledgeBase API client
-├── query_regeneration_api.py # Query generation API
-├── api/                     # REST API endpoints
-├── planning/                # Query planning components
-├── execution/               # Query execution components
-├── observability/           # Logging and monitoring
-├── security/                # Security features
-└── ...
+┌─────────────────┐
+│  Ingress Plane  │  Request validation, auth, rate limiting
+└────────┬────────┘
+         │
+┌────────▼────────┐
+│ Planning Plane  │  Intent extraction, SQL generation, clarification
+└────────┬────────┘
+         │
+┌────────▼────────┐
+│Execution Plane  │  Query execution, engine selection
+└────────┬────────┘
+         │
+┌────────▼────────┐
+│Presentation     │  Result formatting, explanation generation
+│     Plane       │
+└─────────────────┘
 ```
 
 ### Key Components
 
-1. **MetadataProvider**: Single source of truth for metadata with caching
-2. **LLMQueryGenerator**: Generates SQL intents using LLM with comprehensive context
-3. **ContextBundle**: Bundles all context components (RAG, hybrid, structured, rules)
-4. **HybridKnowledgeRetriever**: Combines RAG, graph, and rule-based retrieval
+- **Planning Plane** - Intent extraction, SQL generation, clarification
+- **Execution Plane** - Multi-engine query execution
+- **Knowledge Base** - RAG-based knowledge retrieval
+- **Metadata System** - Node-level metadata isolation
+- **Clarification Agent** - Proactive question generation
 
-## Installation
+## 📡 API Documentation
 
+### Main Endpoints
+
+#### Query Generation
 ```bash
-# Install dependencies
-pip install -r requirements.txt
-
-# Set environment variables
-export OPENAI_API_KEY=your_api_key
-export OPENAI_MODEL=gpt-4  # or gpt-4o, gpt-5, etc.
-export OPENAI_BASE_URL=https://api.openai.com/v1  # Optional
+POST /api/agent/run
+{
+  "query": "show me top 10 customers by revenue",
+  "clarification_mode": true
+}
 ```
 
-## Usage
+#### Clarification Endpoints
+```bash
+# Analyze query for clarification needs
+POST /api/clarification/analyze
+{
+  "query": "show me customers",
+  "use_llm": true
+}
 
-### Basic Usage
+# Resolve clarified query
+POST /api/clarification/resolve
+{
+  "query": "show me customers",
+  "answers": {
+    "metric": "revenue",
+    "time_range": "last 30 days"
+  }
+}
 
-```python
-from backend import LLMQueryGenerator, MetadataProvider
-
-# Load metadata (cached automatically)
-metadata = MetadataProvider.load()
-
-# Generate SQL from natural language
-generator = LLMQueryGenerator()
-intent, reasoning_steps = generator.generate_sql_intent(
-    "show me khatabook customers",
-    metadata
-)
-
-# Convert intent to SQL
-sql, explain_plan, warnings = generator.intent_to_sql(intent, metadata)
+# Get metrics
+GET /api/clarification/metrics
 ```
 
-### API Usage
-
-```python
-from backend.query_regeneration_api import generate_sql_from_query
-
-result = generate_sql_from_query("show me khatabook customers", use_llm=True)
-print(result["sql"])
+#### Health & Metrics
+```bash
+GET /api/v1/health
+GET /api/v1/health/detailed
+GET /api/v1/metrics
+GET /api/v1/metrics/prometheus
 ```
 
-## Code Standards
+See [CLARIFICATION_API_GUIDE.md](./docs/CLARIFICATION_API_GUIDE.md) for detailed API documentation.
 
-### Import Organization
-
-1. **Standard library imports** (alphabetically sorted)
-2. **Third-party imports** (alphabetically sorted)
-3. **Local application imports** (using absolute imports with `backend.` prefix)
-
-Example:
-```python
-import json
-import logging
-from pathlib import Path
-from typing import Dict, Any
-
-import requests
-import tiktoken
-
-from backend.metadata_provider import MetadataProvider
-from backend.sql_builder import SQLBuilder
-```
-
-### Module Structure
-
-- All modules use absolute imports: `from backend.module import Class`
-- No `sys.path` manipulation (except in entry points)
-- Proper `__init__.py` files for package structure
-- Clear separation of concerns
-
-### Error Handling
-
-- All exceptions are logged with `exc_info=True`
-- Graceful degradation for optional components
-- Critical failures raise exceptions
-- Non-critical failures log warnings and continue
-
-### Logging
-
-- Use module-level logger: `logger = logging.getLogger(__name__)`
-- Log levels: DEBUG, INFO, WARNING, ERROR
-- Include context in log messages
-
-## Configuration
+## ⚙️ Configuration
 
 ### Environment Variables
 
-- `OPENAI_API_KEY`: OpenAI API key (required)
-- `OPENAI_MODEL`: Model to use (default: gpt-4)
-- `OPENAI_BASE_URL`: Base URL for API (default: https://api.openai.com/v1)
-
-### Metadata Files
-
-Place metadata files in `metadata/` directory:
-- `semantic_registry.json`: Metrics and dimensions
-- `tables.json`: Table schemas and relationships
-
-## Testing
-
 ```bash
-# Run tests
-pytest tests/
+# Server
+RCA_HOST=0.0.0.0
+RCA_PORT=8080
+RCA_DEBUG=false
 
-# Run with coverage
-pytest --cov=backend tests/
+# Security
+RCA_SECRET_KEY=your-secret-key
+RCA_RATE_LIMIT_RPM=60
+RCA_RATE_LIMIT_RPH=1000
+RCA_CORS_ORIGINS=*
+
+# LLM
+OPENAI_API_KEY=your-api-key
+OPENAI_MODEL=gpt-4
+OPENAI_BASE_URL=https://api.openai.com/v1
+RCA_LLM_TIMEOUT=120
+
+# Database
+RCA_DB_TYPE=postgresql
+RCA_DB_HOST=localhost
+RCA_DB_PORT=5432
+RCA_DB_NAME=spyne_db
+RCA_DB_USER=spyne_user
+RCA_DB_PASSWORD=password
+
+# Observability
+RCA_LOG_LEVEL=INFO
+RCA_ENABLE_METRICS=true
+RCA_ENABLE_TRACING=true
+
+# Clarification
+SPYNE_CLARIFICATION_MODE=true
 ```
 
-## Performance Optimizations
+See `env.example` for all available options.
 
-1. **Metadata Caching**: Metadata loaded once per process
-2. **Query Caching**: Repeated queries use cached results
-3. **Parallel Retrieval**: Knowledge retrieval runs in parallel
-4. **Context Compression**: Reduces token usage by 30-50%
-5. **Token Budget**: Prevents context overflow errors
+## 🚢 Production Deployment
 
-## Contributing
+### Docker Deployment
 
-1. Follow PEP 8 style guide
-2. Use type hints for function signatures
-3. Write docstrings for all public functions/classes
-4. Add tests for new features
-5. Update README for significant changes
+```bash
+# Build image
+docker build -t spyne-ide:latest .
 
-## License
+# Run container
+docker run -p 8080:8080 \
+  -e OPENAI_API_KEY=your-key \
+  -e RCA_DB_HOST=db \
+  spyne-ide:latest
+```
 
-[Your License Here]
+### Docker Compose
+
+```bash
+docker-compose up -d
+```
+
+### Production Checklist
+
+- [x] Rate limiting configured
+- [x] Logging configured
+- [x] Metrics enabled
+- [x] Health checks configured
+- [x] Error handling implemented
+- [x] Security settings configured
+- [x] Database connections configured
+- [x] LLM API keys configured
+
+See [PRODUCTION_READINESS.md](./docs/PRODUCTION_READINESS.md) for detailed checklist.
+
+## 🛠️ Development
+
+### Project Structure
+
+```
+spyne-ide/
+├── backend/                 # Python backend
+│   ├── api/                # API endpoints
+│   ├── planes/             # Four-plane architecture
+│   ├── planning/           # Query planning components
+│   ├── execution/          # Query execution engines
+│   ├── invariants/         # System invariants
+│   └── app_production.py   # Production Flask app
+├── src/                     # Rust core
+│   ├── node_registry.rs    # Node registry
+│   ├── sql_engine.rs       # SQL execution
+│   └── ...
+├── docs/                    # Documentation
+│   ├── PRODUCTION_READINESS.md
+│   ├── CLARIFICATION_API_GUIDE.md
+│   └── ...
+├── database/                # Database schemas
+│   ├── schema.sql
+│   └── ...
+├── scripts/                 # Utility scripts
+│   └── fix_vendor_checksums.py
+├── tests/                   # Test suite
+├── metadata/                # Metadata definitions
+├── config/                  # Configuration files
+├── data/                     # Data files
+├── KnowledgeBase/           # Knowledge base server
+├── docker-compose.yml        # Docker Compose config
+├── Cargo.toml               # Rust dependencies
+├── requirements.txt         # Python dependencies
+└── README.md                # This file
+```
+
+### Code Style
+
+- Python: Follow PEP 8
+- Rust: Follow rustfmt defaults
+- Use type hints in Python
+- Document public APIs
+
+### Running Tests
+
+```bash
+# All tests
+pytest
+
+# With coverage
+pytest --cov=backend --cov-report=html
+
+# Specific test
+pytest tests/test_clarification_agent.py -v
+```
+
+## 📚 Documentation
+
+### Core Documentation
+- [END_TO_END_PIPELINE.md](./docs/END_TO_END_PIPELINE.md) - Complete pipeline flow
+- [CLARIFICATION_API_GUIDE.md](./docs/CLARIFICATION_API_GUIDE.md) - Clarification API reference
+- [PRODUCTION_READINESS.md](./docs/PRODUCTION_READINESS.md) - Production deployment guide
+- [PRODUCTION_FEATURES_CHECKLIST.md](./docs/PRODUCTION_FEATURES_CHECKLIST.md) - Production features
+- [SETUP.md](./docs/SETUP.md) - Installation and setup guide
+- [CHANGELOG.md](./docs/CHANGELOG.md) - Version history
+
+### Feature Documentation
+- [PERMISSIVE_MODE.md](./docs/PERMISSIVE_MODE.md) - Permissive mode (fail-open)
+- [CLARIFICATION_SUMMARY.md](./docs/CLARIFICATION_SUMMARY.md) - Clarification system overview
+- [IMPLEMENTATION_COMPLETE.md](./docs/IMPLEMENTATION_COMPLETE.md) - Implementation details
+- [INTEGRATION_STATUS.md](./docs/INTEGRATION_STATUS.md) - Integration status
+- [SHIP_READY_CHECKLIST.md](./docs/SHIP_READY_CHECKLIST.md) - Pre-deployment checklist
+
+## 🎯 Key Features Explained
+
+### Proactive Clarification
+
+When a query is ambiguous, the system proactively asks clarifying questions:
+
+```python
+# Ambiguous query
+query = "show me customers"
+
+# System response
+{
+  "needs_clarification": true,
+  "questions": [
+    {
+      "question": "What would you like to see about customers?",
+      "field": "metric",
+      "options": ["revenue", "total_customers"],
+      "required": true
+    }
+  ]
+}
+```
+
+### Context-Aware LLM
+
+The LLM uses comprehensive context:
+- Table schemas and relationships
+- Metrics and dimensions definitions
+- Business rules and constraints
+- Knowledge base concepts
+- Historical query patterns
+
+### Intelligent Engine Selection
+
+Automatically selects the best execution engine:
+- DuckDB for analytical queries
+- Trino for federated queries
+- Polars for data transformations
+- Traditional DB for simple queries
+
+## 🔒 Security
+
+- Rate limiting per API key/IP
+- SQL injection protection
+- Request size limits
+- CORS configuration
+- Input validation
+- Error message sanitization
+
+## 📊 Monitoring
+
+### Metrics Available
+
+- Request latency (P50, P95, P99)
+- Error rates
+- Throughput
+- Clarification rates
+- Engine selection distribution
+- LLM token usage
+
+### Logging
+
+Structured JSON logs with:
+- Correlation IDs
+- Request tracing
+- Performance metrics
+- Error details
+
+## 🤝 Contributing
+
+1. Fork the repository
+2. Create a feature branch
+3. Make your changes
+4. Add tests
+5. Submit a pull request
+
+## 📝 License
+
+[Add your license here]
+
+## 🙏 Acknowledgments
+
+Built with:
+- Flask (Python web framework)
+- Rust (High-performance core)
+- OpenAI GPT (LLM)
+- DuckDB/Trino/Polars (Query engines)
+
+## 📞 Support
+
+For issues and questions:
+- GitHub Issues: [Link to issues]
+- Documentation: See `/docs` directory
+- API Reference: [CLARIFICATION_API_GUIDE.md](./docs/CLARIFICATION_API_GUIDE.md)
+
+---
+
+**Status:** ✅ Production Ready
+
+**Version:** 2.0.0
+
+**Last Updated:** January 2024
 

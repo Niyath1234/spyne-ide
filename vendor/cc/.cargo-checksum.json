@@ -1,13 +1,13 @@
 {
   "files": {
     ".cargo_vcs_info.json": "180fb62a60d18d0593b0fc92d2d5cce9cb1a0d648839a317c2cf3bba57c744a6",
-    "CHANGELOG.md": "f7c860164ad789e1c4e35aafaff755530d873d35036a819e841ee20b9cb4a817",
+    "CHANGELOG.md": "0cea90e1fb81be339e60fc9d8472e31210de1911786836e42cea97c5eeebaa34",
     "Cargo.lock": "497c499e308a7b0473bfd575197740bb1fd72483a7926953793abe18e4aa6fbb",
     "Cargo.toml": "ea7867647b43346615f986e1952d00b2fae84f660e6ddf1a921d12fe66f9842d",
     "Cargo.toml.orig": "83f378d0731eee4f911ae9e4a177263bb0471198475c7f907ae706a73c616c7a",
     "LICENSE-APACHE": "a60eea817514531668d7e00765731449fe14d059d3249e0bc93b36de45f759f2",
     "LICENSE-MIT": "378f5840b258e2779c39418f3f2d7b2ba96f1c7917dd6be0713f88305dbda397",
-    "README.md": "cc952a506dc726eed3e128d47d62defbac4470bbb0e465f6a043ae8bf0c96d19",
+    "README.md": "0cea90e1fb81be339e60fc9d8472e31210de1911786836e42cea97c5eeebaa34",
     "clippy.toml": "aa7850db4350883c8f373bd0d6b4d19bf3b75f13c1c238e24368c109cb52fb1d",
     "src/command_helpers.rs": "2e53ac6e632845157829c3cb8845c3301eb00d57567e3607884a624715024dab",
     "src/detect_compiler_family.c": "97ca4b021495611e828becea6187add37414186a16dfedd26c2947cbce6e8b2f",

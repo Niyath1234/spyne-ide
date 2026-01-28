@@ -268,7 +268,16 @@ impl DataAssistant {
                         reasoning_steps.push(format!("Query executed successfully, returned {} rows", query_result.rows.len()));
 
                         // Generate answer
-                        let answer = self.generate_answer_from_results(question, &validated_sql, &query_result).await?;
+                        // Convert SqlQueryResult to SqlProbeResult for compatibility
+                        let probe_result = crate::sql_engine::SqlProbeResult {
+                            row_count: query_result.rows.len(),
+                            sample_rows: query_result.rows.clone(),
+                            columns: query_result.columns.clone(),
+                            summary: None,
+                            execution_time_ms: 0,
+                            warnings: Vec::new(),
+                        };
+                        let answer = self.generate_answer_from_results(question, &validated_sql, &probe_result).await?;
 
                         // Log success
                         let log = crate::observability::execution_log::ExecutionLog::new(query_id.clone(), question.to_string())
@@ -681,7 +690,16 @@ ANSWER:"#,
                 reasoning_steps.push(format!("Query executed successfully, returned {} rows", result.rows.len()));
                 
                 // Step 3: Generate natural language answer from results
-                let answer = self.generate_answer_from_results(question, &validated_sql, &result).await?;
+                // Convert SqlQueryResult to SqlProbeResult for compatibility
+                let probe_result = crate::sql_engine::SqlProbeResult {
+                    row_count: result.rows.len(),
+                    sample_rows: result.rows.clone(),
+                    columns: result.columns.clone(),
+                    summary: None,
+                    execution_time_ms: 0,
+                    warnings: Vec::new(),
+                };
+                let answer = self.generate_answer_from_results(question, &validated_sql, &probe_result).await?;
                 
                 let result_json = serde_json::json!({
                     "sql": validated_sql,
@@ -925,14 +943,14 @@ JSON:"#,
         &self,
         question: &str,
         sql: &str,
-        result: &crate::sql_engine::SqlQueryResult,
+        result: &crate::sql_engine::SqlProbeResult,
     ) -> Result<String> {
         // Format results for LLM
-        let results_summary = if result.rows.is_empty() {
+        let results_summary = if result.sample_rows.is_empty() {
             "No rows returned.".to_string()
-        } else if result.rows.len() == 1 {
+        } else if result.sample_rows.len() == 1 {
             // Single row result - format nicely
-            let row = &result.rows[0];
+            let row = &result.sample_rows[0];
             let mut parts = Vec::new();
             for (col, val) in row {
                 let val_str = match val {
@@ -947,7 +965,7 @@ JSON:"#,
             parts.join(", ")
         } else {
             // Multiple rows - summarize
-            format!("Returned {} rows with columns: {}", result.rows.len(), result.columns.join(", "))
+            format!("Returned {} rows with columns: {}", result.sample_rows.len(), result.columns.join(", "))
         };
         
         let prompt = format!(

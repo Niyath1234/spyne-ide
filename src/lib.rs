@@ -32,6 +32,7 @@ pub mod rule_compiler;
 pub mod task_grounder;
 pub mod execution_planner;
 pub mod execution_engine;
+pub mod execution;
 pub mod goal_directed_explorer;
 pub mod one_shot_runner;
 pub mod safety_guardrails;
@@ -66,6 +67,10 @@ pub mod security;
 pub mod observability;
 pub mod learning;
 pub mod semantic_completeness;
+// Python bindings - only compile if pyo3 is available
+// Commented out until PyO3 is set up
+// #[cfg(feature = "python-bindings")]
+// pub mod python_bindings;
 
 // Re-export Hypergraph module
 #[path = "../Hypergraph/mod.rs"]

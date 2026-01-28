@@ -20,6 +20,7 @@ pub struct Document {
     pub id: String,
     pub text: String,
     pub metadata: HashMap<String, String>,
+    // Embedding is not serialized (too large, can be recomputed)
     pub embedding: Option<Embedding>,
 }
 
@@ -160,8 +161,16 @@ impl InMemoryVectorStore {
     /// Save the vector store to disk
     pub fn save(&self, path: &str) -> Result<()> {
         // Save documents and metadata (HNSW will be rebuilt on load)
+        // Convert documents to serializable format (skip embeddings)
+        let documents_serializable: Vec<_> = self.documents.values()
+            .map(|doc| serde_json::json!({
+                "id": doc.id,
+                "text": doc.text,
+                "metadata": doc.metadata,
+            }))
+            .collect();
         let data = serde_json::json!({
-            "documents": self.documents,
+            "documents": documents_serializable,
             "node_to_doc_id": self.node_to_doc_id,
             "dimension": self.dimension
         });

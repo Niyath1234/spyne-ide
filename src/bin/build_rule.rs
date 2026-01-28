@@ -1,7 +1,7 @@
 use anyhow::Result;
 use clap::Parser;
-use rca_engine::intelligent_rule_builder::IntelligentRuleBuilder;
-use rca_engine::metadata::Metadata;
+use spyne_ide::intelligent_rule_builder::IntelligentRuleBuilder;
+use spyne_ide::metadata::Metadata;
 use std::path::PathBuf;
 
 /// CLI tool to build rules from natural language business rules
