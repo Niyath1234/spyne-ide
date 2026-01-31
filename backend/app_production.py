@@ -297,6 +297,9 @@ def create_app() -> Flask:
 
 def register_middleware(app: Flask):
     """Register middleware."""
+    # Initialize authentication middleware
+    from backend.auth import init_auth_middleware
+    init_auth_middleware(app, secret_key=ProductionConfig.SECRET_KEY)
     
     @app.before_request
     def before_request():
@@ -487,13 +490,25 @@ def get_metrics():
 @metrics_bp.route('/metrics/prometheus', methods=['GET'])
 def prometheus_metrics():
     """Get metrics in Prometheus format."""
-    metrics = metrics_collector.get_metrics()
-    
-    lines = [
-        '# HELP rca_engine_uptime_seconds Server uptime in seconds',
-        '# TYPE rca_engine_uptime_seconds gauge',
-        f'rca_engine_uptime_seconds {metrics["uptime_seconds"]}',
-        '',
+    try:
+        from prometheus_client import generate_latest, CONTENT_TYPE_LATEST
+        
+        # Generate Prometheus metrics
+        output = generate_latest()
+        
+        return Response(
+            output,
+            mimetype=CONTENT_TYPE_LATEST
+        )
+    except ImportError:
+        # Fallback to JSON if Prometheus not available
+        metrics = metrics_collector.get_metrics()
+        
+        lines = [
+            '# HELP rca_engine_uptime_seconds Server uptime in seconds',
+            '# TYPE rca_engine_uptime_seconds gauge',
+            f'rca_engine_uptime_seconds {metrics.get("uptime_seconds", 0)}',
+            '',
         '# HELP rca_engine_requests_total Total request count',
         '# TYPE rca_engine_requests_total counter',
         f'rca_engine_requests_total {metrics["total_requests"]}',

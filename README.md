@@ -4,7 +4,7 @@
 
 Spyne IDE is a production-ready natural language to SQL query engine with advanced features including proactive clarification for ambiguous queries, comprehensive metadata management, and intelligent query planning.
 
-## 🚀 Features
+##  Features
 
 ### Core Capabilities
 - **Natural Language to SQL** - Convert natural language queries to optimized SQL
@@ -14,12 +14,12 @@ Spyne IDE is a production-ready natural language to SQL query engine with advanc
 - **Intelligent Planning** - Multi-stage planning with intent extraction and schema selection
 
 ### Production Features
-- ✅ **Rate Limiting** - Token bucket algorithm for API protection
-- ✅ **Structured Logging** - JSON logs with correlation IDs
-- ✅ **Metrics & Monitoring** - Golden signals, Prometheus metrics
-- ✅ **Error Handling** - Graceful degradation and fallbacks
-- ✅ **Health Checks** - Comprehensive health endpoints
-- ✅ **Security** - CORS, request validation, SQL injection protection
+-  **Rate Limiting** - Token bucket algorithm for API protection
+-  **Structured Logging** - JSON logs with correlation IDs
+-  **Metrics & Monitoring** - Golden signals, Prometheus metrics
+-  **Error Handling** - Graceful degradation and fallbacks
+-  **Health Checks** - Comprehensive health endpoints
+-  **Security** - CORS, request validation, SQL injection protection
 
 ### Clarification System
 - **Proactive Questions** - Detects ambiguities and asks clarifying questions
@@ -27,9 +27,10 @@ Spyne IDE is a production-ready natural language to SQL query engine with advanc
 - **LLM-Powered** - Natural, context-aware question generation
 - **Metrics Tracking** - Monitors clarification usage and success rates
 
-## 📋 Table of Contents
+##  Table of Contents
 
 - [Quick Start](#quick-start)
+- [How Organizations Use This](#how-organizations-use-this)
 - [Architecture](#architecture)
 - [API Documentation](#api-documentation)
 - [Configuration](#configuration)
@@ -37,7 +38,7 @@ Spyne IDE is a production-ready natural language to SQL query engine with advanc
 - [Development](#development)
 - [Documentation](#documentation)
 
-## 🏃 Quick Start
+##  Quick Start
 
 ### Prerequisites
 
@@ -91,7 +92,44 @@ python -m pytest tests/ -v
 python -m pytest tests/test_clarification_agent.py -v
 ```
 
-## 🏗️ Architecture
+## How Organizations Use This
+
+**Spyne IDE is a query layer that sits on top of your existing data infrastructure.**
+
+### Key Points:
+
+1. **No Data Migration Required** - Connect to your existing databases
+2. **APIs Continue Working** - Your existing APIs that write to tables work unchanged
+3. **Read-Only Access** - Spyne IDE queries your tables (doesn't modify data)
+4. **Metadata Registration** - Tell Spyne IDE about your tables and relationships
+
+### Quick Integration:
+
+```bash
+# 1. Connect to your existing database
+# Edit .env:
+RCA_DB_TYPE=postgresql
+RCA_DB_HOST=your-db-host
+RCA_DB_NAME=your_database
+RCA_DB_USER=your_user
+RCA_DB_PASSWORD=your_password
+
+# 2. Register your tables (describe them)
+curl -X POST http://localhost:8080/api/metadata/ingest/table \
+  -H "Content-Type: application/json" \
+  -d '{
+    "table_description": "Table: customers - Customer data with customer_id, name, email columns"
+  }'
+
+# 3. Start querying with natural language
+curl -X POST http://localhost:8080/api/agent/run \
+  -H "Content-Type: application/json" \
+  -d '{"query": "show me top 10 customers"}'
+```
+
+**See [DATA_ENTRY_GUIDE.md](./docs/DATA_ENTRY_GUIDE.md) for complete integration guide.**
+
+## ️ Architecture
 
 ### Four-Plane Architecture
 
@@ -122,7 +160,7 @@ python -m pytest tests/test_clarification_agent.py -v
 - **Metadata System** - Node-level metadata isolation
 - **Clarification Agent** - Proactive question generation
 
-## 📡 API Documentation
+##  API Documentation
 
 ### Main Endpoints
 
@@ -168,7 +206,7 @@ GET /api/v1/metrics/prometheus
 
 See [CLARIFICATION_API_GUIDE.md](./docs/CLARIFICATION_API_GUIDE.md) for detailed API documentation.
 
-## ⚙️ Configuration
+## ️ Configuration
 
 ### Environment Variables
 
@@ -209,7 +247,7 @@ SPYNE_CLARIFICATION_MODE=true
 
 See `env.example` for all available options.
 
-## 🚢 Production Deployment
+##  Production Deployment
 
 ### Docker Deployment
 
@@ -227,6 +265,7 @@ docker run -p 8080:8080 \
 ### Docker Compose
 
 ```bash
+cd docker
 docker-compose up -d
 ```
 
@@ -243,7 +282,7 @@ docker-compose up -d
 
 See [PRODUCTION_READINESS.md](./docs/PRODUCTION_READINESS.md) for detailed checklist.
 
-## 🛠️ Development
+## ️ Development
 
 ### Project Structure
 
@@ -256,10 +295,18 @@ spyne-ide/
 │   ├── execution/          # Query execution engines
 │   ├── invariants/         # System invariants
 │   └── app_production.py   # Production Flask app
-├── src/                     # Rust core
+├── frontend/                # Frontend UI (React/TypeScript)
+│   ├── src/                # Source code
+│   └── ...
+├── rust/                    # Rust core
 │   ├── node_registry.rs    # Node registry
 │   ├── sql_engine.rs       # SQL execution
 │   └── ...
+├── components/             # Shared components
+│   ├── Hypergraph/         # Hypergraph implementation
+│   ├── KnowledgeBase/      # Knowledge base server
+│   ├── WorldState/         # World state management
+│   └── hypergraph-visualizer/ # Visualization component
 ├── docs/                    # Documentation
 │   ├── PRODUCTION_READINESS.md
 │   ├── CLARIFICATION_API_GUIDE.md
@@ -270,11 +317,14 @@ spyne-ide/
 ├── scripts/                 # Utility scripts
 │   └── fix_vendor_checksums.py
 ├── tests/                   # Test suite
-├── metadata/                # Metadata definitions
 ├── config/                  # Configuration files
 ├── data/                     # Data files
-├── KnowledgeBase/           # Knowledge base server
-├── docker-compose.yml        # Docker Compose config
+├── docker/                   # Docker configuration
+│   ├── docker-compose.yml   # Docker Compose config
+│   ├── Dockerfile           # Backend Dockerfile
+│   └── Dockerfile.frontend  # Frontend Dockerfile
+├── infrastructure/          # Infrastructure as code
+│   └── airflow/             # Airflow DAGs and configs
 ├── Cargo.toml               # Rust dependencies
 ├── requirements.txt         # Python dependencies
 └── README.md                # This file
@@ -300,9 +350,10 @@ pytest --cov=backend --cov-report=html
 pytest tests/test_clarification_agent.py -v
 ```
 
-## 📚 Documentation
+##  Documentation
 
 ### Core Documentation
+- [DATA_ENTRY_GUIDE.md](./docs/DATA_ENTRY_GUIDE.md) - **How organizations integrate with existing data**
 - [END_TO_END_PIPELINE.md](./docs/END_TO_END_PIPELINE.md) - Complete pipeline flow
 - [CLARIFICATION_API_GUIDE.md](./docs/CLARIFICATION_API_GUIDE.md) - Clarification API reference
 - [PRODUCTION_READINESS.md](./docs/PRODUCTION_READINESS.md) - Production deployment guide
@@ -317,7 +368,7 @@ pytest tests/test_clarification_agent.py -v
 - [INTEGRATION_STATUS.md](./docs/INTEGRATION_STATUS.md) - Integration status
 - [SHIP_READY_CHECKLIST.md](./docs/SHIP_READY_CHECKLIST.md) - Pre-deployment checklist
 
-## 🎯 Key Features Explained
+##  Key Features Explained
 
 ### Proactive Clarification
 
@@ -358,7 +409,7 @@ Automatically selects the best execution engine:
 - Polars for data transformations
 - Traditional DB for simple queries
 
-## 🔒 Security
+##  Security
 
 - Rate limiting per API key/IP
 - SQL injection protection
@@ -367,7 +418,7 @@ Automatically selects the best execution engine:
 - Input validation
 - Error message sanitization
 
-## 📊 Monitoring
+##  Monitoring
 
 ### Metrics Available
 
@@ -386,7 +437,7 @@ Structured JSON logs with:
 - Performance metrics
 - Error details
 
-## 🤝 Contributing
+##  Contributing
 
 1. Fork the repository
 2. Create a feature branch
@@ -394,11 +445,11 @@ Structured JSON logs with:
 4. Add tests
 5. Submit a pull request
 
-## 📝 License
+##  License
 
 [Add your license here]
 
-## 🙏 Acknowledgments
+##  Acknowledgments
 
 Built with:
 - Flask (Python web framework)
@@ -406,7 +457,7 @@ Built with:
 - OpenAI GPT (LLM)
 - DuckDB/Trino/Polars (Query engines)
 
-## 📞 Support
+##  Support
 
 For issues and questions:
 - GitHub Issues: [Link to issues]
@@ -415,7 +466,7 @@ For issues and questions:
 
 ---
 
-**Status:** ✅ Production Ready
+**Status:**  Production Ready
 
 **Version:** 2.0.0
 

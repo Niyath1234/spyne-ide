@@ -96,7 +96,7 @@ sqlparser = "0.39"
 
 [[bin]]
 name = "server"
-path = "src/bin/server.rs"
+path = "rust/bin/server.rs"
 
 # Removed binary definitions for files that don't exist:
 # - load_tables_data.rs
@@ -106,9 +106,9 @@ path = "src/bin/server.rs"
 
 [[bin]]
 name = "migrate_metadata"
-path = "src/bin/migrate_metadata.rs"
+path = "rust/bin/migrate_metadata.rs"
 
 [[bin]]
 name = "node_registry_server"
-path = "src/bin/node_registry_server.rs"
+path = "rust/bin/node_registry_server.rs"
 

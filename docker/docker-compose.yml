@@ -6,8 +6,8 @@ services:
   # ==========================================================================
   backend:
     build:
-      context: ./backend
-      dockerfile: Dockerfile
+      context: ..
+      dockerfile: docker/Dockerfile
     container_name: rca-backend
     restart: unless-stopped
     ports:
@@ -70,7 +70,9 @@ services:
   # RCA Engine Frontend (React UI)
   # ==========================================================================
   frontend:
-    build: ./ui
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.frontend
     container_name: rca-frontend
     restart: unless-stopped
     ports:
