@@ -18,12 +18,10 @@ import {
 import {
   Send as SendIcon,
   ExpandMore as ExpandMoreIcon,
-  Code as CodeIcon,
   TableChart as TableIcon,
   Link as LinkIcon,
   FilterList as FilterIcon,
   CheckCircle as CheckIcon,
-  Error as ErrorIcon,
 } from '@mui/icons-material';
 import { queryAPI, type QueryGenerationResult, type PrerequisitesResult } from '../api/client';
 import CodeMirror from '@uiw/react-codemirror';
@@ -311,7 +309,7 @@ export const QueryRegeneration: React.FC = () => {
                         {result.filters.map((filter, idx) => (
                           <Chip
                             key={idx}
-                            label={filter}
+                            label={typeof filter === 'string' ? filter : JSON.stringify(filter)}
                             size="small"
                             sx={{
                               bgcolor: '#21262D',

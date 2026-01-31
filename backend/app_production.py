@@ -119,7 +119,9 @@ def setup_logging():
     
     # Configure root logger
     root_logger = logging.getLogger()
-    root_logger.setLevel(getattr(logging, ProductionConfig.LOG_LEVEL))
+    # Ensure LOG_LEVEL is uppercase and get the logging constant
+    log_level = ProductionConfig.LOG_LEVEL.upper()
+    root_logger.setLevel(getattr(logging, log_level, logging.INFO))
     root_logger.addHandler(handler)
     
     # Reduce noise from third-party libraries

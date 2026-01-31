@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Box,
   TextField,
@@ -13,8 +13,6 @@ import {
   Accordion,
   AccordionSummary,
   AccordionDetails,
-  Divider,
-  Grid,
   Select,
   MenuItem,
   FormControl,
@@ -30,7 +28,6 @@ import {
   Link as LinkIcon,
   FilterList as FilterIcon,
   CheckCircle as CheckIcon,
-  Error as ErrorIcon,
   AutoAwesome as BuildIcon,
   Add as AddIcon,
   Delete as DeleteIcon,
@@ -564,7 +561,7 @@ export const QueryBuilder: React.FC = () => {
                         {activeSession.result.filters.map((filter, idx) => (
                           <Chip
                             key={idx}
-                            label={filter}
+                            label={typeof filter === 'string' ? filter : JSON.stringify(filter)}
                             size="small"
                             sx={{
                               bgcolor: '#21262D',

@@ -146,7 +146,7 @@ export const CursorLikeQueryBuilder: React.FC = () => {
           const totalDelay = apiSteps.length * 200;
           setTimeout(() => {
             // Write SQL to center editor
-            setSqlQuery(response.sql);
+            setSqlQuery(response.sql || '');
             
             // Add SQL to chat window as part of chain of thought
             setReasoningSteps(prev => [...prev, {

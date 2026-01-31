@@ -49,7 +49,7 @@ COPY --chown=appuser:appuser rust/ ./rust/
 COPY --chown=appuser:appuser config/ ./config/
 COPY --chown=appuser:appuser database/ ./database/
 COPY --chown=appuser:appuser components/ ./components/
-COPY --chown=appuser:appuser Cargo.toml Cargo.lock pyproject.toml requirements.txt ./
+COPY --chown=appuser:appuser Cargo.toml pyproject.toml requirements.txt ./
 WORKDIR /app/backend
 
 # Set environment variables
