@@ -44,7 +44,13 @@ COPY --from=builder /opt/venv /opt/venv
 ENV PATH="/opt/venv/bin:$PATH"
 
 # Copy application code
-COPY --chown=appuser:appuser . .
+COPY --chown=appuser:appuser backend/ ./backend/
+COPY --chown=appuser:appuser rust/ ./rust/
+COPY --chown=appuser:appuser config/ ./config/
+COPY --chown=appuser:appuser database/ ./database/
+COPY --chown=appuser:appuser components/ ./components/
+COPY --chown=appuser:appuser Cargo.toml Cargo.lock pyproject.toml requirements.txt ./
+WORKDIR /app/backend
 
 # Set environment variables
 ENV PYTHONUNBUFFERED=1 \

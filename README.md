@@ -30,6 +30,7 @@ Spyne IDE is a production-ready natural language to SQL query engine with advanc
 ##  Table of Contents
 
 - [Quick Start](#quick-start)
+- [How Organizations Use This](#how-organizations-use-this)
 - [Architecture](#architecture)
 - [API Documentation](#api-documentation)
 - [Configuration](#configuration)
@@ -90,6 +91,43 @@ python -m pytest tests/ -v
 # Run specific test suite
 python -m pytest tests/test_clarification_agent.py -v
 ```
+
+## How Organizations Use This
+
+**Spyne IDE is a query layer that sits on top of your existing data infrastructure.**
+
+### Key Points:
+
+1. **No Data Migration Required** - Connect to your existing databases
+2. **APIs Continue Working** - Your existing APIs that write to tables work unchanged
+3. **Read-Only Access** - Spyne IDE queries your tables (doesn't modify data)
+4. **Metadata Registration** - Tell Spyne IDE about your tables and relationships
+
+### Quick Integration:
+
+```bash
+# 1. Connect to your existing database
+# Edit .env:
+RCA_DB_TYPE=postgresql
+RCA_DB_HOST=your-db-host
+RCA_DB_NAME=your_database
+RCA_DB_USER=your_user
+RCA_DB_PASSWORD=your_password
+
+# 2. Register your tables (describe them)
+curl -X POST http://localhost:8080/api/metadata/ingest/table \
+  -H "Content-Type: application/json" \
+  -d '{
+    "table_description": "Table: customers - Customer data with customer_id, name, email columns"
+  }'
+
+# 3. Start querying with natural language
+curl -X POST http://localhost:8080/api/agent/run \
+  -H "Content-Type: application/json" \
+  -d '{"query": "show me top 10 customers"}'
+```
+
+**See [DATA_ENTRY_GUIDE.md](./docs/DATA_ENTRY_GUIDE.md) for complete integration guide.**
 
 ## ️ Architecture
 
@@ -227,6 +265,7 @@ docker run -p 8080:8080 \
 ### Docker Compose
 
 ```bash
+cd docker
 docker-compose up -d
 ```
 
@@ -256,10 +295,18 @@ spyne-ide/
 │   ├── execution/          # Query execution engines
 │   ├── invariants/         # System invariants
 │   └── app_production.py   # Production Flask app
-├── src/                     # Rust core
+├── frontend/                # Frontend UI (React/TypeScript)
+│   ├── src/                # Source code
+│   └── ...
+├── rust/                    # Rust core
 │   ├── node_registry.rs    # Node registry
 │   ├── sql_engine.rs       # SQL execution
 │   └── ...
+├── components/             # Shared components
+│   ├── Hypergraph/         # Hypergraph implementation
+│   ├── KnowledgeBase/      # Knowledge base server
+│   ├── WorldState/         # World state management
+│   └── hypergraph-visualizer/ # Visualization component
 ├── docs/                    # Documentation
 │   ├── PRODUCTION_READINESS.md
 │   ├── CLARIFICATION_API_GUIDE.md
@@ -270,11 +317,14 @@ spyne-ide/
 ├── scripts/                 # Utility scripts
 │   └── fix_vendor_checksums.py
 ├── tests/                   # Test suite
-├── metadata/                # Metadata definitions
 ├── config/                  # Configuration files
 ├── data/                     # Data files
-├── KnowledgeBase/           # Knowledge base server
-├── docker-compose.yml        # Docker Compose config
+├── docker/                   # Docker configuration
+│   ├── docker-compose.yml   # Docker Compose config
+│   ├── Dockerfile           # Backend Dockerfile
+│   └── Dockerfile.frontend  # Frontend Dockerfile
+├── infrastructure/          # Infrastructure as code
+│   └── airflow/             # Airflow DAGs and configs
 ├── Cargo.toml               # Rust dependencies
 ├── requirements.txt         # Python dependencies
 └── README.md                # This file
@@ -303,6 +353,7 @@ pytest tests/test_clarification_agent.py -v
 ##  Documentation
 
 ### Core Documentation
+- [DATA_ENTRY_GUIDE.md](./docs/DATA_ENTRY_GUIDE.md) - **How organizations integrate with existing data**
 - [END_TO_END_PIPELINE.md](./docs/END_TO_END_PIPELINE.md) - Complete pipeline flow
 - [CLARIFICATION_API_GUIDE.md](./docs/CLARIFICATION_API_GUIDE.md) - Clarification API reference
 - [PRODUCTION_READINESS.md](./docs/PRODUCTION_READINESS.md) - Production deployment guide
