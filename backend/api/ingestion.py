@@ -3,11 +3,15 @@ Ingestion API
 
 Endpoints for contract registration with ingestion semantics.
 Implements Section 3.1 and 11.2 from EXECUTION_PLAN.md
+
+RISK #3 FIX: Ingestion is admin-only and gated by INGESTION_ENABLED flag.
+All ingestion MUST land in SHADOW state - never directly to ACTIVE.
 """
 
 from flask import Blueprint, request, jsonify
 from typing import Dict, Any, Optional
 import logging
+import os
 
 from backend.models.table_state import UserRole, RolePermissions, SystemMode
 
@@ -45,6 +49,51 @@ def get_system_mode() -> SystemMode:
         except ValueError:
             return SystemMode.READ_ONLY
     return SystemMode.READ_ONLY
+
+
+def is_ingestion_enabled() -> bool:
+    """
+    Check if ingestion is enabled via feature flag.
+    
+    RISK #3 FIX: Ingestion disabled by default in production.
+    Requires explicit config change and restart.
+    """
+    # Check environment variable (production default: false)
+    env_flag = os.getenv('INGESTION_ENABLED', 'false').lower()
+    if env_flag in ('true', '1', 'yes'):
+        return True
+    
+    # Check system config (if available)
+    if _system_config:
+        config_flag = _system_config.get('ingestion_enabled', False)
+        if config_flag:
+            return True
+    
+    return False
+
+
+def require_ingestion_access():
+    """
+    Require admin role AND ingestion enabled flag.
+    
+    RISK #3 FIX: Both conditions must be met.
+    """
+    role = get_current_user_role()
+    
+    # Must be admin
+    if role != UserRole.ADMIN:
+        raise PermissionError(
+            "Ingestion requires ADMIN role. "
+            "Current role: {}".format(role.value)
+        )
+    
+    # Must have ingestion enabled
+    if not is_ingestion_enabled():
+        raise PermissionError(
+            "Ingestion is disabled. "
+            "Set INGESTION_ENABLED=true and restart to enable. "
+            "⚠️ This is a production safety feature."
+        )
 
 
 def validate_ingestion_semantics(semantics: Dict[str, Any]) -> tuple[bool, Optional[str]]:
@@ -97,8 +146,9 @@ def validate_ingestion_semantics(semantics: Dict[str, Any]) -> tuple[bool, Optio
 def register_contract():
     """
     Register contract with ingestion semantics.
-    Requires ENGINEER or ADMIN role.
-    System must be in INGESTION_READY mode.
+    
+    RISK #3 FIX: Requires ADMIN role AND INGESTION_ENABLED flag.
+    All contracts are created in SHADOW state - never ACTIVE.
     """
     if not _contract_store:
         return jsonify({
@@ -106,23 +156,13 @@ def register_contract():
             'error': 'Service not initialized'
         }), 503
     
-    role = get_current_user_role()
-    system_mode = get_system_mode()
-    
-    # Check permission
+    # RISK #3 FIX: Enforce admin-only + feature flag
     try:
-        RolePermissions.require(role, 'can_create_contracts')
+        require_ingestion_access()
     except PermissionError as e:
         return jsonify({
             'success': False,
             'error': str(e)
-        }), 403
-    
-    # Check system mode
-    if system_mode != SystemMode.INGESTION_READY:
-        return jsonify({
-            'success': False,
-            'error': f'System is in {system_mode} mode. Ingestion requires INGESTION_READY mode.'
         }), 403
     
     data = request.get_json()
@@ -151,7 +191,7 @@ def register_contract():
         }), 400
     
     try:
-        # Register contract
+        # RISK #3 FIX: Register contract - ALWAYS in SHADOW state
         contract = _contract_store.register_contract(
             endpoint=endpoint,
             table_name=table_name,
@@ -159,9 +199,16 @@ def register_contract():
             owner=request.headers.get('X-User-Email', 'unknown@example.com')
         )
         
+        # Ensure contract is in SHADOW state (enforced by contract_store)
+        logger.warning(
+            f"⚠️ Contract {contract.get('contract_id')} registered in SHADOW state. "
+            "This is invisible to users until promotion."
+        )
+        
         return jsonify({
             'success': True,
-            'message': 'Contract registered successfully',
+            'message': 'Contract registered successfully in SHADOW state',
+            'warning': '⚠️ This contract is invisible to users until promotion to ACTIVE',
             'contract': contract
         }), 201
         
@@ -177,7 +224,8 @@ def register_contract():
 def replay_ingestion():
     """
     Replay ingestion for a time range.
-    Requires ADMIN role.
+    
+    RISK #3 FIX: Requires ADMIN role AND INGESTION_ENABLED flag.
     Implements Section 3.3 from EXECUTION_PLAN.md
     """
     if not _contract_store:
@@ -186,13 +234,13 @@ def replay_ingestion():
             'error': 'Service not initialized'
         }), 503
     
-    role = get_current_user_role()
-    
-    # Check permission (replay requires admin)
-    if role != UserRole.ADMIN:
+    # RISK #3 FIX: Enforce admin-only + feature flag
+    try:
+        require_ingestion_access()
+    except PermissionError as e:
         return jsonify({
             'success': False,
-            'error': 'Replay requires ADMIN role'
+            'error': str(e)
         }), 403
     
     data = request.get_json() or {}
@@ -242,7 +290,8 @@ def replay_ingestion():
 def backfill_ingestion():
     """
     Backfill ingestion from archive.
-    Requires ADMIN role.
+    
+    RISK #3 FIX: Requires ADMIN role AND INGESTION_ENABLED flag.
     Implements Section 3.3 from EXECUTION_PLAN.md
     """
     if not _contract_store:
@@ -251,13 +300,13 @@ def backfill_ingestion():
             'error': 'Service not initialized'
         }), 503
     
-    role = get_current_user_role()
-    
-    # Check permission (backfill requires admin)
-    if role != UserRole.ADMIN:
+    # RISK #3 FIX: Enforce admin-only + feature flag
+    try:
+        require_ingestion_access()
+    except PermissionError as e:
         return jsonify({
             'success': False,
-            'error': 'Backfill requires ADMIN role'
+            'error': str(e)
         }), 403
     
     data = request.get_json() or {}

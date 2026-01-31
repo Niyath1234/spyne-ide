@@ -1,5 +1,17 @@
 #!/usr/bin/env python3
 """
+⚠️ RISK #2 FIX: This module generates SQL in Python, which violates the intent-only boundary.
+
+In the future, this should be:
+1. Deleted, OR
+2. Marked as preview-only (never executed)
+
+Python should output intent JSON only.
+Rust (rust/core/engine/logical_plan.rs) should generate SQL.
+
+For now, this is DEPRECATED - use only for migration.
+"""
+"""
 Robust SQL Builder with Table Relationship Resolution
 
 This module provides a general, robust solution for building SQL queries from intents.

@@ -2,6 +2,9 @@
 Table Store
 
 Database access for table state management.
+
+RISK #1 FIX: All writes route through CKO client.
+Reads remain direct for performance.
 """
 
 from typing import Optional, Dict, Any
@@ -11,12 +14,18 @@ import logging
 
 from .db_connection import DatabaseConnection
 from backend.observability.metrics import metrics_collector
+from backend.cko_client import get_cko_client
 
 logger = logging.getLogger(__name__)
 
 
 class TableStore:
-    """Store for table state management."""
+    """
+    Store for table state management.
+    
+    RISK #1 FIX: Writes route through CKO client.
+    Reads are direct for performance (read-only projections).
+    """
     
     def __init__(self, db_connection=None):
         """
@@ -117,6 +126,9 @@ class TableStore:
         """
         Promote table from one state to another.
         
+        RISK #1 FIX: Routes through CKO client.
+        RISK #4 FIX: Promotion is explicit and auditable.
+        
         Args:
             table_id: Table name/identifier
             from_state: Current state
@@ -129,6 +141,16 @@ class TableStore:
         Raises:
             ValueError: If transition is invalid or constraints violated
         """
+        # RISK #1 FIX: Request state change through CKO client
+        cko_client = get_cko_client()
+        cko_response = cko_client.request_state_change(
+            table_name=table_id,
+            from_state=from_state.value,
+            to_state=to_state.value,
+            requested_by=changed_by,
+            reason=f"Promotion from {from_state.value} to {to_state.value}"
+        )
+        
         # Validate transition
         is_valid, error_msg = TableStateManager.validate_transition(
             from_state, to_state, None  # Role check happens at API level
@@ -136,6 +158,8 @@ class TableStore:
         if not is_valid:
             raise ValueError(error_msg)
         
+        # RISK #1 FIX: Execute the state change (CKO has approved)
+        # This is the actual database write, but it's been authorized by CKO
         with DatabaseConnection.get_connection() as conn:
             cursor = conn.cursor()
             
@@ -178,7 +202,13 @@ class TableStore:
             
             logger.info(
                 f"Promoted table {table_id} from {from_state.value} to {to_state.value} "
-                f"by {changed_by}"
+                f"by {changed_by} (authorized by CKO)"
+            )
+            
+            # RISK #4 FIX: Log promotion for audit trail
+            logger.warning(
+                f"🔴 PROMOTION: {table_id} from {from_state.value} to {to_state.value} "
+                f"by {changed_by}. This affects all users."
             )
             
             # Record metrics

@@ -2,8 +2,11 @@
 """
 Centralized Metadata Provider with Caching
 
-This module provides a single source of truth for metadata loading
-with process-level caching to prevent redundant disk I/O.
+RISK #1 FIX: This module is READ-ONLY.
+It provides cached access to metadata from WorldState.
+It NEVER mutates metadata - that is WorldState's exclusive domain.
+
+All metadata writes MUST go through backend/cko_client.py.
 """
 
 from functools import lru_cache
@@ -14,7 +17,13 @@ logger = logging.getLogger(__name__)
 
 
 class MetadataProvider:
-    """Centralized metadata provider with caching."""
+    """
+    Centralized metadata provider with caching.
+    
+    RISK #1 FIX: This is a READ-ONLY projection of WorldState.
+    It provides cached access for performance, but never mutates.
+    All mutations MUST go through CKO client.
+    """
     
     _cache: Dict[str, Any] = None
     _cache_timestamp: float = None
@@ -23,7 +32,10 @@ class MetadataProvider:
     @lru_cache(maxsize=1)
     def load() -> Dict[str, Any]:
         """
-        Load metadata with process-level caching.
+        Load metadata with process-level caching (READ-ONLY).
+        
+        RISK #1 FIX: This method only READS metadata.
+        It never writes or mutates. All writes go through CKO client.
         
         Returns:
             Metadata dictionary with tables, semantic_registry, rules, etc.

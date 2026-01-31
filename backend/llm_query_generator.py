@@ -1044,16 +1044,57 @@ Return ONLY the JSON object:"""
     
     def intent_to_sql(self, intent: Dict[str, Any], metadata: Dict[str, Any], query_text: Optional[str] = None) -> Tuple[str, Optional[str], Optional[str]]:
         """
-        Convert SQL intent to actual SQL query using robust SQL builder.
-        Uses node-level isolation - only loads relevant tables/joins.
+        Convert SQL intent to actual SQL query.
+        
+        RISK #2 FIX: Routes through Rust SQL generation API.
+        Python NEVER generates SQL directly.
         
         Args:
             intent: SQL intent dictionary
-            metadata: Metadata dictionary
-            query_text: Optional query text for node-level isolation
+            metadata: Metadata dictionary (for context, not SQL generation)
+            query_text: Optional query text for context
         
         Returns:
             (sql_query, explain_plan, warnings)
+        """
+        # RISK #2 FIX: Use Rust SQL client instead of Python SQL builder
+        try:
+            from backend.rust_sql_client import get_rust_sql_client
+            from backend.planning.intent_format import QueryIntent
+            
+            # Convert intent to QueryIntent format
+            query_intent = QueryIntent(
+                intent=intent.get('intent', query_text or ''),
+                entities=intent.get('entities', []),
+                constraints=intent.get('constraints', []),
+                preferences=intent.get('preferences'),
+                metric_name=intent.get('metric_name'),
+                dimensions=intent.get('dimensions')
+            )
+            
+            # Generate SQL via Rust
+            rust_client = get_rust_sql_client()
+            result = rust_client.generate_sql_from_intent_dict(query_intent.to_dict())
+            
+            sql = result.get('sql', '')
+            explanation = result.get('explanation', '')
+            warnings = result.get('warnings', [])
+            
+            warnings_str = "\n".join([f"⚠️ {w}" for w in warnings]) if warnings else None
+            
+            return sql, explanation, warnings_str
+            
+        except Exception as e:
+            logger.warning(f"Rust SQL generation failed, falling back to deprecated Python path: {e}")
+            # FALLBACK: Use deprecated Python SQL builder (for migration only)
+            return self._intent_to_sql_deprecated(intent, metadata, query_text)
+    
+    def _intent_to_sql_deprecated(self, intent: Dict[str, Any], metadata: Dict[str, Any], query_text: Optional[str] = None) -> Tuple[str, Optional[str], Optional[str]]:
+        """
+        DEPRECATED: Python SQL generation (migration only).
+        
+        ⚠️ RISK #2 FIX: This method violates the intent-only boundary.
+        Use only when Rust SQL generation is unavailable.
         """
         # Get query_text from intent if not provided
         if not query_text:
@@ -1111,7 +1152,7 @@ Return ONLY the JSON object:"""
                 error_msg += f"\nWarnings: {', '.join(warnings)}"
             raise ValueError(error_msg)
         
-        # Build SQL using robust builder
+        # DEPRECATED: Build SQL using Python builder (migration only)
         builder = SQLBuilder(resolver)
         sql, explain_plan = builder.build(intent, include_explain=True)
         

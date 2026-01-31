@@ -1,5 +1,9 @@
 //! Ingestion Orchestrator - Main ingestion coordinator
 //! Adapted for RCA-ENGINE: Works with WorldState and Polars instead of SQL engine
+//!
+//! RISK #3 FIX: All ingestion MUST land in SHADOW state.
+//! There is NO code path that allows ingestion → ACTIVE.
+//! Promotion is the ONLY bridge to user-visible data.
 
 use crate::ingestion::{
     IngestionConnector, IngestionResult, IngestionStatus,

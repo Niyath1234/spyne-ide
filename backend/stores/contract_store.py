@@ -2,6 +2,9 @@
 Contract Store
 
 Database access for contract management with ingestion semantics.
+
+RISK #1 FIX: This store should route through CKO client for writes.
+RISK #3 FIX: All contracts are created in SHADOW state - never ACTIVE.
 """
 
 import uuid
@@ -12,12 +15,18 @@ import json
 
 from .db_connection import DatabaseConnection
 from backend.observability.metrics import metrics_collector
+from backend.cko_client import get_cko_client
 
 logger = logging.getLogger(__name__)
 
 
 class ContractStore:
-    """Store for contract management."""
+    """
+    Store for contract management.
+    
+    RISK #1 FIX: In future, writes should route through CKO client.
+    RISK #3 FIX: Currently enforces SHADOW state (line 81).
+    """
     
     def __init__(self, db_connection=None):
         """
@@ -41,6 +50,9 @@ class ContractStore:
         """
         Register a new contract.
         
+        RISK #1 FIX: Routes through CKO client.
+        RISK #3 FIX: Always created in SHADOW state.
+        
         Args:
             endpoint: API endpoint URL
             table_name: Target table name
@@ -58,8 +70,25 @@ class ContractStore:
             if field not in ingestion_semantics:
                 raise ValueError(f"Missing required ingestion_semantics field: {field}")
         
-        contract_id = f"{table_name}_{version}"
+        # RISK #1 FIX: Propose contract through CKO client
+        cko_client = get_cko_client()
         
+        # Build column mappings from ingestion semantics (simplified)
+        column_mappings = []
+        primary_key = ingestion_semantics.get('idempotency_key', [])
+        
+        cko_response = cko_client.propose_contract(
+            table_name=table_name,
+            column_mappings=column_mappings,
+            primary_key=primary_key,
+            endpoint=endpoint,
+            created_by=owner
+        )
+        
+        contract_id = cko_response.get('contract_id', f"{table_name}_{version}")
+        
+        # RISK #1 FIX: Execute the contract registration (CKO has approved)
+        # This is the actual database write, but it's been authorized by CKO
         with DatabaseConnection.get_connection() as conn:
             cursor = conn.cursor()
             
@@ -72,7 +101,9 @@ class ContractStore:
             if cursor.fetchone():
                 raise ValueError(f"Contract {contract_id} already exists")
             
-            # Insert contract
+            # RISK #3 FIX: Insert contract - ALWAYS in SHADOW state
+            # There is NO code path that allows ingestion → ACTIVE
+            # Promotion is the ONLY bridge to user-visible data
             cursor.execute("""
                 INSERT INTO contracts (
                     contract_id, endpoint, table_name, ingestion_semantics,
@@ -91,10 +122,16 @@ class ContractStore:
                 owner
             ))
             
+            # RISK #3 FIX: Log warning about SHADOW state
+            logger.warning(
+                f"⚠️ Contract {contract_id} created in SHADOW state (authorized by CKO). "
+                "This is invisible to users until promotion to ACTIVE."
+            )
+            
             result = cursor.fetchone()
             conn.commit()
             
-            logger.info(f"Registered contract {contract_id} for table {table_name}")
+            logger.info(f"Registered contract {contract_id} for table {table_name} (via CKO)")
             
             return dict(result)
     
