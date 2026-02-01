@@ -78,7 +78,7 @@ export const KnowledgeRegister: React.FC = () => {
   );
 
   return (
-    <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column', backgroundColor: '#0D1117' }}>
+    <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column', backgroundColor: '#000000' }}>
       {/* Header */}
       <Box
         sx={{
@@ -89,7 +89,7 @@ export const KnowledgeRegister: React.FC = () => {
           gap: 2,
         }}
       >
-        <BookIcon sx={{ color: '#FF6B35', fontSize: 24 }} />
+        <BookIcon sx={{ color: '#ff096c', fontSize: 24 }} />
         <Typography variant="h6" sx={{ color: '#E6EDF3', fontWeight: 600 }}>
           Knowledge Register
         </Typography>
@@ -116,7 +116,7 @@ export const KnowledgeRegister: React.FC = () => {
               color: '#E6EDF3',
               backgroundColor: '#161B22',
               '& fieldset': { borderColor: '#30363D' },
-              '&:hover fieldset': { borderColor: '#FF6B35' },
+              '&:hover fieldset': { borderColor: '#ff096c' },
             },
           }}
         />
@@ -137,16 +137,16 @@ export const KnowledgeRegister: React.FC = () => {
             <Table>
               <TableHead>
                 <TableRow>
-                  <TableCell sx={{ color: '#FF6B35', fontWeight: 600, borderColor: '#30363D' }}>
+                  <TableCell sx={{ color: '#ff096c', fontWeight: 600, borderColor: '#000000' }}>
                     Title
                   </TableCell>
-                  <TableCell sx={{ color: '#FF6B35', fontWeight: 600, borderColor: '#30363D' }}>
+                  <TableCell sx={{ color: '#ff096c', fontWeight: 600, borderColor: '#000000' }}>
                     Type
                   </TableCell>
-                  <TableCell sx={{ color: '#FF6B35', fontWeight: 600, borderColor: '#30363D' }}>
+                  <TableCell sx={{ color: '#ff096c', fontWeight: 600, borderColor: '#000000' }}>
                     Tags
                   </TableCell>
-                  <TableCell sx={{ color: '#FF6B35', fontWeight: 600, borderColor: '#30363D' }}>
+                  <TableCell sx={{ color: '#ff096c', fontWeight: 600, borderColor: '#000000' }}>
                     Content Preview
                   </TableCell>
                 </TableRow>

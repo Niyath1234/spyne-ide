@@ -14,17 +14,17 @@ interface QueryEditorProps {
 // Custom VS Code Dark+ theme for CodeMirror with BRIGHT, HIGH-CONTRAST colors
 const vscodeDarkTheme: Extension = EditorView.theme({
   '&': {
-    backgroundColor: '#1E1E1E !important',
+    backgroundColor: '#000000 !important',
     color: '#FFFFFF',
     height: '100%',
   },
   '.cm-editor': {
     height: '100%',
-    backgroundColor: '#1E1E1E !important',
+    backgroundColor: '#000000 !important',
   },
   '.cm-scroller': {
     fontFamily: "'Consolas', 'Menlo', 'Monaco', 'Courier New', monospace",
-    backgroundColor: '#1E1E1E !important',
+    backgroundColor: '#000000 !important',
   },
   '.cm-content': {
     padding: '8px 16px',
@@ -32,7 +32,7 @@ const vscodeDarkTheme: Extension = EditorView.theme({
     fontSize: '0.875rem',
     fontFamily: "'Consolas', 'Menlo', 'Monaco', 'Courier New', monospace",
     color: '#FFFFFF !important',
-    backgroundColor: '#1E1E1E !important',
+    backgroundColor: '#000000 !important',
   },
   '.cm-focused': {
     outline: 'none',
@@ -65,18 +65,18 @@ const vscodeDarkTheme: Extension = EditorView.theme({
     borderLeftWidth: '2px',
   },
   // SQL syntax highlighting colors - BRIGHT like pgAdmin
-  '.cm-keyword': { color: '#FF5C8D !important', fontWeight: 'bold' }, // Bright pink/red for keywords (SELECT, FROM, WHERE, etc.) - like pgAdmin
-  '.cm-string': { color: '#FFA057 !important', fontWeight: 'normal' }, // Bright orange for strings - like pgAdmin
+  '.cm-keyword': { color: '#ff096c !important', fontWeight: 'bold' }, // Pink accent for keywords
+  '.cm-string': { color: '#ff096c !important', fontWeight: 'normal' }, // Pink accent for strings
   '.cm-number': { color: '#B5CEA8 !important', fontWeight: 'normal' }, // Bright green for numbers
   '.cm-operator': { color: '#FFFFFF !important', fontWeight: 'bold' }, // Bright white for operators (=, *, etc.)
   '.cm-variable': { color: '#5DBBF5 !important', fontWeight: 'normal' }, // Bright cyan/blue for identifiers - like pgAdmin
   '.cm-builtin': { color: '#5DBBF5 !important', fontWeight: 'normal' }, // Bright cyan for built-ins - like pgAdmin
   '.cm-comment': { color: '#6A9955 !important', fontStyle: 'italic' }, // Bright green for comments
-  '.cm-meta': { color: '#FF5C8D !important', fontWeight: 'normal' }, // Bright pink for meta
+  '.cm-meta': { color: '#ff096c !important', fontWeight: 'normal' }, // Pink accent for meta
   '.cm-typeName': { color: '#5DBBF5 !important', fontWeight: 'normal' }, // Bright cyan for type names
   '.cm-propertyName': { color: '#5DBBF5 !important', fontWeight: 'normal' }, // Bright cyan for property names
   // Additional SQL-specific highlighting
-  '.cm-atom': { color: '#FF5C8D !important' }, // For boolean literals - bright pink
+  '.cm-atom': { color: '#ff096c !important' }, // For boolean literals - pink accent
   '.cm-def': { color: '#DCDCAA !important' }, // For definitions - yellow
   '.cm-qualifier': { color: '#5DBBF5 !important' }, // For qualifiers - bright cyan
   '.cm-line': {
@@ -128,7 +128,7 @@ export const QueryEditor: React.FC<QueryEditorProps> = ({ onExecute, isExecuting
   };
 
   return (
-    <Box sx={{ display: 'flex', flexDirection: 'column', flex: 1, overflow: 'hidden', backgroundColor: '#1E1E1E' }}>
+    <Box sx={{ display: 'flex', flexDirection: 'column', flex: 1, overflow: 'hidden', backgroundColor: '#000000' }}>
       {/* Toolbar */}
       <Box
         sx={{
@@ -243,14 +243,14 @@ export const QueryEditor: React.FC<QueryEditorProps> = ({ onExecute, isExecuting
           overflow: 'hidden', 
           position: 'relative', 
           display: 'flex',
-          backgroundColor: '#1E1E1E',
+          backgroundColor: '#000000',
           '& .cm-editor': {
-            backgroundColor: '#1E1E1E !important',
+            backgroundColor: '#000000 !important',
             width: '100%',
             height: '100%',
           },
           '& .cm-scroller': {
-            backgroundColor: '#1E1E1E !important',
+            backgroundColor: '#000000 !important',
           },
         }}
       >

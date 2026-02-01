@@ -184,7 +184,7 @@ export const QueryBuilder: React.FC = () => {
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
           <BuildIcon sx={{ color: '#1F6FEB', fontSize: 32 }} />
           <Box>
-            <Typography variant="h4" sx={{ color: '#E6EDF3' }}>
+            <Typography variant="h4" sx={{ color: '#0d1321' }}>
               Query Builder
             </Typography>
             <Typography variant="body2" sx={{ color: '#8B949E' }}>
@@ -202,7 +202,7 @@ export const QueryBuilder: React.FC = () => {
               onChange={(e) => setActiveSessionId(e.target.value)}
               label="Select Query"
               sx={{
-                color: '#E6EDF3',
+                color: '#0d1321',
                 '& .MuiOutlinedInput-notchedOutline': {
                   borderColor: '#30363D',
                 },
@@ -270,7 +270,7 @@ export const QueryBuilder: React.FC = () => {
         <CardContent>
           <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 2 }}>
             <Box>
-              <Typography variant="h6" sx={{ color: '#E6EDF3' }}>
+              <Typography variant="h6" sx={{ color: '#0d1321' }}>
                 Metadata & Business Rules Registry
               </Typography>
               <Typography variant="caption" sx={{ color: '#8B949E' }}>
@@ -334,7 +334,7 @@ export const QueryBuilder: React.FC = () => {
         <Card sx={{ mb: 3, bgcolor: '#161B22', border: '1px solid #30363D' }}>
           <CardContent>
             <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 2 }}>
-              <Typography variant="h6" sx={{ color: '#E6EDF3' }}>
+              <Typography variant="h6" sx={{ color: '#0d1321' }}>
                 {activeSession.name}
               </Typography>
               <Typography variant="caption" sx={{ color: '#8B949E' }}>
@@ -353,7 +353,7 @@ export const QueryBuilder: React.FC = () => {
               sx={{
                 '& .MuiOutlinedInput-root': {
                   bgcolor: '#0D1117',
-                  color: '#E6EDF3',
+                  color: '#0d1321',
                   '& fieldset': {
                     borderColor: '#30363D',
                   },
@@ -399,7 +399,7 @@ export const QueryBuilder: React.FC = () => {
         <Card sx={{ bgcolor: '#161B22', border: '1px solid #30363D', mb: 3 }}>
           <CardContent>
             <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 2 }}>
-              <Typography variant="h6" sx={{ color: '#E6EDF3' }}>
+              <Typography variant="h6" sx={{ color: '#0d1321' }}>
                 {activeSession.name} - Results
               </Typography>
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
@@ -410,7 +410,7 @@ export const QueryBuilder: React.FC = () => {
                     onChange={(e) => updateSession(activeSessionId, { viewType: e.target.value as 'sql' | 'breakdown' })}
                     label="View"
                     sx={{
-                      color: '#E6EDF3',
+                      color: '#0d1321',
                       '& .MuiOutlinedInput-notchedOutline': {
                         borderColor: '#30363D',
                       },
@@ -478,10 +478,10 @@ export const QueryBuilder: React.FC = () => {
 
                 {/* Metric & Dimensions */}
                 <Accordion defaultExpanded sx={{ bgcolor: '#0D1117', mb: 2 }}>
-                  <AccordionSummary expandIcon={<ExpandMoreIcon sx={{ color: '#E6EDF3' }} />}>
+                  <AccordionSummary expandIcon={<ExpandMoreIcon sx={{ color: '#0d1321' }} />}>
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                       <TableIcon sx={{ color: '#58A6FF' }} />
-                      <Typography sx={{ color: '#E6EDF3' }}>Metric & Dimensions</Typography>
+                      <Typography sx={{ color: '#0d1321' }}>Metric & Dimensions</Typography>
                     </Box>
                   </AccordionSummary>
                   <AccordionDetails>
@@ -503,7 +503,7 @@ export const QueryBuilder: React.FC = () => {
                         <Stack spacing={1}>
                           {activeSession.result.dimensions.map((dim, idx) => (
                             <Box key={idx} sx={{ pl: 2 }}>
-                              <Typography variant="body2" sx={{ color: '#E6EDF3' }}>
+                              <Typography variant="body2" sx={{ color: '#0d1321' }}>
                                 • {dim.name}
                               </Typography>
                               <Typography variant="caption" sx={{ color: '#8B949E', pl: 2 }}>
@@ -519,10 +519,10 @@ export const QueryBuilder: React.FC = () => {
 
                 {/* Joins */}
                 <Accordion sx={{ bgcolor: '#0D1117', mb: 2 }}>
-                  <AccordionSummary expandIcon={<ExpandMoreIcon sx={{ color: '#E6EDF3' }} />}>
+                  <AccordionSummary expandIcon={<ExpandMoreIcon sx={{ color: '#0d1321' }} />}>
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                       <LinkIcon sx={{ color: '#58A6FF' }} />
-                      <Typography sx={{ color: '#E6EDF3' }}>Joins (from Metadata)</Typography>
+                      <Typography sx={{ color: '#0d1321' }}>Joins (from Metadata)</Typography>
                     </Box>
                   </AccordionSummary>
                   <AccordionDetails>
@@ -530,7 +530,7 @@ export const QueryBuilder: React.FC = () => {
                       <Stack spacing={1}>
                         {activeSession.result.joins.map((join, idx) => (
                           <Box key={idx} sx={{ pl: 2 }}>
-                            <Typography variant="body2" sx={{ color: '#E6EDF3' }}>
+                            <Typography variant="body2" sx={{ color: '#0d1321' }}>
                               {join.from_table} → {join.to_table}
                             </Typography>
                             <Typography variant="caption" sx={{ color: '#8B949E', pl: 2 }}>
@@ -549,10 +549,10 @@ export const QueryBuilder: React.FC = () => {
 
                 {/* Filters */}
                 <Accordion sx={{ bgcolor: '#0D1117' }}>
-                  <AccordionSummary expandIcon={<ExpandMoreIcon sx={{ color: '#E6EDF3' }} />}>
+                  <AccordionSummary expandIcon={<ExpandMoreIcon sx={{ color: '#0d1321' }} />}>
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                       <FilterIcon sx={{ color: '#58A6FF' }} />
-                      <Typography sx={{ color: '#E6EDF3' }}>Filters (from Business Rules)</Typography>
+                      <Typography sx={{ color: '#0d1321' }}>Filters (from Business Rules)</Typography>
                     </Box>
                   </AccordionSummary>
                   <AccordionDetails>
@@ -565,7 +565,7 @@ export const QueryBuilder: React.FC = () => {
                             size="small"
                             sx={{
                               bgcolor: '#21262D',
-                              color: '#E6EDF3',
+                              color: '#0d1321',
                               border: '1px solid #30363D',
                             }}
                           />

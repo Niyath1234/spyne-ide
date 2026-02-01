@@ -1,39 +1,46 @@
 import { createTheme } from '@mui/material/styles';
 
-// Dark theme matching GitHub's dark mode colors
+// Dark theme with rim highlights
+const darkBackground = '#000000'; // Darkest background
+const darkGray = '#000000'; // Dark gray/blue-gray for cards, borders
+const mediumGray = '#000000'; // Medium gray/blue-gray for secondary surfaces
+const accentPink = '#ff096c'; // Bright pink/magenta for accents and rim highlights
+const textPrimary = '#E6EDF3';
+const textSecondary = '#9AA0A6';
+
 export const theme = createTheme({
   palette: {
     mode: 'dark',
     primary: {
-      main: '#1F6FEB',
-      light: '#58A6FF',
-      dark: '#1F6FEB',
+      main: accentPink,
+      light: '#ff4d9a',
+      dark: '#cc0055',
     },
     secondary: {
-      main: '#238636',
-      light: '#2EA043',
-      dark: '#238636',
+      main: accentPink,
+      light: '#ff4d9a',
+      dark: '#cc0055',
     },
     background: {
-      default: '#0D1117',
-      paper: '#161B22',
+      default: darkBackground,
+      paper: darkGray,
     },
     text: {
-      primary: '#E6EDF3',
-      secondary: '#8B949E',
+      primary: textPrimary,
+      secondary: textSecondary,
     },
-    divider: '#30363D',
+    divider: mediumGray,
     error: {
-      main: '#F85149',
+      main: '#FF6B6B',
     },
     warning: {
-      main: '#D29922',
+      main: '#ff096c',
     },
     info: {
-      main: '#58A6FF',
+      main: accentPink,
     },
     success: {
-      main: '#238636',
+      main: accentPink,
     },
   },
   components: {
@@ -42,14 +49,21 @@ export const theme = createTheme({
         root: {
           textTransform: 'none',
           borderRadius: 6,
+          '&:hover': {
+            boxShadow: `0 0 8px ${accentPink}40`,
+          },
         },
       },
     },
     MuiCard: {
       styleOverrides: {
         root: {
-          backgroundColor: '#161B22',
-          border: '1px solid #30363D',
+          backgroundColor: darkGray,
+          border: `1px solid ${mediumGray}`,
+          '&:hover': {
+            borderColor: accentPink,
+            boxShadow: `0 0 12px ${accentPink}30`,
+          },
         },
       },
     },
@@ -57,16 +71,17 @@ export const theme = createTheme({
       styleOverrides: {
         root: {
           '& .MuiOutlinedInput-root': {
-            backgroundColor: '#0D1117',
-            color: '#E6EDF3',
+            backgroundColor: darkBackground,
+            color: textPrimary,
             '& fieldset': {
-              borderColor: '#30363D',
+              borderColor: mediumGray,
             },
             '&:hover fieldset': {
-              borderColor: '#484F58',
+              borderColor: accentPink,
             },
             '&.Mui-focused fieldset': {
-              borderColor: '#1F6FEB',
+              borderColor: accentPink,
+              boxShadow: `0 0 8px ${accentPink}40`,
             },
           },
         },
@@ -75,19 +90,50 @@ export const theme = createTheme({
     MuiChip: {
       styleOverrides: {
         root: {
-          backgroundColor: '#21262D',
-          color: '#E6EDF3',
-          border: '1px solid #30363D',
+          backgroundColor: darkGray,
+          color: textPrimary,
+          border: `1px solid ${mediumGray}`,
+          '&:hover': {
+            borderColor: accentPink,
+          },
         },
       },
     },
     MuiAccordion: {
       styleOverrides: {
         root: {
-          backgroundColor: '#0D1117',
+          backgroundColor: darkBackground,
+          border: `1px solid ${mediumGray}`,
           '&:before': {
             display: 'none',
           },
+          '&:hover': {
+            borderColor: accentPink,
+          },
+        },
+      },
+    },
+    MuiSelect: {
+      styleOverrides: {
+        root: {
+          '& .MuiOutlinedInput-notchedOutline': {
+            borderColor: mediumGray,
+          },
+          '&:hover .MuiOutlinedInput-notchedOutline': {
+            borderColor: accentPink,
+          },
+          '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
+            borderColor: accentPink,
+            boxShadow: `0 0 8px ${accentPink}40`,
+          },
+        },
+      },
+    },
+    MuiPaper: {
+      styleOverrides: {
+        root: {
+          backgroundColor: darkGray,
+          border: `1px solid ${mediumGray}`,
         },
       },
     },

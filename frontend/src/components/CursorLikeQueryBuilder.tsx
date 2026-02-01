@@ -357,7 +357,7 @@ export const CursorLikeQueryBuilder: React.FC = () => {
   };
 
   return (
-    <Box sx={{ display: 'flex', height: '100%', overflow: 'hidden', bgcolor: '#0D1117' }}>
+    <Box sx={{ display: 'flex', height: '100%', overflow: 'hidden', bgcolor: '#000000' }}>
       {/* Center: SQL Editor */}
       <Box
         sx={{

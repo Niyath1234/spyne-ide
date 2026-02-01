@@ -233,7 +233,7 @@ export const GraphVisualizer: React.FC = () => {
   }, []);
 
   return (
-    <Box sx={{ display: 'flex', flexDirection: 'column', height: '100%', backgroundColor: '#1E1E1E' }}>
+    <Box sx={{ display: 'flex', flexDirection: 'column', height: '100%', backgroundColor: '#000000' }}>
       {/* Toolbar */}
       <Box
         sx={{
@@ -322,7 +322,7 @@ export const GraphVisualizer: React.FC = () => {
             <Box sx={{ textAlign: 'center' }}>
               <Typography
                 sx={{
-                  color: '#F48771',
+                  color: '#ff096c',
                   fontSize: '0.875rem',
                   fontFamily: 'ui-monospace, "Courier New", monospace',
                   mb: 2,

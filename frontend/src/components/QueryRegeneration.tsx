@@ -88,7 +88,7 @@ export const QueryRegeneration: React.FC = () => {
 
   return (
     <Box sx={{ p: 3, height: '100%', overflow: 'auto' }}>
-      <Typography variant="h4" gutterBottom sx={{ color: '#E6EDF3', mb: 3 }}>
+      <Typography variant="h4" gutterBottom sx={{ color: '#0d1321', mb: 3 }}>
         Query Regeneration from Natural Language
       </Typography>
 
@@ -96,7 +96,7 @@ export const QueryRegeneration: React.FC = () => {
       <Card sx={{ mb: 3, bgcolor: '#161B22', border: '1px solid #30363D' }}>
         <CardContent>
           <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 2 }}>
-            <Typography variant="h6" sx={{ color: '#E6EDF3' }}>
+            <Typography variant="h6" sx={{ color: '#0d1321' }}>
               Prerequisites Status
             </Typography>
             <Button
@@ -148,7 +148,7 @@ export const QueryRegeneration: React.FC = () => {
       {/* Query Input */}
       <Card sx={{ mb: 3, bgcolor: '#161B22', border: '1px solid #30363D' }}>
         <CardContent>
-          <Typography variant="h6" gutterBottom sx={{ color: '#E6EDF3', mb: 2 }}>
+          <Typography variant="h6" gutterBottom sx={{ color: '#0d1321', mb: 2 }}>
             Natural Language Query
           </Typography>
           <TextField
@@ -163,7 +163,7 @@ export const QueryRegeneration: React.FC = () => {
             sx={{
               '& .MuiOutlinedInput-root': {
                 bgcolor: '#0D1117',
-                color: '#E6EDF3',
+                color: '#0d1321',
                 '& fieldset': {
                   borderColor: '#30363D',
                 },
@@ -209,7 +209,7 @@ export const QueryRegeneration: React.FC = () => {
           <CardContent>
             {result.success ? (
               <>
-                <Typography variant="h6" gutterBottom sx={{ color: '#E6EDF3', mb: 2 }}>
+                <Typography variant="h6" gutterBottom sx={{ color: '#0d1321', mb: 2 }}>
                   Generated SQL
                 </Typography>
 
@@ -228,10 +228,10 @@ export const QueryRegeneration: React.FC = () => {
 
                 {/* Metadata Display */}
                 <Accordion defaultExpanded sx={{ bgcolor: '#0D1117', mb: 2 }}>
-                  <AccordionSummary expandIcon={<ExpandMoreIcon sx={{ color: '#E6EDF3' }} />}>
+                  <AccordionSummary expandIcon={<ExpandMoreIcon sx={{ color: '#0d1321' }} />}>
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                       <TableIcon sx={{ color: '#58A6FF' }} />
-                      <Typography sx={{ color: '#E6EDF3' }}>Metric & Dimensions</Typography>
+                      <Typography sx={{ color: '#0d1321' }}>Metric & Dimensions</Typography>
                     </Box>
                   </AccordionSummary>
                   <AccordionDetails>
@@ -253,7 +253,7 @@ export const QueryRegeneration: React.FC = () => {
                         <Stack spacing={1}>
                           {result.dimensions.map((dim, idx) => (
                             <Box key={idx} sx={{ pl: 2 }}>
-                              <Typography variant="body2" sx={{ color: '#E6EDF3' }}>
+                              <Typography variant="body2" sx={{ color: '#0d1321' }}>
                                 • {dim.name}
                               </Typography>
                               <Typography variant="caption" sx={{ color: '#8B949E', pl: 2 }}>
@@ -268,10 +268,10 @@ export const QueryRegeneration: React.FC = () => {
                 </Accordion>
 
                 <Accordion sx={{ bgcolor: '#0D1117', mb: 2 }}>
-                  <AccordionSummary expandIcon={<ExpandMoreIcon sx={{ color: '#E6EDF3' }} />}>
+                  <AccordionSummary expandIcon={<ExpandMoreIcon sx={{ color: '#0d1321' }} />}>
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                       <LinkIcon sx={{ color: '#58A6FF' }} />
-                      <Typography sx={{ color: '#E6EDF3' }}>Joins</Typography>
+                      <Typography sx={{ color: '#0d1321' }}>Joins</Typography>
                     </Box>
                   </AccordionSummary>
                   <AccordionDetails>
@@ -279,7 +279,7 @@ export const QueryRegeneration: React.FC = () => {
                       <Stack spacing={1}>
                         {result.joins.map((join, idx) => (
                           <Box key={idx} sx={{ pl: 2 }}>
-                            <Typography variant="body2" sx={{ color: '#E6EDF3' }}>
+                            <Typography variant="body2" sx={{ color: '#0d1321' }}>
                               {join.from_table} → {join.to_table}
                             </Typography>
                             <Typography variant="caption" sx={{ color: '#8B949E', pl: 2 }}>
@@ -297,10 +297,10 @@ export const QueryRegeneration: React.FC = () => {
                 </Accordion>
 
                 <Accordion sx={{ bgcolor: '#0D1117' }}>
-                  <AccordionSummary expandIcon={<ExpandMoreIcon sx={{ color: '#E6EDF3' }} />}>
+                  <AccordionSummary expandIcon={<ExpandMoreIcon sx={{ color: '#0d1321' }} />}>
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                       <FilterIcon sx={{ color: '#58A6FF' }} />
-                      <Typography sx={{ color: '#E6EDF3' }}>Filters</Typography>
+                      <Typography sx={{ color: '#0d1321' }}>Filters</Typography>
                     </Box>
                   </AccordionSummary>
                   <AccordionDetails>
@@ -313,7 +313,7 @@ export const QueryRegeneration: React.FC = () => {
                             size="small"
                             sx={{
                               bgcolor: '#21262D',
-                              color: '#E6EDF3',
+                              color: '#0d1321',
                               border: '1px solid #30363D',
                             }}
                           />

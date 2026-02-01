@@ -3,7 +3,7 @@ import { Box, Typography } from '@mui/material';
 
 export const Monitoring: React.FC = () => {
   return (
-    <Box sx={{ p: 3 }}>
+    <Box sx={{ p: 3, height: '100%', backgroundColor: '#000000' }}>
       <Typography variant="h4" sx={{ color: '#E6EDF3' }}>
         Monitoring
       </Typography>

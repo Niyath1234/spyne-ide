@@ -10,7 +10,6 @@ import {
 import {
   Chat as ChatIcon,
   AccountTree as VisualizerIcon,
-  Build as BuildIcon,
   Book as BookIcon,
   Storage as StorageIcon,
   Code as CodeIcon,
@@ -29,11 +28,6 @@ export const Sidebar: React.FC<SidebarProps> = ({ width }) => {
       id: 'notebook',
       label: 'Trino Notebook',
       icon: <CodeIcon />,
-    },
-    {
-      id: 'query-regeneration',
-      label: 'Query Builder',
-      icon: <BuildIcon />,
     },
     {
       id: 'reasoning',
@@ -62,8 +56,8 @@ export const Sidebar: React.FC<SidebarProps> = ({ width }) => {
       sx={{
         width,
         height: '100%',
-        backgroundColor: '#161B22',
-        borderRight: '1px solid #30363D',
+        backgroundColor: '#000000',
+        borderRight: '2px solid #ff096c',
         overflow: 'auto',
       }}
     >
@@ -75,24 +69,26 @@ export const Sidebar: React.FC<SidebarProps> = ({ width }) => {
               onClick={() => setViewMode(item.id as any)}
               sx={{
                 borderRadius: 1,
+                borderLeft: viewMode === item.id ? '3px solid #ff096c' : '3px solid transparent',
                 '&.Mui-selected': {
-                  backgroundColor: '#1F6FEB',
-                  color: '#FFFFFF',
+                  backgroundColor: '#000000',
+                  color: '#ff096c',
                   '&:hover': {
-                    backgroundColor: '#1F6FEB',
+                    backgroundColor: '#000000',
                   },
                   '& .MuiListItemIcon-root': {
-                    color: '#FFFFFF',
+                    color: '#ff096c',
                   },
                 },
                 '&:hover': {
-                  backgroundColor: '#21262D',
+                  backgroundColor: '#000000',
+                  borderLeft: '3px solid #ff096c',
                 },
               }}
             >
               <ListItemIcon
                 sx={{
-                  color: viewMode === item.id ? '#FFFFFF' : '#8B949E',
+                  color: viewMode === item.id ? '#ff096c' : '#9AA0A6',
                   minWidth: 40,
                 }}
               >

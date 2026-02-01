@@ -7,7 +7,6 @@ import { ReasoningChat } from './components/ReasoningChat';
 import { Monitoring } from './components/Monitoring';
 import { RulesView } from './components/RulesView';
 import { HypergraphVisualizer } from './components/HypergraphVisualizer';
-import { CursorLikeQueryBuilder } from './components/CursorLikeQueryBuilder';
 import { KnowledgeRegister } from './components/KnowledgeRegister';
 import { MetadataRegister } from './components/MetadataRegister';
 import { TrinoNotebook } from './components/TrinoNotebook';
@@ -28,8 +27,6 @@ function App() {
         return <HypergraphVisualizer />;
       case 'monitoring':
         return <Monitoring />;
-      case 'query-regeneration':
-        return <CursorLikeQueryBuilder />;
       case 'knowledge-register':
         return <KnowledgeRegister />;
       case 'metadata-register':
@@ -54,7 +51,7 @@ function App() {
               display: 'flex',
               flexDirection: 'column',
               overflow: 'hidden',
-              backgroundColor: '#0D1117',
+              backgroundColor: '#000000',
             }}
           >
             {renderContent()}

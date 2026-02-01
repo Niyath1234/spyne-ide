@@ -7,8 +7,8 @@ export const TopBar: React.FC = () => {
     <Box
       sx={{
         height: 40,
-        backgroundColor: '#252526',
-        borderBottom: '1px solid #3E3E42',
+        backgroundColor: '#000000',
+        borderBottom: '2px solid #ff096c',
         display: 'flex',
         alignItems: 'center',
         px: 2,
@@ -16,15 +16,19 @@ export const TopBar: React.FC = () => {
       }}
     >
       <Box sx={{ flex: 1, display: 'flex', alignItems: 'center', gap: 1 }}>
-        <Box sx={{ color: '#E6EDF3', fontSize: '0.875rem', fontWeight: 600 }}>
-          RCA Engine - Query Builder
+        <Box sx={{ color: '#ff096c', fontSize: '0.875rem', fontWeight: 600 }}>
+          SPYNE-NN
         </Box>
       </Box>
       <IconButton
         size="small"
         sx={{
-          color: '#CCCCCC',
-          '&:hover': { backgroundColor: '#3E3E42' },
+          color: '#9AA0A6',
+          '&:hover': { 
+            backgroundColor: 'rgba(255, 9, 108, 0.1)', 
+            color: '#ff096c',
+            boxShadow: `0 0 8px rgba(255, 9, 108, 0.3)`,
+          },
         }}
       >
         <SettingsIcon fontSize="small" />

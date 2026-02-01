@@ -211,7 +211,7 @@ export const HypergraphVisualizer: React.FC = () => {
             minHeight: '600px',
             border: '1px solid #30363D',
             borderRadius: 1,
-            bgcolor: '#0D1117',
+            bgcolor: '#000000',
           }}
         />
       )}

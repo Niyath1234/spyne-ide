@@ -254,21 +254,21 @@ export const TrinoNotebook: React.FC = () => {
 
   if (isLoading && !notebook) {
     return (
-      <Box sx={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', height: '100%', bgcolor: '#1e1e1e', gap: 2 }}>
-        <CircularProgress sx={{ color: '#8ab4f8' }} />
-        <Typography sx={{ color: '#9aa0a6' }}>Initializing notebook...</Typography>
+      <Box sx={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', height: '100%', bgcolor: '#000000', gap: 2 }}>
+        <CircularProgress sx={{ color: '#ff096c' }} />
+        <Typography sx={{ color: '#9AA0A6' }}>Initializing notebook...</Typography>
       </Box>
     );
   }
 
   return (
-    <Box sx={{ display: 'flex', flexDirection: 'column', height: '100%', bgcolor: '#1e1e1e', overflow: 'hidden' }}>
+    <Box sx={{ display: 'flex', flexDirection: 'column', height: '100%', bgcolor: '#000000', overflow: 'hidden' }}>
       {/* Top Header Bar */}
       <Box
         sx={{
           height: 48,
-          bgcolor: '#242424',
-          borderBottom: '1px solid #2a2a2a',
+          bgcolor: '#000000',
+          borderBottom: '2px solid #ff096c',
           display: 'flex',
           alignItems: 'center',
           px: 2,
@@ -281,14 +281,15 @@ export const TrinoNotebook: React.FC = () => {
           startIcon={<Add sx={{ fontSize: 16 }} />}
           onClick={addCell}
           sx={{
-            color: '#9aa0a6',
+            color: '#9AA0A6',
             textTransform: 'none',
             fontSize: '0.875rem',
             minWidth: 'auto',
             px: 1.5,
             '&:hover': {
-              backgroundColor: 'rgba(154, 160, 166, 0.1)',
-              color: '#e8eaed',
+              backgroundColor: 'rgba(255, 9, 108, 0.1)',
+              color: '#ff096c',
+              boxShadow: `0 0 8px rgba(255, 9, 108, 0.3)`,
             },
           }}
         >
@@ -300,17 +301,18 @@ export const TrinoNotebook: React.FC = () => {
           onClick={runAllCells}
           disabled={isExecuting || cells.length === 0}
           sx={{
-            color: '#9aa0a6',
+            color: '#9AA0A6',
             textTransform: 'none',
             fontSize: '0.875rem',
             minWidth: 'auto',
             px: 1.5,
             '&:hover': {
-              backgroundColor: 'rgba(154, 160, 166, 0.1)',
-              color: '#e8eaed',
+              backgroundColor: 'rgba(255, 9, 108, 0.1)',
+              color: '#ff096c',
+              boxShadow: `0 0 8px rgba(255, 9, 108, 0.3)`,
             },
             '&:disabled': {
-              color: '#7a7a7a',
+              color: '#000000',
             },
           }}
         >
@@ -325,23 +327,24 @@ export const TrinoNotebook: React.FC = () => {
             value={engine}
             onChange={(e) => setEngine(e.target.value)}
             sx={{
-              color: '#e8eaed',
+              color: '#E6EDF3',
               fontSize: '0.875rem',
               height: 32,
-              bgcolor: '#1f1f1f',
+              bgcolor: '#000000',
               '& .MuiOutlinedInput-notchedOutline': {
-                borderColor: '#2a2a2a',
+                borderColor: '#000000',
               },
               '&:hover .MuiOutlinedInput-notchedOutline': {
-                borderColor: '#3a3a3a',
+                borderColor: '#ff096c',
               },
               '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
-                borderColor: '#8ab4f8',
+                borderColor: '#ff096c',
+                boxShadow: `0 0 8px rgba(255, 9, 108, 0.4)`,
               },
             }}
           >
             {SUPPORTED_ENGINES.map((eng) => (
-              <MenuItem key={eng.value} value={eng.value} sx={{ bgcolor: '#1f1f1f', color: '#e8eaed' }}>
+              <MenuItem key={eng.value} value={eng.value} sx={{ bgcolor: '#000000', color: '#E6EDF3' }}>
                 {eng.label}
               </MenuItem>
             ))}
@@ -357,7 +360,7 @@ export const TrinoNotebook: React.FC = () => {
             flex: 1,
             overflowY: 'auto',
             overflowX: 'hidden',
-            bgcolor: '#1e1e1e',
+            bgcolor: '#000000',
             p: 2,
           }}
         >
@@ -368,10 +371,11 @@ export const TrinoNotebook: React.FC = () => {
               onClose={() => setError(null)}
               sx={{
                 mb: 2,
-                bgcolor: '#ea4335',
-                color: '#ffffff',
-                '& .MuiAlert-icon': { color: '#ffffff' },
-                '& .MuiAlert-message': { color: '#ffffff' },
+                bgcolor: '#FF6B6B',
+                color: '#000000',
+                border: '2px solid #ff096c',
+                '& .MuiAlert-icon': { color: '#000000' },
+                '& .MuiAlert-message': { color: '#000000' },
               }}
             >
               {error}
@@ -385,7 +389,7 @@ export const TrinoNotebook: React.FC = () => {
                 justifyContent: 'center',
                 alignItems: 'center',
                 height: '100%',
-                color: '#9aa0a6',
+                color: '#9AA0A6',
               }}
             >
               <Typography>No cells. Click "+ Code" to add a cell.</Typography>
@@ -430,9 +434,9 @@ export const TrinoNotebook: React.FC = () => {
                 sx={{
                   p: 3,
                   textAlign: 'center',
-                  color: '#9aa0a6',
+                  color: '#9AA0A6',
                   cursor: 'pointer',
-                  '&:hover': { color: '#e8eaed' },
+                  '&:hover': { color: '#ff096c' },
                 }}
                 onClick={addCell}
               >

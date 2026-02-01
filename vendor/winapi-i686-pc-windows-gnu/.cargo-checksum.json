@@ -1325,7 +1325,7 @@
     "lib/libwinapi_windowsapp_downlevel-cabinet.a": "89a12c6584e2cdc05364aef6f6e17f77d0083769633adfab47b5d6793ad884e6",
     "lib/libwinapi_windowsapp_downlevel-d2d1.a": "bda9d05a33ca5e056cf5937fef2a52a59b6700fe45578131391116ca4a4c5b31",
     "lib/libwinapi_windowsapp_downlevel-d3d11.a": "151c55f421ac527340a812b669da6b35faf8e9b45d1e2d0e08deb982063a24e8",
-    "lib/libwinapi_windowsapp_downlevel-d3dcompiler_47.a": "b1377cd66a4f5e603f7713d253a8257da5942b4cdeb124f6172cc22573ec4f37",
+    "lib/libwinapi_windowsapp_downlevel-d3dcompiler_47.a": "b1377cd66a4f5e603f7713d253a8257da5942b4cdeb12000000cc22573ec4f37",
     "lib/libwinapi_windowsapp_downlevel-deviceaccess.a": "dae3ef67aedc2f6be5934edd881e94f0f1d557157eb120603033c3b33056b790",
     "lib/libwinapi_windowsapp_downlevel-dhcpcsvc.a": "71c09c6b4a7957e41326568aa5c3843e3b801e64b8402fe29c39ef722de2f2cd",
     "lib/libwinapi_windowsapp_downlevel-dhcpcsvc6.a": "1b2e5fe6ebe47482a817032559f7f7fef399e0af20c8a65263976efa41cfad30",

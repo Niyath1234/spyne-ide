@@ -8,7 +8,7 @@ interface ReasoningStep {
   metadata?: any;
 }
 
-type ViewMode = 'pipelines' | 'reasoning' | 'rules' | 'visualizer' | 'monitoring' | 'query-regeneration' | 'knowledge-register' | 'metadata-register' | 'notebook';
+type ViewMode = 'pipelines' | 'reasoning' | 'rules' | 'visualizer' | 'monitoring' | 'knowledge-register' | 'metadata-register' | 'notebook';
 
 interface StoreState {
   reasoningSteps: ReasoningStep[];

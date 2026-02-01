@@ -14,7 +14,7 @@ export const ResultsPanel: React.FC<ResultsPanelProps> = ({ result }) => {
   const rows = result?.rows || [];
 
   return (
-    <Box sx={{ height: '40%', display: 'flex', flexDirection: 'column', borderTop: '1px solid #3E3E42', backgroundColor: '#1E1E1E' }}>
+    <Box sx={{ height: '40%', display: 'flex', flexDirection: 'column', borderTop: '1px solid #000000', backgroundColor: '#000000' }}>
       <Box sx={{ display: 'flex', alignItems: 'center', borderBottom: '1px solid #3E3E42' }}>
         <Tabs
           value={activeTab}
@@ -55,7 +55,7 @@ export const ResultsPanel: React.FC<ResultsPanelProps> = ({ result }) => {
 
       <Box sx={{ flex: 1, overflow: 'auto' }}>
         {activeTab === 0 && (
-          <Table stickyHeader sx={{ backgroundColor: '#1E1E1E' }}>
+          <Table stickyHeader sx={{ backgroundColor: '#000000' }}>
             <TableHead>
               <TableRow>
                 {columns.map((colName: string) => (
@@ -116,12 +116,12 @@ export const ResultsPanel: React.FC<ResultsPanelProps> = ({ result }) => {
                   >
                     {result?.error ? (
                       <Box>
-                        <Typography sx={{ color: '#F48771', mb: 1, fontWeight: 600 }}>
+                        <Typography sx={{ color: '#ff096c', mb: 1, fontWeight: 600 }}>
                           {result.error}
                         </Typography>
                         {result.error.includes('hallucination') || result.error.includes('validation failed') ? (
                           <Box sx={{ mt: 2 }}>
-                            <Typography sx={{ color: '#FFA057', fontSize: '0.8125rem', mb: 1, fontWeight: 600 }}>
+                            <Typography sx={{ color: '#ff096c', fontSize: '0.8125rem', mb: 1, fontWeight: 600 }}>
                               💡 What this means:
                             </Typography>
                             <Typography sx={{ color: '#CCCCCC', fontSize: '0.8125rem', mb: 1 }}>
@@ -150,7 +150,7 @@ export const ResultsPanel: React.FC<ResultsPanelProps> = ({ result }) => {
           <Box sx={{ p: 2, color: '#CCCCCC', fontSize: '0.875rem', fontFamily: 'Consolas, Menlo, Monaco, "Courier New", monospace' }}>
             {result?.error ? (
               <Box>
-                <Typography sx={{ color: '#F48771', mb: 1 }}>Error: {result.error}</Typography>
+                <Typography sx={{ color: '#ff096c', mb: 1 }}>Error: {result.error}</Typography>
                 {result.error.includes('1e6') || result.error.includes('1e7') ? (
                   <Typography sx={{ color: '#858585', fontSize: '0.8125rem' }}>
                     Tip: Polars SQL doesn't support scientific notation. Use full numbers instead:
