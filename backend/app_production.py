@@ -277,40 +277,72 @@ pipelines_store: List[Dict[str, Any]] = []
 def create_app() -> Flask:
     """Create and configure Flask application."""
     app = Flask(__name__)
-    
+
     # Apply configuration
     app.config['SECRET_KEY'] = ProductionConfig.SECRET_KEY
     app.config['MAX_CONTENT_LENGTH'] = ProductionConfig.MAX_CONTENT_LENGTH
-    
-    # Setup CORS
+
+    # ------------------------------------------------------------------
+    # 1️⃣ GLOBAL OPTIONS / PREFLIGHT HANDLER (runs per request)
+    # ------------------------------------------------------------------
+    @app.before_request
+    def global_preflight():
+        if request.method == "OPTIONS":
+            response = Response("", status=200)
+
+            origin = request.headers.get("Origin")
+            cors_origins = ProductionConfig.CORS_ORIGINS
+
+            if "*" in cors_origins:
+                response.headers["Access-Control-Allow-Origin"] = origin or "*"
+            elif origin in cors_origins:
+                response.headers["Access-Control-Allow-Origin"] = origin
+            else:
+                response.headers["Access-Control-Allow-Origin"] = cors_origins[0]
+
+            response.headers["Access-Control-Allow-Methods"] = (
+                "GET, POST, PUT, DELETE, OPTIONS, PATCH"
+            )
+            response.headers["Access-Control-Allow-Headers"] = (
+                request.headers.get(
+                    "Access-Control-Request-Headers",
+                    "Content-Type, Authorization, X-Request-ID",
+                )
+            )
+            response.headers["Access-Control-Allow-Credentials"] = "true"
+            response.headers["Access-Control-Max-Age"] = "3600"
+
+            return response
+
+    # ------------------------------------------------------------------
+    # 2️⃣ APP SETUP (runs ONCE at startup)
+    # ------------------------------------------------------------------
     CORS(app, origins=ProductionConfig.CORS_ORIGINS, supports_credentials=True)
-    
-    # Register middleware
+
     register_middleware(app)
-    
-    # Register blueprints
     register_blueprints(app)
-    
-    # Register error handlers
     register_error_handlers(app)
-    
+
     return app
+
 
 
 def register_middleware(app: Flask):
     """Register middleware."""
-    # Initialize authentication middleware
     from backend.auth import init_auth_middleware
     init_auth_middleware(app, secret_key=ProductionConfig.SECRET_KEY)
-    
+
     @app.before_request
     def before_request():
-        """Before request middleware."""
+        # OPTIONS already handled globally
+        if request.method == "OPTIONS":
+            return None
+
         g.request_start_time = time.time()
         g.request_id = request.headers.get('X-Request-ID', str(uuid.uuid4()))
         g.user_id = request.headers.get('X-User-ID', 'anonymous')
-        
-        # Rate limiting (skip for health checks)
+
+        # Rate limiting (skip health checks)
         if not request.path.startswith('/api/v1/health'):
             identifier = request.headers.get('X-API-Key', request.remote_addr)
             allowed, message = rate_limiter.is_allowed(identifier)
@@ -321,22 +353,25 @@ def register_middleware(app: Flask):
                     'error_code': 'RATE_LIMITED',
                     'request_id': g.request_id,
                 }), 429
-    
+
     @app.after_request
     def after_request(response: Response) -> Response:
-        """After request middleware."""
+        # OPTIONS requests do not have g.request_start_time
+        if request.method == "OPTIONS":
+            return response
+
         duration_ms = (time.time() - g.request_start_time) * 1000
-        
-        # Record metrics
-        metrics_collector.record_request(duration_ms, response.status_code, request.path)
-        
-        # Add headers
+
+        metrics_collector.record_request(
+            duration_ms,
+            response.status_code,
+            request.path,
+        )
+
         response.headers['X-Request-ID'] = g.request_id
         response.headers['X-Response-Time-Ms'] = str(int(duration_ms))
-        
-        # Log request
-        log = logging.getLogger('access')
-        log.info(
+
+        logging.getLogger('access').info(
             f'{request.method} {request.path}',
             extra={'extra': {
                 'method': request.method,
@@ -344,10 +379,11 @@ def register_middleware(app: Flask):
                 'status': response.status_code,
                 'duration_ms': duration_ms,
                 'ip': request.remote_addr,
-            }}
+            }},
         )
-        
+
         return response
+
 
 
 def register_error_handlers(app: Flask):
@@ -391,6 +427,51 @@ def register_blueprints(app: Flask):
     app.register_blueprint(rules_bp, url_prefix='/api')
     app.register_blueprint(metadata_bp, url_prefix='/api')
     app.register_blueprint(ingestion_bp, url_prefix='/api')
+    
+    # Register notebook blueprint
+    # IMPORTANT: Import directly from notebook.py to avoid circular import via api/__init__.py
+    startup_logger = logging.getLogger('startup')
+    try:
+        # Use direct file import to bypass api/__init__.py which has circular imports
+        import importlib.util
+        import os
+        notebook_path = os.path.join(os.path.dirname(__file__), 'api', 'notebook.py')
+        
+        if not os.path.exists(notebook_path):
+            raise ImportError(f"Could not find notebook.py at {notebook_path}")
+        
+        # Load notebook module directly without triggering api/__init__.py
+        spec = importlib.util.spec_from_file_location("notebook_api", notebook_path)
+        notebook_module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(notebook_module)
+        notebook_router = notebook_module.notebook_router
+        
+        startup_logger.info(f'Notebook blueprint imported successfully: name={notebook_router.name}')
+        
+        # Register the blueprint
+        app.register_blueprint(notebook_router, url_prefix='/api/v1')
+        startup_logger.info(f'Notebook blueprint registered: name={notebook_router.name}, url_prefix=/api/v1')
+        
+        # Force Flask to update url_map by accessing it
+        _ = list(app.url_map.iter_rules())
+        
+        # Log registered routes for debugging
+        registered_routes = [f"{rule.rule} [{', '.join(rule.methods - {'OPTIONS', 'HEAD'})}]" 
+                            for rule in app.url_map.iter_rules() 
+                            if 'notebook' in str(rule)]
+        if registered_routes:
+            startup_logger.info(f'✓ Notebook API endpoints registered: {registered_routes}')
+        else:
+            startup_logger.warning('Notebook blueprint registered but no routes found in url_map')
+            # List all /api/v1 routes to see what's registered
+            all_v1_routes = [f"{rule.rule} [{', '.join(rule.methods - {'OPTIONS', 'HEAD'})}]" 
+                           for rule in app.url_map.iter_rules() 
+                           if '/api/v1' in str(rule)]
+            startup_logger.info(f'All /api/v1 routes: {all_v1_routes}')
+    except ImportError as e:
+        startup_logger.error(f'Notebook module import failed: {e}', exc_info=True)
+    except Exception as e:
+        startup_logger.error(f'Failed to register notebook blueprint: {e}', exc_info=True)
     
     # Register clarification blueprint
     try:

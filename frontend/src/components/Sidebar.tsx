@@ -13,6 +13,7 @@ import {
   Build as BuildIcon,
   Book as BookIcon,
   Storage as StorageIcon,
+  Code as CodeIcon,
 } from '@mui/icons-material';
 import { useStore } from '../store/useStore';
 
@@ -24,6 +25,11 @@ export const Sidebar: React.FC<SidebarProps> = ({ width }) => {
   const { viewMode, setViewMode } = useStore();
 
   const menuItems = [
+    {
+      id: 'notebook',
+      label: 'Trino Notebook',
+      icon: <CodeIcon />,
+    },
     {
       id: 'query-regeneration',
       label: 'Query Builder',

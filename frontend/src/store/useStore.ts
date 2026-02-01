@@ -8,7 +8,7 @@ interface ReasoningStep {
   metadata?: any;
 }
 
-type ViewMode = 'pipelines' | 'reasoning' | 'rules' | 'visualizer' | 'monitoring' | 'query-regeneration' | 'knowledge-register' | 'metadata-register';
+type ViewMode = 'pipelines' | 'reasoning' | 'rules' | 'visualizer' | 'monitoring' | 'query-regeneration' | 'knowledge-register' | 'metadata-register' | 'notebook';
 
 interface StoreState {
   reasoningSteps: ReasoningStep[];
@@ -31,7 +31,7 @@ export const useStore = create<StoreState>((set) => ({
   clearReasoning: () => set({ reasoningSteps: [] }),
   sidebarOpen: true,
   sidebarWidth: 250,
-  viewMode: 'query-regeneration',
+  viewMode: 'notebook',
   setViewMode: (mode: ViewMode) => set({ viewMode: mode }),
   setSidebarOpen: (open: boolean) => set({ sidebarOpen: open }),
   setSidebarWidth: (width: number) => set({ sidebarWidth: width }),

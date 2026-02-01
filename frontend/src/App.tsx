@@ -10,6 +10,7 @@ import { HypergraphVisualizer } from './components/HypergraphVisualizer';
 import { CursorLikeQueryBuilder } from './components/CursorLikeQueryBuilder';
 import { KnowledgeRegister } from './components/KnowledgeRegister';
 import { MetadataRegister } from './components/MetadataRegister';
+import { TrinoNotebook } from './components/TrinoNotebook';
 import { useStore } from './store/useStore';
 
 function App() {
@@ -33,8 +34,10 @@ function App() {
         return <KnowledgeRegister />;
       case 'metadata-register':
         return <MetadataRegister />;
+      case 'notebook':
+        return <TrinoNotebook />;
       default:
-        return <CursorLikeQueryBuilder />;
+        return <TrinoNotebook />;
     }
   };
 

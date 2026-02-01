@@ -22,11 +22,24 @@ apiClient.interceptors.request.use((config) => {
 apiClient.interceptors.response.use(
   (response) => response,
   (error: AxiosError) => {
-    const errorResponse = {
+    // Check for CORS errors
+    const isCorsError = !error.response && (
+      error.message?.includes('CORS') ||
+      error.message?.includes('Access-Control') ||
+      error.message?.includes('Network Error') ||
+      error.code === 'ERR_NETWORK' ||
+      error.code === 'ERR_FAILED'
+    );
+    
+    const errorResponse: any = {
       success: false,
-      error: error.message || 'Unknown error',
+      error: isCorsError 
+        ? 'CORS error: Backend is not allowing requests from this origin. Make sure the backend CORS configuration includes this frontend origin.'
+        : error.message || 'Unknown error',
       status: error.response?.status,
       request_id: error.config?.headers?.['X-Request-ID'],
+      code: error.code,
+      isCorsError,
     };
     
     if (error.response?.data && typeof error.response.data === 'object') {
@@ -281,6 +294,74 @@ export const metadataAPI = {
       metadata_text: metadataText,
       system,
     });
+    return response.data;
+  },
+};
+
+// Notebook API
+export interface NotebookCell {
+  id: string;
+  sql: string;
+  status?: 'idle' | 'running' | 'success' | 'error';
+  result?: {
+    schema: Array<{ name: string; type: string }>;
+    rows: any[][];
+    row_count: number;
+    execution_time_ms: number;
+  };
+  error?: string;
+}
+
+export interface Notebook {
+  id: string;
+  engine: string;
+  cells: NotebookCell[];
+  metadata?: Record<string, any>;
+  created_at?: string;
+  updated_at?: string;
+}
+
+export const notebookAPI = {
+  create: async (notebook: Partial<Notebook>): Promise<{ success: boolean; notebook: Notebook; error?: string }> => {
+    try {
+      const response = await apiClient.post('/api/v1/notebooks', notebook);
+      return response.data;
+    } catch (err: any) {
+      console.error('Notebook API create error:', err);
+      throw err;
+    }
+  },
+  get: async (notebookId: string): Promise<{ success: boolean; notebook: Notebook; error?: string }> => {
+    try {
+      const response = await apiClient.get(`/api/v1/notebooks/${notebookId}`);
+      return response.data;
+    } catch (err: any) {
+      // 404 is expected if notebook doesn't exist
+      if (err.response?.status === 404) {
+        return { success: false, notebook: {} as Notebook, error: 'Notebook not found' };
+      }
+      console.error('Notebook API get error:', err);
+      throw err;
+    }
+  },
+  list: async (): Promise<{ success: boolean; notebooks: Notebook[] }> => {
+    const response = await apiClient.get('/api/v1/notebooks');
+    return response.data;
+  },
+  update: async (notebookId: string, notebook: Partial<Notebook>): Promise<{ success: boolean; notebook: Notebook; error?: string }> => {
+    const response = await apiClient.put(`/api/v1/notebooks/${notebookId}`, notebook);
+    return response.data;
+  },
+  compile: async (notebookId: string, cellId?: string): Promise<{ success: boolean; sql: string; error?: string }> => {
+    const response = await apiClient.post(`/api/v1/notebooks/${notebookId}/compile`, { cell_id: cellId });
+    return response.data;
+  },
+  execute: async (notebookId: string, data: { cell_id: string }): Promise<{ success: boolean; cell_id: string; result?: any; compiled_sql?: string; error?: string }> => {
+    const response = await apiClient.post(`/api/v1/notebooks/${notebookId}/execute`, data);
+    return response.data;
+  },
+  generateSQL: async (notebookId: string, cellId: string, data: { query: string }): Promise<{ success: boolean; sql?: string; cell_id?: string; error?: string }> => {
+    const response = await apiClient.post(`/api/v1/notebooks/${notebookId}/cells/${cellId}/generate-sql`, data);
     return response.data;
   },
 };

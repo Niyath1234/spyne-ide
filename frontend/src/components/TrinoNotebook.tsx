@@ -1,0 +1,447 @@
+import React, { useState, useEffect } from 'react';
+import {
+  Box,
+  Typography,
+  Button,
+  CircularProgress,
+  Alert,
+  Select,
+  FormControl,
+  MenuItem,
+} from '@mui/material';
+import {
+  PlayArrow,
+  Add,
+} from '@mui/icons-material';
+import { notebookAPI } from '../api/client';
+import type { Notebook, NotebookCell } from '../api/client';
+import { NotebookCell as NotebookCellComponent } from './NotebookCell';
+import { AIChatPanel } from './AIChatPanel';
+
+const SUPPORTED_ENGINES = [
+  { value: 'trino', label: 'Trino (Presto)' },
+  { value: 'presto', label: 'Presto' },
+  { value: 'hive', label: 'Hive' },
+  { value: 'druid', label: 'Druid' },
+  { value: 'snowflake', label: 'Snowflake' },
+  { value: 'bigquery', label: 'BigQuery' },
+  { value: 'mysql', label: 'MySQL' },
+  { value: 'sqlite', label: 'SQLite' },
+  { value: 'postgresql', label: 'PostgreSQL' },
+  { value: 'mssql', label: 'SQL Server' },
+  { value: 'oracle', label: 'Oracle' },
+];
+
+export const TrinoNotebook: React.FC = () => {
+  const [notebook, setNotebook] = useState<Notebook | null>(null);
+  const [cells, setCells] = useState<NotebookCell[]>([]);
+  const [isExecuting, setIsExecuting] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [aiOpenCellId, setAiOpenCellId] = useState<string | null>(null);
+  const [engine, setEngine] = useState<string>('trino');
+
+  // Initialize notebook
+  useEffect(() => {
+    const initNotebook = async () => {
+      setIsLoading(true);
+      setError(null);
+      try {
+        // Try to load existing notebook first
+        try {
+          const loadResponse = await notebookAPI.get('default');
+          if (loadResponse.success && loadResponse.notebook) {
+            const notebookData = loadResponse.notebook;
+            const typedCells: NotebookCell[] = (notebookData.cells || []).map(cell => ({
+              ...cell,
+              status: (cell.status as NotebookCell['status']) || 'idle',
+            }));
+            setNotebook({ ...notebookData, cells: typedCells });
+            setCells(typedCells.length > 0 ? typedCells : [{ id: `cell${Date.now()}`, sql: '', status: 'idle' }]);
+            setIsLoading(false);
+            return;
+          }
+        } catch (loadErr: any) {
+          // Notebook doesn't exist, create new one
+          console.log('Notebook not found, creating new one:', loadErr.message);
+        }
+
+        // Create new notebook with one empty cell
+        const emptyCell: NotebookCell = {
+          id: `cell${Date.now()}`,
+          sql: '',
+          status: 'idle',
+        };
+
+        const response = await notebookAPI.create({
+          id: 'default',
+          engine: 'trino',
+          cells: [emptyCell],
+        });
+
+        if (response.success) {
+          const notebookData = response.notebook;
+          const typedCells: NotebookCell[] = (notebookData.cells || []).map(cell => ({
+            ...cell,
+            status: (cell.status as NotebookCell['status']) || 'idle',
+          }));
+          setNotebook({ ...notebookData, cells: typedCells });
+          setCells(typedCells.length > 0 ? typedCells : [emptyCell]);
+        } else {
+          setError(response.error || 'Failed to create notebook');
+        }
+      } catch (err: any) {
+        console.error('Notebook initialization error:', err);
+        
+        const errorMessage = err.message || '';
+        const isCorsError = errorMessage.includes('CORS') || errorMessage.includes('Access-Control');
+        const isNetworkError = err.code === 'ECONNREFUSED' || 
+                              err.code === 'ERR_NETWORK' || 
+                              err.code === 'ERR_FAILED' ||
+                              errorMessage.includes('Network Error') || 
+                              errorMessage.includes('fetch') ||
+                              errorMessage.includes('Failed to fetch');
+        
+        // Check if it's a CORS or network error
+        if (isCorsError || isNetworkError) {
+          const corsMessage = isCorsError 
+            ? 'CORS error: Backend is not allowing requests from this origin. ' +
+              'Make sure RCA_CORS_ORIGINS includes http://localhost:5173 or set it to "*" for development. '
+            : '';
+          
+          setError(
+            corsMessage +
+            'Cannot connect to backend server. ' +
+            'Make sure the backend is running on http://localhost:8080. ' +
+            'Starting with local-only mode (notebooks will not be saved).'
+          );
+          
+          // Create local notebook as fallback with one empty cell
+          const emptyCell: NotebookCell = {
+            id: `cell${Date.now()}`,
+            sql: '',
+            status: 'idle',
+          };
+          const localNotebook: Notebook = {
+            id: 'local-default',
+            engine: 'trino',
+            cells: [emptyCell],
+          };
+          setNotebook(localNotebook);
+          setCells([emptyCell]);
+        } else {
+          // Extract meaningful error message
+          const apiError = err.response?.data?.error;
+          const errorMsg = err.message;
+          
+          // Avoid duplication
+          let finalError = 'Failed to initialize notebook';
+          if (apiError && !apiError.includes('Failed to initialize notebook')) {
+            finalError = apiError;
+          } else if (errorMsg && !errorMsg.includes('Failed to initialize notebook')) {
+            finalError = errorMsg;
+          }
+          
+          setError(finalError);
+        }
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    initNotebook();
+  }, []);
+
+  const addCell = () => {
+    const newCell: NotebookCell = {
+      id: `cell${Date.now()}`,
+      sql: '',
+      status: 'idle',
+    };
+    const newCells = [...cells, newCell];
+    setCells(newCells);
+    updateNotebook({ cells: newCells });
+  };
+
+  const updateCell = (cellId: string, updates: Partial<NotebookCell>) => {
+    const newCells = cells.map((c) => (c.id === cellId ? { ...c, ...updates } : c));
+    setCells(newCells);
+    updateNotebook({ cells: newCells });
+  };
+
+  const updateNotebook = async (updates: Partial<Notebook>) => {
+    if (!notebook) return;
+
+    try {
+      const updated = { ...notebook, ...updates, updated_at: new Date().toISOString() };
+      await notebookAPI.update(notebook.id, updated);
+      setNotebook(updated);
+    } catch (err: any) {
+      console.error('Failed to update notebook:', err);
+    }
+  };
+
+  const executeCell = async (cellId: string) => {
+    if (!notebook) return;
+
+    setIsExecuting(true);
+    setError(null);
+
+    updateCell(cellId, { status: 'running', error: undefined });
+
+    try {
+      const response = await notebookAPI.execute(notebook.id, { cell_id: cellId });
+
+      if (response.success) {
+        updateCell(cellId, {
+          status: 'success',
+          result: response.result,
+          error: undefined,
+        });
+      } else {
+        updateCell(cellId, {
+          status: 'error',
+          error: response.error,
+          result: undefined,
+        });
+      }
+    } catch (err: any) {
+      updateCell(cellId, {
+        status: 'error',
+        error: err.message || 'Execution failed',
+        result: undefined,
+      });
+    } finally {
+      setIsExecuting(false);
+    }
+  };
+
+  const runAllCells = async () => {
+    if (!notebook || cells.length === 0) return;
+
+    setIsExecuting(true);
+    setError(null);
+
+    for (const cell of cells) {
+      await executeCell(cell.id);
+    }
+
+    setIsExecuting(false);
+  };
+
+  const handleGenerateSQL = async (query: string) => {
+    if (!aiOpenCellId || !notebook) return;
+
+    try {
+      const response = await notebookAPI.generateSQL(notebook.id, aiOpenCellId, {
+        query,
+      });
+
+      if (response.success && response.sql) {
+        updateCell(aiOpenCellId, { sql: response.sql });
+        setAiOpenCellId(null);
+      } else {
+        setError(response.error || 'Failed to generate SQL');
+      }
+    } catch (err: any) {
+      setError(err.message || 'Failed to generate SQL');
+    }
+  };
+
+  const handleToggleAI = (cellId: string | null) => {
+    setAiOpenCellId(cellId);
+  };
+
+  if (isLoading && !notebook) {
+    return (
+      <Box sx={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', height: '100%', bgcolor: '#1e1e1e', gap: 2 }}>
+        <CircularProgress sx={{ color: '#8ab4f8' }} />
+        <Typography sx={{ color: '#9aa0a6' }}>Initializing notebook...</Typography>
+      </Box>
+    );
+  }
+
+  return (
+    <Box sx={{ display: 'flex', flexDirection: 'column', height: '100%', bgcolor: '#1e1e1e', overflow: 'hidden' }}>
+      {/* Top Header Bar */}
+      <Box
+        sx={{
+          height: 48,
+          bgcolor: '#242424',
+          borderBottom: '1px solid #2a2a2a',
+          display: 'flex',
+          alignItems: 'center',
+          px: 2,
+          gap: 1,
+        }}
+      >
+        {/* Left: Commands */}
+        <Button
+          size="small"
+          startIcon={<Add sx={{ fontSize: 16 }} />}
+          onClick={addCell}
+          sx={{
+            color: '#9aa0a6',
+            textTransform: 'none',
+            fontSize: '0.875rem',
+            minWidth: 'auto',
+            px: 1.5,
+            '&:hover': {
+              backgroundColor: 'rgba(154, 160, 166, 0.1)',
+              color: '#e8eaed',
+            },
+          }}
+        >
+          + Code
+        </Button>
+        <Button
+          size="small"
+          startIcon={<PlayArrow sx={{ fontSize: 16 }} />}
+          onClick={runAllCells}
+          disabled={isExecuting || cells.length === 0}
+          sx={{
+            color: '#9aa0a6',
+            textTransform: 'none',
+            fontSize: '0.875rem',
+            minWidth: 'auto',
+            px: 1.5,
+            '&:hover': {
+              backgroundColor: 'rgba(154, 160, 166, 0.1)',
+              color: '#e8eaed',
+            },
+            '&:disabled': {
+              color: '#7a7a7a',
+            },
+          }}
+        >
+          ▷ Run all
+        </Button>
+
+        <Box sx={{ flex: 1 }} />
+
+        {/* Engine Selector */}
+        <FormControl size="small" sx={{ minWidth: 150, mr: 2 }}>
+          <Select
+            value={engine}
+            onChange={(e) => setEngine(e.target.value)}
+            sx={{
+              color: '#e8eaed',
+              fontSize: '0.875rem',
+              height: 32,
+              bgcolor: '#1f1f1f',
+              '& .MuiOutlinedInput-notchedOutline': {
+                borderColor: '#2a2a2a',
+              },
+              '&:hover .MuiOutlinedInput-notchedOutline': {
+                borderColor: '#3a3a3a',
+              },
+              '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
+                borderColor: '#8ab4f8',
+              },
+            }}
+          >
+            {SUPPORTED_ENGINES.map((eng) => (
+              <MenuItem key={eng.value} value={eng.value} sx={{ bgcolor: '#1f1f1f', color: '#e8eaed' }}>
+                {eng.label}
+              </MenuItem>
+            ))}
+          </Select>
+        </FormControl>
+      </Box>
+
+      {/* Main Content Area */}
+      <Box sx={{ display: 'flex', flex: 1, overflow: 'hidden' }}>
+        {/* Notebook Cells Area */}
+        <Box
+          sx={{
+            flex: 1,
+            overflowY: 'auto',
+            overflowX: 'hidden',
+            bgcolor: '#1e1e1e',
+            p: 2,
+          }}
+        >
+          {/* Error Display */}
+          {error && (
+            <Alert
+              severity="error"
+              onClose={() => setError(null)}
+              sx={{
+                mb: 2,
+                bgcolor: '#ea4335',
+                color: '#ffffff',
+                '& .MuiAlert-icon': { color: '#ffffff' },
+                '& .MuiAlert-message': { color: '#ffffff' },
+              }}
+            >
+              {error}
+            </Alert>
+          )}
+
+          {cells.length === 0 ? (
+            <Box
+              sx={{
+                display: 'flex',
+                justifyContent: 'center',
+                alignItems: 'center',
+                height: '100%',
+                color: '#9aa0a6',
+              }}
+            >
+              <Typography>No cells. Click "+ Code" to add a cell.</Typography>
+            </Box>
+          ) : (
+            <>
+              {cells.map((cell) => (
+                <Box
+                  key={cell.id}
+                  sx={{
+                    mb: 2,
+                  }}
+                >
+                  {/* Cell */}
+                  <NotebookCellComponent
+                    cell={cell}
+                    onRun={executeCell}
+                    onChange={(cellId, sql) => updateCell(cellId, { sql })}
+                    isAIOpen={aiOpenCellId === cell.id}
+                    onToggleAI={handleToggleAI}
+                  />
+
+                  {/* AI Panel (shown when AI is open for this cell, below the cell) */}
+                  {aiOpenCellId === cell.id && (
+                    <Box
+                      sx={{
+                        mt: 1,
+                      }}
+                    >
+                      <AIChatPanel
+                        cellId={cell.id}
+                        onClose={() => setAiOpenCellId(null)}
+                        onGenerateSQL={handleGenerateSQL}
+                      />
+                    </Box>
+                  )}
+                </Box>
+              ))}
+
+              {/* Empty Cell Placeholder */}
+              <Box
+                sx={{
+                  p: 3,
+                  textAlign: 'center',
+                  color: '#9aa0a6',
+                  cursor: 'pointer',
+                  '&:hover': { color: '#e8eaed' },
+                }}
+                onClick={addCell}
+              >
+                <Typography variant="body2">Start coding or generate with AI.</Typography>
+              </Box>
+            </>
+          )}
+        </Box>
+      </Box>
+    </Box>
+  );
+};
