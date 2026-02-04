@@ -7,13 +7,78 @@ Trino SQL Notebook endpoints for cell-based SQL composition.
 import re
 import json
 import os
+import threading
 from typing import Dict, List, Optional, Any
 from flask import Blueprint, request, jsonify
 
 notebook_router = Blueprint('notebook', __name__)
 
-# In-memory notebook storage (in production, use database)
-_notebooks: Dict[str, Dict[str, Any]] = {}
+# File-based notebook storage (shared across Gunicorn workers)
+NOTEBOOKS_FILE = os.getenv('NOTEBOOKS_STORAGE_PATH', '/tmp/rca_notebooks.json')
+_notebooks_lock = threading.Lock()
+
+def _load_notebooks() -> Dict[str, Dict[str, Any]]:
+    """Load notebooks from file."""
+    if os.path.exists(NOTEBOOKS_FILE):
+        try:
+            with open(NOTEBOOKS_FILE, 'r') as f:
+                return json.load(f)
+        except (json.JSONDecodeError, IOError):
+            return {}
+    return {}
+
+def _save_notebooks(notebooks: Dict[str, Dict[str, Any]]):
+    """Save notebooks to file."""
+    import logging
+    logger = logging.getLogger('notebook_api')
+    try:
+        # Ensure directory exists
+        dir_path = os.path.dirname(NOTEBOOKS_FILE)
+        if dir_path:
+            os.makedirs(dir_path, exist_ok=True)
+        # Use atomic write: write to temp file then rename
+        temp_file = NOTEBOOKS_FILE + '.tmp'
+        logger.info(f'Attempting to save {len(notebooks)} notebooks to {NOTEBOOKS_FILE}')
+        with open(temp_file, 'w') as f:
+            json.dump(notebooks, f, indent=2)
+        os.replace(temp_file, NOTEBOOKS_FILE)
+        logger.info(f'✅ Successfully saved {len(notebooks)} notebooks to {NOTEBOOKS_FILE}')
+        # Verify file exists
+        if not os.path.exists(NOTEBOOKS_FILE):
+            logger.error(f'❌ File {NOTEBOOKS_FILE} does not exist after save operation!')
+    except (IOError, OSError) as e:
+        logger.error(f'❌ Failed to save notebooks to {NOTEBOOKS_FILE}: {e}', exc_info=True)
+        # Don't raise - allow in-memory operation as fallback
+    except Exception as e:
+        logger.error(f'❌ Unexpected error saving notebooks: {type(e).__name__}: {e}', exc_info=True)
+
+def _get_notebooks() -> Dict[str, Dict[str, Any]]:
+    """Get notebooks dict (thread-safe)."""
+    with _notebooks_lock:
+        return _load_notebooks()
+
+def _set_notebook(notebook_id: str, notebook: Dict[str, Any]):
+    """Set a notebook (thread-safe)."""
+    import logging
+    logger = logging.getLogger('notebook_api')
+    with _notebooks_lock:
+        notebooks = _load_notebooks()
+        notebooks[notebook_id] = notebook
+        logger.info(f'Saving notebook {notebook_id} to {NOTEBOOKS_FILE}')
+        _save_notebooks(notebooks)
+        # Verify it was saved
+        if os.path.exists(NOTEBOOKS_FILE):
+            logger.info(f'Notebook {notebook_id} saved successfully')
+        else:
+            logger.warning(f'Notebook {notebook_id} save completed but file {NOTEBOOKS_FILE} does not exist')
+
+def _delete_notebook(notebook_id: str):
+    """Delete a notebook (thread-safe)."""
+    with _notebooks_lock:
+        notebooks = _load_notebooks()
+        if notebook_id in notebooks:
+            del notebooks[notebook_id]
+            _save_notebooks(notebooks)
 
 # Execution router instance
 _executor = None
@@ -285,9 +350,10 @@ def _compile_notebook(notebook: Dict[str, Any], target_cell_id: Optional[str] = 
 @notebook_router.route('/notebooks', methods=['GET'])
 def list_notebooks():
     """List all notebooks."""
+    notebooks = _get_notebooks()
     return jsonify({
         'success': True,
-        'notebooks': list(_notebooks.values())
+        'notebooks': list(notebooks.values())
     })
 
 
@@ -296,18 +362,28 @@ def list_notebooks():
 def create_notebook():
     """Create a new notebook."""
     data = request.get_json() or {}
-    notebook_id = data.get('id') or f"notebook_{len(_notebooks) + 1}"
+    notebooks = _get_notebooks()
+    notebook_id = data.get('id') or f"notebook_{len(notebooks) + 1}"
     
     notebook = {
         'id': notebook_id,
-        'engine': 'trino',
+        'engine': data.get('engine', 'trino'),  # Use engine from request
         'cells': data.get('cells', []),
         'metadata': data.get('metadata', {}),
         'created_at': data.get('created_at'),
         'updated_at': data.get('updated_at'),
     }
     
-    _notebooks[notebook_id] = notebook
+    _set_notebook(notebook_id, notebook)
+    
+    # Verify it was saved
+    import logging
+    logger = logging.getLogger('notebook_api')
+    saved_notebooks = _get_notebooks()
+    if notebook_id in saved_notebooks:
+        logger.info(f'Notebook {notebook_id} verified in storage after create')
+    else:
+        logger.error(f'CRITICAL: Notebook {notebook_id} NOT found in storage after create!')
     
     return jsonify({
         'success': True,
@@ -319,7 +395,8 @@ def create_notebook():
 @notebook_router.route('/notebooks/<notebook_id>', methods=['GET'])
 def get_notebook(notebook_id: str):
     """Get a notebook by ID."""
-    notebook = _notebooks.get(notebook_id)
+    notebooks = _get_notebooks()
+    notebook = notebooks.get(notebook_id)
     if not notebook:
         return jsonify({
             'success': False,
@@ -335,7 +412,8 @@ def get_notebook(notebook_id: str):
 @notebook_router.route('/notebooks/<notebook_id>', methods=['PUT'])
 def update_notebook(notebook_id: str):
     """Update a notebook."""
-    notebook = _notebooks.get(notebook_id)
+    notebooks = _get_notebooks()
+    notebook = notebooks.get(notebook_id)
     if not notebook:
         return jsonify({
             'success': False,
@@ -354,7 +432,7 @@ def update_notebook(notebook_id: str):
     
     notebook['updated_at'] = data.get('updated_at')
     
-    _notebooks[notebook_id] = notebook
+    _set_notebook(notebook_id, notebook)
     
     return jsonify({
         'success': True,
@@ -365,7 +443,8 @@ def update_notebook(notebook_id: str):
 @notebook_router.route('/notebooks/<notebook_id>/compile', methods=['POST'])
 def compile_notebook(notebook_id: str):
     """Compile a notebook to Trino SQL."""
-    notebook = _notebooks.get(notebook_id)
+    notebooks = _get_notebooks()
+    notebook = notebooks.get(notebook_id)
     if not notebook:
         return jsonify({
             'success': False,
@@ -392,7 +471,8 @@ def compile_notebook(notebook_id: str):
 @notebook_router.route('/notebooks/<notebook_id>/execute', methods=['POST'])
 def execute_notebook(notebook_id: str):
     """Execute a notebook cell."""
-    notebook = _notebooks.get(notebook_id)
+    notebooks = _get_notebooks()
+    notebook = notebooks.get(notebook_id)
     if not notebook:
         return jsonify({
             'success': False,
@@ -432,14 +512,40 @@ def execute_notebook(notebook_id: str):
         }), 400
     
     # Execute query
+    # Get engine from notebook metadata (defaults to 'trino')
+    notebook_engine = notebook.get('engine', 'trino')
+    
     if not _executor:
         # Try to use Trino directly via HTTP
         try:
             import requests
-            trino_url = os.getenv('TRINO_COORDINATOR_URL', 'http://localhost:8080')
+            import logging
+            logger = logging.getLogger(__name__)
+            # Use Trino service name from docker-compose (or localhost:8081 for local)
+            # In docker: trino:8080 (internal), locally: localhost:8081 (external)
+            # Check if we're in Docker by looking for service name
+            trino_url = os.getenv('TRINO_COORDINATOR_URL')
+            if not trino_url:
+                # Try docker service name first, fallback to localhost
+                try:
+                    import socket
+                    socket.gethostbyname('trino')
+                    trino_url = 'http://trino:8080'  # Docker internal
+                    logger.info('Using Docker internal Trino URL: http://trino:8080')
+                except socket.gaierror:
+                    trino_url = 'http://localhost:8081'  # Local development
+                    logger.info('Using local Trino URL: http://localhost:8081')
+            else:
+                logger.info(f'Using Trino URL from environment: {trino_url}')
+            
             trino_user = os.getenv('TRINO_USER', 'admin')
-            trino_catalog = os.getenv('TRINO_CATALOG', 'memory')
-            trino_schema = os.getenv('TRINO_SCHEMA', 'default')
+            # Use notebook engine or default catalog
+            # For Trino, use 'tpch' catalog for testing, or 'memory' as default
+            trino_catalog = os.getenv('TRINO_CATALOG', 'tpch' if notebook_engine == 'trino' else 'memory')
+            trino_schema = os.getenv('TRINO_SCHEMA', 'tiny')  # Default to 'tiny' schema for TPCH
+            
+            logger.info(f'Executing Trino query: URL={trino_url}, Catalog={trino_catalog}, Schema={trino_schema}, User={trino_user}')
+            logger.debug(f'Compiled SQL: {compiled_sql[:200]}...' if len(compiled_sql) > 200 else f'Compiled SQL: {compiled_sql}')
             
             headers = {
                 'X-Trino-User': trino_user,
@@ -447,71 +553,210 @@ def execute_notebook(notebook_id: str):
                 'X-Trino-Schema': trino_schema,
             }
             
-            response = requests.post(
-                f'{trino_url}/v1/statement',
-                headers=headers,
-                data=compiled_sql,
-                timeout=300
-            )
+            # Trino API: POST to /v1/statement with SQL as text/plain
+            try:
+                response = requests.post(
+                    f'{trino_url}/v1/statement',
+                    headers={
+                        **headers,
+                        'Content-Type': 'text/plain',
+                    },
+                    data=compiled_sql.encode('utf-8'),
+                    timeout=300
+                )
+            except requests.exceptions.ConnectionError as e:
+                logger.error(f'Connection error to Trino at {trino_url}: {str(e)}')
+                raise Exception(f'Cannot connect to Trino at {trino_url}. Is Trino running? Error: {str(e)}')
             
-            if response.status_code == 200:
-                # Parse Trino response
+            # Check for HTTP errors
+            if response.status_code != 200:
+                error_text = response.text or f'HTTP {response.status_code}'
+                logger.error(f'Trino HTTP error {response.status_code}: {error_text[:500]}')
+                raise Exception(f'Trino connection failed (HTTP {response.status_code}): {error_text[:200]}')
+            
+            # Parse Trino response
+            try:
                 data = response.json()
-                rows = []
-                schema = []
-                
-                # Trino returns data in chunks
-                next_uri = data.get('nextUri')
-                if 'columns' in data:
-                    schema = [{'name': col['name'], 'type': col['type']} for col in data['columns']]
-                
-                # Fetch all data
-                while next_uri:
-                    chunk_response = requests.get(f'{trino_url}{next_uri}', headers=headers, timeout=300)
-                    chunk_data = chunk_response.json()
-                    if 'data' in chunk_data:
-                        rows.extend(chunk_data['data'])
-                    next_uri = chunk_data.get('nextUri')
-                
-                # Update cell with results
+            except json.JSONDecodeError as e:
+                logger.error(f'Failed to parse Trino response: {response.text[:500]}')
+                raise Exception(f'Invalid JSON response from Trino: {response.text[:200]}')
+            
+            # Check for errors in initial response
+            if data.get('error'):
+                error_info = data['error']
+                error_msg = error_info.get('message', 'Unknown error')
+                error_code = error_info.get('errorCode', 'UNKNOWN')
+                raise Exception(f'Trino query error [{error_code}]: {error_msg}')
+            
+            # Check query state
+            stats = data.get('stats', {})
+            if stats.get('state') == 'FAILED':
+                error_info = data.get('error', {})
+                error_msg = error_info.get('message', 'Query failed')
+                error_code = error_info.get('errorCode', 'UNKNOWN')
+                raise Exception(f'Trino query failed [{error_code}]: {error_msg}')
+            
+            rows = []
+            schema = []
+            
+            # Extract schema from columns (may be in initial response or later)
+            if 'columns' in data:
+                schema = [{'name': col['name'], 'type': col['type']} for col in data['columns']]
+            
+            # Extract data if available in initial response (rare but possible)
+            if 'data' in data:
+                rows.extend(data['data'])
+            
+            # Trino returns data in chunks via nextUri
+            next_uri = data.get('nextUri')
+            logger.info(f'Initial response: state={stats.get("state")}, nextUri={next_uri[:80] if next_uri else None}..., has_columns={"columns" in data}, has_data={"data" in data}')
+            
+            # If no nextUri and query is finished, we're done (rare case)
+            if not next_uri and stats.get('state') == 'FINISHED':
+                logger.info('Query completed immediately without nextUri')
                 cell['result'] = {
                     'schema': schema,
-                    'rows': rows[:100],  # Limit to 100 rows for display
+                    'rows': rows[:100],
                     'row_count': len(rows),
-                    'execution_time_ms': 0,  # Trino doesn't provide this in simple response
+                    'execution_time_ms': stats.get('wallTimeMillis', 0),
                 }
                 cell['status'] = 'success'
                 cell['error'] = None
-                
-                # Save notebook
-                _notebooks[notebook_id] = notebook
-                
+                _set_notebook(notebook_id, notebook)
                 return jsonify({
                     'success': True,
                     'cell_id': cell_id,
                     'result': cell['result'],
                     'compiled_sql': compiled_sql
                 })
-            else:
-                error_msg = response.text or 'Trino execution failed'
-                raise Exception(error_msg)
+            
+            # Fetch all data chunks
+            iteration = 0
+            while next_uri:
+                iteration += 1
+                logger.debug(f'Fetching chunk {iteration}: {next_uri[:80]}...')
+                
+                # Trino returns nextUri as a full URL, so use it directly
+                # If it's a relative path, prepend trino_url
+                if next_uri.startswith('http://') or next_uri.startswith('https://'):
+                    chunk_url = next_uri
+                else:
+                    chunk_url = f'{trino_url}{next_uri}'
+                
+                chunk_response = requests.get(chunk_url, headers=headers, timeout=300)
+                if chunk_response.status_code != 200:
+                    error_text = chunk_response.text or f'HTTP {chunk_response.status_code}'
+                    logger.error(f'Trino chunk fetch failed: {error_text}')
+                    raise Exception(f'Trino data fetch failed: {error_text}')
+                
+                chunk_data = chunk_response.json()
+                logger.debug(f'Chunk {iteration} state: {chunk_data.get("stats", {}).get("state")}, has_data: {"data" in chunk_data}, has_columns: {"columns" in chunk_data}')
+                
+                # Check for errors in chunk
+                if chunk_data.get('error'):
+                    error_info = chunk_data['error']
+                    error_msg = error_info.get('message', 'Unknown error')
+                    error_code = error_info.get('errorCode', 'UNKNOWN')
+                    raise Exception(f'Trino query error [{error_code}]: {error_msg}')
+                
+                # Check query state
+                chunk_stats = chunk_data.get('stats', {})
+                if chunk_stats.get('state') == 'FAILED':
+                    error_info = chunk_data.get('error', {})
+                    error_msg = error_info.get('message', 'Query failed')
+                    error_code = error_info.get('errorCode', 'UNKNOWN')
+                    raise Exception(f'Trino query failed [{error_code}]: {error_msg}')
+                
+                # Extract data if available
+                if 'data' in chunk_data:
+                    rows.extend(chunk_data['data'])
+                
+                # Update schema if columns are available (may come in later chunks)
+                if 'columns' in chunk_data and not schema:
+                    schema = [{'name': col['name'], 'type': col['type']} for col in chunk_data['columns']]
+                
+                # Check if query is finished
+                chunk_stats = chunk_data.get('stats', {})
+                query_state = chunk_stats.get('state')
+                
+                # If query is finished (no more nextUri), break out of loop
+                next_uri = chunk_data.get('nextUri')
+                if not next_uri or query_state == 'FINISHED':
+                    break
+                
+                # If still QUEUED or RUNNING, continue polling (small delay for QUEUED)
+                if query_state == 'QUEUED':
+                    import time
+                    time.sleep(0.1)  # Small delay for queued queries
+            
+            # After loop completes, update cell with final results
+            # Get final stats from last chunk if available
+            final_stats = chunk_data.get('stats', {}) if 'chunk_data' in locals() else stats
+            logger.info(f'Query completed: {len(rows)} rows, {len(schema)} columns')
+            cell['result'] = {
+                'schema': schema,
+                'rows': rows[:100],  # Limit to 100 rows for display
+                'row_count': len(rows),
+                'execution_time_ms': final_stats.get('wallTimeMillis', 0),
+            }
+            cell['status'] = 'success'
+            cell['error'] = None
+            
+            # Save notebook
+            _set_notebook(notebook_id, notebook)
+            
+            return jsonify({
+                'success': True,
+                'cell_id': cell_id,
+                'result': cell['result'],
+                'compiled_sql': compiled_sql
+            })
         except ImportError:
             return jsonify({
                 'success': False,
                 'error': 'Trino executor not available. Install requests: pip install requests'
             }), 503
+        except requests.exceptions.ConnectionError as e:
+            # Connection error - Trino might not be running or URL is wrong
+            error_msg = f'Cannot connect to Trino at {trino_url}. Is Trino running? Error: {str(e)}'
+            cell['status'] = 'error'
+            cell['error'] = error_msg
+            cell['result'] = None
+            _notebooks[notebook_id] = notebook
+            return jsonify({
+                'success': False,
+                'error': error_msg,
+                'cell_id': cell_id,
+                'compiled_sql': compiled_sql
+            }), 500
+        except requests.exceptions.Timeout as e:
+            error_msg = f'Trino query timed out after 300 seconds. The query might be too complex or Trino is overloaded.'
+            cell['status'] = 'error'
+            cell['error'] = error_msg
+            cell['result'] = None
+            _notebooks[notebook_id] = notebook
+            return jsonify({
+                'success': False,
+                'error': error_msg,
+                'cell_id': cell_id,
+                'compiled_sql': compiled_sql
+            }), 500
         except Exception as e:
             # Update cell with error
+            error_details = str(e)
+            # Include more context for debugging
+            if 'trino_url' in locals():
+                error_details += f' (Trino URL: {trino_url}, Catalog: {trino_catalog}, Schema: {trino_schema})'
             cell['status'] = 'error'
-            cell['error'] = str(e)
+            cell['error'] = error_details
             cell['result'] = None
             
             # Save notebook
-            _notebooks[notebook_id] = notebook
+            _set_notebook(notebook_id, notebook)
             
             return jsonify({
                 'success': False,
-                'error': str(e),
+                'error': error_details,
                 'cell_id': cell_id,
                 'compiled_sql': compiled_sql
             }), 500
@@ -538,8 +783,8 @@ def execute_notebook(notebook_id: str):
             else:
                 raise Exception('Executor does not support execute method')
             
-            # Save notebook
-            _notebooks[notebook_id] = notebook
+                # Save notebook
+                _set_notebook(notebook_id, notebook)
             
             return jsonify({
                 'success': True,
@@ -554,7 +799,7 @@ def execute_notebook(notebook_id: str):
             cell['result'] = None
             
             # Save notebook
-            _notebooks[notebook_id] = notebook
+            _set_notebook(notebook_id, notebook)
             
             return jsonify({
                 'success': False,
@@ -567,7 +812,8 @@ def execute_notebook(notebook_id: str):
 @notebook_router.route('/notebooks/<notebook_id>/cells/<cell_id>/generate-sql', methods=['POST'])
 def generate_sql_for_cell(notebook_id: str, cell_id: str):
     """Generate SQL for a cell using LLM (Cursor-style - only writes to current cell)."""
-    notebook = _notebooks.get(notebook_id)
+    notebooks = _get_notebooks()
+    notebook = notebooks.get(notebook_id)
     if not notebook:
         return jsonify({
             'success': False,

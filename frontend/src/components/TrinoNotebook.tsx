@@ -51,15 +51,19 @@ export const TrinoNotebook: React.FC = () => {
         try {
           const loadResponse = await notebookAPI.get('default');
           if (loadResponse.success && loadResponse.notebook) {
-            const notebookData = loadResponse.notebook;
-            const typedCells: NotebookCell[] = (notebookData.cells || []).map(cell => ({
-              ...cell,
-              status: (cell.status as NotebookCell['status']) || 'idle',
-            }));
-            setNotebook({ ...notebookData, cells: typedCells });
-            setCells(typedCells.length > 0 ? typedCells : [{ id: `cell${Date.now()}`, sql: '', status: 'idle' }]);
-            setIsLoading(false);
-            return;
+          const notebookData = loadResponse.notebook;
+          const typedCells: NotebookCell[] = (notebookData.cells || []).map(cell => ({
+            ...cell,
+            status: (cell.status as NotebookCell['status']) || 'idle',
+          }));
+          setNotebook({ ...notebookData, cells: typedCells });
+          setCells(typedCells.length > 0 ? typedCells : [{ id: `cell${Date.now()}`, sql: '', status: 'idle' }]);
+          // Set engine from notebook if available
+          if (notebookData.engine) {
+            setEngine(notebookData.engine);
+          }
+          setIsLoading(false);
+          return;
           }
         } catch (loadErr: any) {
           // Notebook doesn't exist, create new one
@@ -75,7 +79,7 @@ export const TrinoNotebook: React.FC = () => {
 
         const response = await notebookAPI.create({
           id: 'default',
-          engine: 'trino',
+          engine: engine,
           cells: [emptyCell],
         });
 
@@ -173,13 +177,20 @@ export const TrinoNotebook: React.FC = () => {
     if (!notebook) return;
 
     try {
-      const updated = { ...notebook, ...updates, updated_at: new Date().toISOString() };
+      const updated = { ...notebook, ...updates, engine: engine, updated_at: new Date().toISOString() };
       await notebookAPI.update(notebook.id, updated);
       setNotebook(updated);
     } catch (err: any) {
       console.error('Failed to update notebook:', err);
     }
   };
+
+  // Update engine when changed
+  useEffect(() => {
+    if (notebook && notebook.engine !== engine) {
+      updateNotebook({ engine });
+    }
+  }, [engine]);
 
   const executeCell = async (cellId: string) => {
     if (!notebook) return;
@@ -254,7 +265,7 @@ export const TrinoNotebook: React.FC = () => {
 
   if (isLoading && !notebook) {
     return (
-      <Box sx={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', height: '100%', bgcolor: '#000000', gap: 2 }}>
+      <Box sx={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', height: '100%', bgcolor: '#22292f', gap: 2 }}>
         <CircularProgress sx={{ color: '#ff096c' }} />
         <Typography sx={{ color: '#9AA0A6' }}>Initializing notebook...</Typography>
       </Box>
@@ -262,12 +273,12 @@ export const TrinoNotebook: React.FC = () => {
   }
 
   return (
-    <Box sx={{ display: 'flex', flexDirection: 'column', height: '100%', bgcolor: '#000000', overflow: 'hidden' }}>
+    <Box sx={{ display: 'flex', flexDirection: 'column', height: '100%', bgcolor: '#22292f', overflow: 'hidden' }}>
       {/* Top Header Bar */}
       <Box
         sx={{
           height: 48,
-          bgcolor: '#000000',
+          bgcolor: '#2a3843',
           borderBottom: '2px solid #ff096c',
           display: 'flex',
           alignItems: 'center',
@@ -330,9 +341,9 @@ export const TrinoNotebook: React.FC = () => {
               color: '#E6EDF3',
               fontSize: '0.875rem',
               height: 32,
-              bgcolor: '#000000',
+              bgcolor: '#2a3843',
               '& .MuiOutlinedInput-notchedOutline': {
-                borderColor: '#000000',
+                borderColor: '#4f6172',
               },
               '&:hover .MuiOutlinedInput-notchedOutline': {
                 borderColor: '#ff096c',
@@ -344,7 +355,7 @@ export const TrinoNotebook: React.FC = () => {
             }}
           >
             {SUPPORTED_ENGINES.map((eng) => (
-              <MenuItem key={eng.value} value={eng.value} sx={{ bgcolor: '#000000', color: '#E6EDF3' }}>
+              <MenuItem key={eng.value} value={eng.value} sx={{ bgcolor: '#2a3843', color: '#E6EDF3' }}>
                 {eng.label}
               </MenuItem>
             ))}
@@ -360,7 +371,7 @@ export const TrinoNotebook: React.FC = () => {
             flex: 1,
             overflowY: 'auto',
             overflowX: 'hidden',
-            bgcolor: '#000000',
+            bgcolor: '#22292f',
             p: 2,
           }}
         >

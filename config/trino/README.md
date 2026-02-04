@@ -19,6 +19,52 @@ Connects to the PostgreSQL database service defined in docker-compose.yml.
 ### TPCH (`tpch.properties`)
 TPC-H benchmark connector for testing and demos.
 
+**Configuration**:
+- `connector.name=tpch` - TPCH connector
+- `tpch.splits-per-node=4` - Parallel processing splits
+
+**Available Schemas**:
+- `tiny` - Smallest dataset (~1MB)
+- `sf1` - Scale factor 1 (~1GB)
+- `sf10` - Scale factor 10 (~10GB)
+- `sf100` - Scale factor 100 (~100GB)
+
+**Example Queries**:
+```sql
+-- List available schemas
+SHOW SCHEMAS FROM tpch;
+
+-- List tables in tiny schema
+SHOW TABLES FROM tpch.tiny;
+
+-- Query customer table
+SELECT * FROM tpch.tiny.customer LIMIT 10;
+
+-- Query orders
+SELECT * FROM tpch.tiny.orders LIMIT 10;
+
+-- Join customer and orders
+SELECT 
+    c.custkey,
+    c.name,
+    COUNT(o.orderkey) as order_count
+FROM tpch.tiny.customer c
+LEFT JOIN tpch.tiny.orders o ON c.custkey = o.custkey
+GROUP BY c.custkey, c.name
+LIMIT 10;
+```
+
+**Verifying TPCH is Enabled**:
+```sql
+-- Check if TPCH catalog is available
+SHOW CATALOGS;
+-- Should show: tpch, postgres, tpcds (if enabled)
+
+-- Check TPCH schemas
+SHOW SCHEMAS FROM tpch;
+-- Should show: information_schema, tiny, sf1, sf10, sf100, etc.
+```
+
 ### TPCDS (`tpcds.properties`)
 TPC-DS benchmark connector for testing and demos.
 
@@ -48,9 +94,26 @@ docker-compose up
 docker exec -it rca-trino trino --server http://localhost:8080
 ```
 
-#### Example Query
+#### Example Queries
+
+**Check available catalogs**:
 ```sql
 SHOW CATALOGS;
+-- Should show: tpch, postgres, tpcds (if enabled)
+```
+
+**TPCH testing**:
+```sql
+-- List TPCH schemas
+SHOW SCHEMAS FROM tpch;
+
+-- Query TPCH data
+SELECT * FROM tpch.tiny.customer LIMIT 10;
+SELECT * FROM tpch.tiny.orders LIMIT 10;
+```
+
+**PostgreSQL queries**:
+```sql
 SHOW SCHEMAS FROM postgres;
 SELECT * FROM postgres.rca_engine.your_table LIMIT 10;
 ```

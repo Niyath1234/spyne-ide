@@ -5,6 +5,7 @@ import {
   Typography,
   Tooltip,
   CircularProgress,
+  Chip,
 } from '@mui/material';
 import {
   PlayArrow,
@@ -13,6 +14,8 @@ import {
   Error as ErrorIcon,
   ExpandMore,
   ExpandLess,
+  ContentCopy,
+  Check,
 } from '@mui/icons-material';
 import CodeMirror from '@uiw/react-codemirror';
 import { sql } from '@codemirror/lang-sql';
@@ -36,10 +39,21 @@ export const NotebookCell: React.FC<NotebookCellProps> = ({
   onToggleAI,
 }) => {
   const [isErrorExpanded, setIsErrorExpanded] = useState(false);
+  const [cellIdCopied, setCellIdCopied] = useState(false);
 
   const isRunning = cell.status === 'running';
   const isSuccess = cell.status === 'success';
   const isError = cell.status === 'error';
+
+  const handleCopyCellId = async () => {
+    try {
+      await navigator.clipboard.writeText(cell.id);
+      setCellIdCopied(true);
+      setTimeout(() => setCellIdCopied(false), 2000);
+    } catch (err) {
+      console.error('Failed to copy cell ID:', err);
+    }
+  };
 
   return (
     <Box
@@ -51,8 +65,8 @@ export const NotebookCell: React.FC<NotebookCellProps> = ({
       {/* Cell Container */}
       <Box
         sx={{
-          background: '#000000',
-          border: '2px solid #000000',
+          background: '#2a3843',
+          border: '2px solid #4f6172',
           borderRadius: '8px',
           padding: '12px',
           transition: 'all 0.2s',
@@ -71,6 +85,32 @@ export const NotebookCell: React.FC<NotebookCellProps> = ({
             marginBottom: '8px',
           }}
         >
+          {/* Cell ID Display (Copyable) */}
+          <Tooltip title={cellIdCopied ? "Copied!" : "Click to copy cell ID for %%ref"}>
+            <Chip
+              label={cell.id}
+              size="small"
+              onClick={handleCopyCellId}
+              icon={cellIdCopied ? <Check sx={{ fontSize: '14px' }} /> : <ContentCopy sx={{ fontSize: '14px' }} />}
+              sx={{
+                height: '24px',
+                fontSize: '0.7rem',
+                fontFamily: 'monospace',
+                bgcolor: '#2a3843',
+                color: '#ff096c',
+                border: '1px solid #4f6172',
+                cursor: 'pointer',
+                '&:hover': {
+                  bgcolor: '#4f6172',
+                  borderColor: '#ff096c',
+                },
+                '& .MuiChip-icon': {
+                  color: '#ff096c',
+                },
+              }}
+            />
+          </Tooltip>
+
           {/* Run Button */}
           <Tooltip title="Run cell">
             <IconButton
@@ -78,7 +118,7 @@ export const NotebookCell: React.FC<NotebookCellProps> = ({
               onClick={() => onRun(cell.id)}
               disabled={isRunning}
               sx={{
-                color: isRunning ? '#000000' : '#ff096c',
+                color: isRunning ? '#4f6172' : '#ff096c',
                 padding: '4px',
                 '&:hover': {
                   backgroundColor: 'rgba(255, 9, 108, 0.1)',
@@ -86,7 +126,7 @@ export const NotebookCell: React.FC<NotebookCellProps> = ({
                   boxShadow: `0 0 8px rgba(255, 9, 108, 0.3)`,
                 },
                 '&:disabled': {
-                  color: '#000000',
+                  color: '#4f6172',
                 },
               }}
             >
@@ -109,7 +149,7 @@ export const NotebookCell: React.FC<NotebookCellProps> = ({
                   boxShadow: `0 0 8px rgba(255, 9, 108, 0.3)`,
                 },
                 '&:disabled': {
-                  color: '#000000',
+                  color: '#4f6172',
                 },
               }}
             >
@@ -152,7 +192,7 @@ export const NotebookCell: React.FC<NotebookCellProps> = ({
           sx={{
             position: 'relative',
             '& .cm-editor': {
-              backgroundColor: '#000000 !important',
+              backgroundColor: '#22292f !important',
             },
             '& .cm-scroller': {
               fontFamily: "'Consolas', 'Menlo', 'Monaco', 'Courier New', monospace",
@@ -167,7 +207,7 @@ export const NotebookCell: React.FC<NotebookCellProps> = ({
               outline: 'none',
             },
             '& .cm-gutters': {
-              backgroundColor: '#000000 !important',
+              backgroundColor: '#22292f !important',
               border: 'none',
             },
             '& .cm-lineNumbers .cm-gutterElement': {
@@ -185,7 +225,7 @@ export const NotebookCell: React.FC<NotebookCellProps> = ({
               EditorView.lineWrapping,
               EditorView.theme({
                 '&': {
-                  backgroundColor: '#000000',
+                  backgroundColor: '#22292f',
                 },
                 '.cm-content': {
                   color: '#E6EDF3',
@@ -201,7 +241,7 @@ export const NotebookCell: React.FC<NotebookCellProps> = ({
               highlightActiveLine: false,
               autocompletion: true,
             }}
-            placeholder="Start coding or generate with AI."
+            placeholder="Start coding or generate with AI. Use %%ref <cell_id> AS <alias> to reference other cells."
           />
         </Box>
 
@@ -210,7 +250,7 @@ export const NotebookCell: React.FC<NotebookCellProps> = ({
           <Box
             sx={{
               marginTop: '12px',
-              background: '#000000',
+              background: '#2a3843',
               borderTop: '2px solid #ff096c',
               paddingTop: '8px',
             }}
@@ -254,7 +294,7 @@ export const NotebookCell: React.FC<NotebookCellProps> = ({
           <Box
             sx={{
               marginTop: '12px',
-              background: '#000000',
+              background: '#2a3843',
               borderTop: '2px solid #ff096c',
               paddingTop: '8px',
               maxHeight: '400px',
@@ -272,8 +312,8 @@ export const NotebookCell: React.FC<NotebookCellProps> = ({
               <thead>
                 <tr
                   style={{
-                    backgroundColor: '#000000',
-                    borderBottom: '1px solid #000000',
+                    backgroundColor: '#22292f',
+                    borderBottom: '1px solid #4f6172',
                   }}
                 >
                   {cell.result.schema.map((col) => (
@@ -284,7 +324,7 @@ export const NotebookCell: React.FC<NotebookCellProps> = ({
                         textAlign: 'left',
                         color: '#E6EDF3',
                         fontWeight: 600,
-                        borderRight: '1px solid #000000',
+                        borderRight: '1px solid #4f6172',
                       }}
                     >
                       {col.name}
@@ -297,10 +337,10 @@ export const NotebookCell: React.FC<NotebookCellProps> = ({
                   <tr
                     key={idx}
                     style={{
-                      borderBottom: '1px solid #000000',
+                      borderBottom: '1px solid #4f6172',
                     }}
                     onMouseEnter={(e) => {
-                      e.currentTarget.style.backgroundColor = '#000000';
+                      e.currentTarget.style.backgroundColor = '#2a3843';
                     }}
                     onMouseLeave={(e) => {
                       e.currentTarget.style.backgroundColor = 'transparent';
@@ -312,7 +352,7 @@ export const NotebookCell: React.FC<NotebookCellProps> = ({
                         style={{
                           padding: '8px 12px',
                           color: '#E6EDF3',
-                          borderRight: '1px solid #000000',
+                          borderRight: '1px solid #4f6172',
                         }}
                       >
                         {String(cellValue ?? 'NULL')}
