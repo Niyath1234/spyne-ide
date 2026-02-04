@@ -43,15 +43,15 @@ export const AIChatPanel: React.FC<AIChatPanelProps> = ({
   return (
     <Box
       sx={{
-        background: '#000000',
-        border: '2px solid #ff096c',
-        borderRadius: '8px',
+        background: '#161B22',
+        border: '1px solid #232833',
+        borderRadius: '12px',
         color: '#E6EDF3',
         display: 'flex',
         flexDirection: 'column',
         maxHeight: '400px',
         overflow: 'hidden',
-        boxShadow: `0 0 12px rgba(255, 9, 108, 0.3)`,
+        boxShadow: '0 8px 24px rgba(0, 0, 0, 0.2)',
       }}
     >
       {/* Header */}
@@ -61,14 +61,14 @@ export const AIChatPanel: React.FC<AIChatPanelProps> = ({
           alignItems: 'center',
           justifyContent: 'space-between',
           padding: '12px 16px',
-          borderBottom: '2px solid #000000',
+          borderBottom: '1px solid #232833',
         }}
       >
         <Typography
           sx={{
             fontSize: '0.875rem',
-            color: '#ff096c',
-            fontWeight: 500,
+            color: '#ff5fa8',
+            fontWeight: 600,
           }}
         >
           AI for Cell {cellId.substring(0, 8)}
@@ -77,12 +77,17 @@ export const AIChatPanel: React.FC<AIChatPanelProps> = ({
           size="small"
           onClick={onClose}
           sx={{
-            color: '#9AA0A6',
+            color: '#A7B0C0',
             padding: '4px',
+            borderRadius: '10px',
+            transition: 'transform 150ms ease, box-shadow 150ms ease, background-color 150ms ease',
             '&:hover': {
-              backgroundColor: 'rgba(255, 9, 108, 0.1)',
-              color: '#ff096c',
-              boxShadow: `0 0 8px rgba(255, 9, 108, 0.3)`,
+              backgroundColor: 'rgba(255, 95, 168, 0.12)',
+              color: '#ff5fa8',
+              boxShadow: `0 0 10px rgba(255, 95, 168, 0.2)`,
+            },
+            '&:active': {
+              transform: 'scale(0.98)',
             },
           }}
         >
@@ -96,7 +101,7 @@ export const AIChatPanel: React.FC<AIChatPanelProps> = ({
         onSubmit={handleSubmit}
         sx={{
           padding: '16px',
-          borderTop: '2px solid #000000',
+          borderTop: '1px solid #232833',
           display: 'flex',
           gap: '8px',
           alignItems: 'flex-end',
@@ -112,24 +117,25 @@ export const AIChatPanel: React.FC<AIChatPanelProps> = ({
           disabled={isGenerating}
           sx={{
             '& .MuiOutlinedInput-root': {
-              backgroundColor: '#000000',
+              backgroundColor: '#12161D',
               color: '#E6EDF3',
               fontSize: '0.875rem',
+              borderRadius: '10px',
               '& fieldset': {
-                borderColor: '#000000',
+                borderColor: '#232833',
               },
               '&:hover fieldset': {
-                borderColor: '#ff096c',
+                borderColor: '#ff5fa8',
               },
               '&.Mui-focused fieldset': {
-                borderColor: '#ff096c',
-                boxShadow: `0 0 8px rgba(255, 9, 108, 0.4)`,
+                borderColor: '#ff5fa8',
+                boxShadow: `0 0 8px rgba(255, 95, 168, 0.35)`,
               },
             },
             '& .MuiInputBase-input': {
               color: '#E6EDF3',
               '&::placeholder': {
-                color: '#9AA0A6',
+                color: '#A7B0C0',
                 opacity: 1,
               },
             },
@@ -139,20 +145,25 @@ export const AIChatPanel: React.FC<AIChatPanelProps> = ({
           type="submit"
           disabled={!input.trim() || isGenerating}
           sx={{
-            color: isGenerating ? '#000000' : '#ff096c',
+            color: isGenerating ? '#4B5262' : '#ff5fa8',
             padding: '8px',
+            borderRadius: '10px',
+            transition: 'transform 150ms ease, box-shadow 150ms ease, background-color 150ms ease',
             '&:hover': {
-              backgroundColor: 'rgba(255, 9, 108, 0.1)',
-              color: '#ff096c',
-              boxShadow: `0 0 8px rgba(255, 9, 108, 0.3)`,
+              backgroundColor: 'rgba(255, 95, 168, 0.12)',
+              color: '#ff5fa8',
+              boxShadow: `0 0 10px rgba(255, 95, 168, 0.2)`,
             },
             '&:disabled': {
-              color: '#000000',
+              color: '#4B5262',
+            },
+            '&:active': {
+              transform: 'scale(0.98)',
             },
           }}
         >
           {isGenerating ? (
-            <CircularProgress size={20} sx={{ color: '#ff096c' }} />
+            <CircularProgress size={20} sx={{ color: '#ff5fa8' }} />
           ) : (
             <Send sx={{ fontSize: '20px' }} />
           )}

@@ -11,36 +11,36 @@ interface QueryEditorProps {
   isExecuting: boolean;
 }
 
-// Custom VS Code Dark+ theme for CodeMirror with BRIGHT, HIGH-CONTRAST colors
+// Custom dark theme for CodeMirror with modern, muted accents
 const vscodeDarkTheme: Extension = EditorView.theme({
   '&': {
-    backgroundColor: '#000000 !important',
-    color: '#FFFFFF',
+    backgroundColor: '#12161D !important',
+    color: '#E6EDF3',
     height: '100%',
   },
   '.cm-editor': {
     height: '100%',
-    backgroundColor: '#000000 !important',
+    backgroundColor: '#12161D !important',
   },
   '.cm-scroller': {
-    fontFamily: "'Consolas', 'Menlo', 'Monaco', 'Courier New', monospace",
-    backgroundColor: '#000000 !important',
+    fontFamily: "'JetBrains Mono', 'Fira Code', Menlo, Monaco, Consolas, 'Courier New', monospace",
+    backgroundColor: '#12161D !important',
   },
   '.cm-content': {
     padding: '8px 16px',
     minHeight: '100%',
     fontSize: '0.875rem',
-    fontFamily: "'Consolas', 'Menlo', 'Monaco', 'Courier New', monospace",
-    color: '#FFFFFF !important',
-    backgroundColor: '#000000 !important',
+    fontFamily: "'JetBrains Mono', 'Fira Code', Menlo, Monaco, Consolas, 'Courier New', monospace",
+    color: '#E6EDF3 !important',
+    backgroundColor: '#12161D !important',
   },
   '.cm-focused': {
     outline: 'none',
   },
   '.cm-gutters': {
-    backgroundColor: '#252526 !important',
+    backgroundColor: '#1F242E !important',
     border: 'none',
-    color: '#B0B0B0 !important',
+    color: '#A7B0C0 !important',
   },
   '.cm-lineNumbers': {
     minWidth: '40px',
@@ -48,48 +48,48 @@ const vscodeDarkTheme: Extension = EditorView.theme({
   '.cm-lineNumbers .cm-gutterElement': {
     padding: '0 8px',
     fontSize: '0.8125rem',
-    color: '#B0B0B0 !important',
+    color: '#A7B0C0 !important',
   },
   '.cm-activeLineGutter': {
-    backgroundColor: '#2A2D2E !important',
-    color: '#FFFFFF !important',
+    backgroundColor: '#1F242E !important',
+    color: '#E6EDF3 !important',
   },
   '.cm-activeLine': {
-    backgroundColor: '#2A2D2E !important',
+    backgroundColor: '#1F242E !important',
   },
   '.cm-selectionBackground': {
-    backgroundColor: '#264F78 !important',
+    backgroundColor: '#2A3342 !important',
   },
   '.cm-cursor': {
-    borderLeftColor: '#FFFFFF !important',
+    borderLeftColor: '#E6EDF3 !important',
     borderLeftWidth: '2px',
   },
-  // SQL syntax highlighting colors - BRIGHT like pgAdmin
-  '.cm-keyword': { color: '#ff096c !important', fontWeight: 'bold' }, // Pink accent for keywords
-  '.cm-string': { color: '#ff096c !important', fontWeight: 'normal' }, // Pink accent for strings
-  '.cm-number': { color: '#B5CEA8 !important', fontWeight: 'normal' }, // Bright green for numbers
-  '.cm-operator': { color: '#FFFFFF !important', fontWeight: 'bold' }, // Bright white for operators (=, *, etc.)
-  '.cm-variable': { color: '#5DBBF5 !important', fontWeight: 'normal' }, // Bright cyan/blue for identifiers - like pgAdmin
-  '.cm-builtin': { color: '#5DBBF5 !important', fontWeight: 'normal' }, // Bright cyan for built-ins - like pgAdmin
-  '.cm-comment': { color: '#6A9955 !important', fontStyle: 'italic' }, // Bright green for comments
-  '.cm-meta': { color: '#ff096c !important', fontWeight: 'normal' }, // Pink accent for meta
-  '.cm-typeName': { color: '#5DBBF5 !important', fontWeight: 'normal' }, // Bright cyan for type names
-  '.cm-propertyName': { color: '#5DBBF5 !important', fontWeight: 'normal' }, // Bright cyan for property names
+  // SQL syntax highlighting colors - muted modern palette
+  '.cm-keyword': { color: '#ff5fa8 !important', fontWeight: 'bold' },
+  '.cm-string': { color: '#C4B5FD !important', fontWeight: 'normal' },
+  '.cm-number': { color: '#93C5FD !important', fontWeight: 'normal' },
+  '.cm-operator': { color: '#E6EDF3 !important', fontWeight: 'bold' },
+  '.cm-variable': { color: '#E6EDF3 !important', fontWeight: 'normal' },
+  '.cm-builtin': { color: '#8BD5CA !important', fontWeight: 'normal' },
+  '.cm-comment': { color: '#A7B0C0 !important', fontStyle: 'italic' },
+  '.cm-meta': { color: '#ff5fa8 !important', fontWeight: 'normal' },
+  '.cm-typeName': { color: '#A7B0C0 !important', fontWeight: 'normal' },
+  '.cm-propertyName': { color: '#A7B0C0 !important', fontWeight: 'normal' },
   // Additional SQL-specific highlighting
-  '.cm-atom': { color: '#ff096c !important' }, // For boolean literals - pink accent
-  '.cm-def': { color: '#DCDCAA !important' }, // For definitions - yellow
-  '.cm-qualifier': { color: '#5DBBF5 !important' }, // For qualifiers - bright cyan
+  '.cm-atom': { color: '#ff5fa8 !important' },
+  '.cm-def': { color: '#F9E2AF !important' },
+  '.cm-qualifier': { color: '#8BD5CA !important' },
   '.cm-line': {
-    color: '#FFFFFF !important',
+    color: '#E6EDF3 !important',
   },
-  // Default text color - bright white for maximum visibility
+  // Default text color
   '.cm-text': {
-    color: '#FFFFFF !important',
+    color: '#E6EDF3 !important',
   },
   // Ensure all text is visible
   '.cm-matchingBracket': {
-    backgroundColor: '#264F78 !important',
-    color: '#FFFFFF !important',
+    backgroundColor: '#2A3342 !important',
+    color: '#E6EDF3 !important',
     fontWeight: 'bold',
   },
 });
@@ -128,20 +128,31 @@ export const QueryEditor: React.FC<QueryEditorProps> = ({ onExecute, isExecuting
   };
 
   return (
-    <Box sx={{ display: 'flex', flexDirection: 'column', flex: 1, overflow: 'hidden', backgroundColor: '#000000' }}>
+    <Box
+      sx={{
+        display: 'flex',
+        flexDirection: 'column',
+        flex: 1,
+        overflow: 'hidden',
+        backgroundColor: '#12161D',
+        border: '1px solid #232833',
+        borderRadius: '12px',
+        boxShadow: '0 8px 24px rgba(0, 0, 0, 0.25)',
+      }}
+    >
       {/* Toolbar */}
       <Box
         sx={{
-          height: 40,
-          backgroundColor: '#252526',
-          borderBottom: '1px solid #3E3E42',
+          height: 44,
+          backgroundColor: '#12161D',
+          borderBottom: '1px solid #232833',
           display: 'flex',
           alignItems: 'center',
           px: 2,
           gap: 1,
         }}
       >
-        <Typography sx={{ color: '#CCCCCC', fontSize: '0.875rem', mr: 2 }}>
+        <Typography sx={{ color: '#A7B0C0', fontSize: '0.875rem', mr: 2 }}>
           rca_engine/niyathnair@RCA Engine
         </Typography>
         <FormControl size="small" sx={{ minWidth: 140 }}>
@@ -149,14 +160,15 @@ export const QueryEditor: React.FC<QueryEditorProps> = ({ onExecute, isExecuting
             value={queryMode}
             onChange={(e) => handleModeChange(e.target.value as QueryMode)}
             sx={{
-              color: '#CCCCCC',
+              color: '#E6EDF3',
               fontSize: '0.875rem',
-              height: 28,
+              height: 30,
+              bgcolor: '#161B22',
               '& .MuiOutlinedInput-notchedOutline': {
-                borderColor: '#3E3E42',
+                borderColor: '#232833',
               },
               '&:hover .MuiOutlinedInput-notchedOutline': {
-                borderColor: '#464647',
+                borderColor: '#ff5fa8',
               },
             }}
           >
@@ -169,14 +181,15 @@ export const QueryEditor: React.FC<QueryEditorProps> = ({ onExecute, isExecuting
           <Select
             value="nolimit"
             sx={{
-              color: '#CCCCCC',
+              color: '#E6EDF3',
               fontSize: '0.875rem',
-              height: 28,
+              height: 30,
+              bgcolor: '#161B22',
               '& .MuiOutlinedInput-notchedOutline': {
-                borderColor: '#3E3E42',
+                borderColor: '#232833',
               },
               '&:hover .MuiOutlinedInput-notchedOutline': {
-                borderColor: '#464647',
+                borderColor: '#ff5fa8',
               },
             }}
           >
@@ -189,8 +202,17 @@ export const QueryEditor: React.FC<QueryEditorProps> = ({ onExecute, isExecuting
         <IconButton
           size="small"
           sx={{
-            color: '#CCCCCC',
-            '&:hover': { backgroundColor: '#3E3E42' },
+            color: '#A7B0C0',
+            borderRadius: '10px',
+            transition: 'transform 150ms ease, box-shadow 150ms ease, background-color 150ms ease',
+            '&:hover': {
+              backgroundColor: 'rgba(255, 95, 168, 0.12)',
+              color: '#ff5fa8',
+              boxShadow: '0 0 10px rgba(255, 95, 168, 0.2)',
+            },
+            '&:active': {
+              transform: 'scale(0.98)',
+            },
           }}
         >
           <Save fontSize="small" />
@@ -200,9 +222,18 @@ export const QueryEditor: React.FC<QueryEditorProps> = ({ onExecute, isExecuting
           onClick={handleExecute}
           disabled={isExecuting || !query.trim()}
           sx={{
-            color: isExecuting ? '#808080' : '#CCCCCC',
-            '&:hover': { backgroundColor: '#3E3E42' },
-            '&:disabled': { color: '#606060' },
+            color: isExecuting ? '#4B5262' : '#A7B0C0',
+            borderRadius: '10px',
+            transition: 'transform 150ms ease, box-shadow 150ms ease, background-color 150ms ease',
+            '&:hover': {
+              backgroundColor: 'rgba(255, 95, 168, 0.12)',
+              color: '#ff5fa8',
+              boxShadow: '0 0 10px rgba(255, 95, 168, 0.2)',
+            },
+            '&:disabled': { color: '#4B5262' },
+            '&:active': {
+              transform: 'scale(0.98)',
+            },
           }}
         >
           <PlayArrow fontSize="small" />
@@ -210,7 +241,7 @@ export const QueryEditor: React.FC<QueryEditorProps> = ({ onExecute, isExecuting
       </Box>
 
       {/* Tabs */}
-      <Box sx={{ borderBottom: '1px solid #3E3E42' }}>
+      <Box sx={{ borderBottom: '1px solid #232833' }}>
         <Tabs
           value={activeTab}
           onChange={(_, value) => setActiveTab(value)}
@@ -220,14 +251,14 @@ export const QueryEditor: React.FC<QueryEditorProps> = ({ onExecute, isExecuting
               minHeight: 36,
               padding: '0 16px',
               textTransform: 'none',
-              color: '#CCCCCC',
+              color: '#A7B0C0',
               fontSize: '0.875rem',
               '&.Mui-selected': {
-                color: '#FFFFFF',
+                color: '#E6EDF3',
               },
             },
             '& .MuiTabs-indicator': {
-              backgroundColor: '#007ACC',
+              backgroundColor: '#ff5fa8',
             },
           }}
         >
@@ -243,14 +274,14 @@ export const QueryEditor: React.FC<QueryEditorProps> = ({ onExecute, isExecuting
           overflow: 'hidden', 
           position: 'relative', 
           display: 'flex',
-          backgroundColor: '#000000',
+          backgroundColor: '#12161D',
           '& .cm-editor': {
-            backgroundColor: '#000000 !important',
+            backgroundColor: '#12161D !important',
             width: '100%',
             height: '100%',
           },
           '& .cm-scroller': {
-            backgroundColor: '#000000 !important',
+            backgroundColor: '#12161D !important',
           },
         }}
       >

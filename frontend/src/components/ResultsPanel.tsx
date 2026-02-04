@@ -116,12 +116,12 @@ export const ResultsPanel: React.FC<ResultsPanelProps> = ({ result }) => {
                   >
                     {result?.error ? (
                       <Box>
-                        <Typography sx={{ color: '#ff096c', mb: 1, fontWeight: 600 }}>
+                        <Typography sx={{ color: '#ff5fa8', mb: 1, fontWeight: 600 }}>
                           {result.error}
                         </Typography>
                         {result.error.includes('hallucination') || result.error.includes('validation failed') ? (
                           <Box sx={{ mt: 2 }}>
-                            <Typography sx={{ color: '#ff096c', fontSize: '0.8125rem', mb: 1, fontWeight: 600 }}>
+                            <Typography sx={{ color: '#ff5fa8', fontSize: '0.8125rem', mb: 1, fontWeight: 600 }}>
                               💡 What this means:
                             </Typography>
                             <Typography sx={{ color: '#CCCCCC', fontSize: '0.8125rem', mb: 1 }}>
@@ -150,7 +150,7 @@ export const ResultsPanel: React.FC<ResultsPanelProps> = ({ result }) => {
           <Box sx={{ p: 2, color: '#CCCCCC', fontSize: '0.875rem', fontFamily: 'Consolas, Menlo, Monaco, "Courier New", monospace' }}>
             {result?.error ? (
               <Box>
-                <Typography sx={{ color: '#ff096c', mb: 1 }}>Error: {result.error}</Typography>
+                <Typography sx={{ color: '#ff5fa8', mb: 1 }}>Error: {result.error}</Typography>
                 {result.error.includes('1e6') || result.error.includes('1e7') ? (
                   <Typography sx={{ color: '#858585', fontSize: '0.8125rem' }}>
                     Tip: Polars SQL doesn't support scientific notation. Use full numbers instead:

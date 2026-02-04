@@ -30,7 +30,7 @@ export const useStore = create<StoreState>((set) => ({
     })),
   clearReasoning: () => set({ reasoningSteps: [] }),
   sidebarOpen: true,
-  sidebarWidth: 250,
+  sidebarWidth: 232,
   viewMode: 'notebook',
   setViewMode: (mode: ViewMode) => set({ viewMode: mode }),
   setSidebarOpen: (open: boolean) => set({ sidebarOpen: open }),

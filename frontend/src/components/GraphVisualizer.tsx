@@ -322,7 +322,7 @@ export const GraphVisualizer: React.FC = () => {
             <Box sx={{ textAlign: 'center' }}>
               <Typography
                 sx={{
-                  color: '#ff096c',
+                  color: '#ff5fa8',
                   fontSize: '0.875rem',
                   fontFamily: 'ui-monospace, "Courier New", monospace',
                   mb: 2,

@@ -1,12 +1,14 @@
 import { createTheme } from '@mui/material/styles';
 
-// Dark theme with rim highlights
-const darkBackground = '#000000'; // Darkest background
-const darkGray = '#000000'; // Dark gray/blue-gray for cards, borders
-const mediumGray = '#000000'; // Medium gray/blue-gray for secondary surfaces
-const accentPink = '#ff096c'; // Bright pink/magenta for accents and rim highlights
+// Modern dark theme tokens
+const darkBackground = '#0F1117';
+const darkGray = '#161B22';
+const mediumGray = '#1F242E';
+const accentPink = '#ff5fa8';
 const textPrimary = '#E6EDF3';
-const textSecondary = '#9AA0A6';
+const textSecondary = '#A7B0C0';
+const divider = '#232833';
+const errorSoft = '#E57373';
 
 export const theme = createTheme({
   palette: {
@@ -29,12 +31,12 @@ export const theme = createTheme({
       primary: textPrimary,
       secondary: textSecondary,
     },
-    divider: mediumGray,
+    divider,
     error: {
-      main: '#FF6B6B',
+      main: errorSoft,
     },
     warning: {
-      main: '#ff096c',
+      main: '#ff5fa8',
     },
     info: {
       main: accentPink,
@@ -44,13 +46,29 @@ export const theme = createTheme({
     },
   },
   components: {
+    MuiCssBaseline: {
+      styleOverrides: {
+        body: {
+          backgroundColor: darkBackground,
+          color: textPrimary,
+          fontFamily: "'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
+        },
+        code: {
+          fontFamily: "'JetBrains Mono', 'Fira Code', Menlo, Monaco, Consolas, 'Courier New', monospace",
+        },
+      },
+    },
     MuiButton: {
       styleOverrides: {
         root: {
           textTransform: 'none',
-          borderRadius: 6,
+          borderRadius: 10,
+          transition: 'transform 150ms ease, box-shadow 150ms ease, background-color 150ms ease',
           '&:hover': {
-            boxShadow: `0 0 8px ${accentPink}40`,
+            boxShadow: `0 0 12px ${accentPink}35`,
+          },
+          '&:active': {
+            transform: 'scale(0.98)',
           },
         },
       },
@@ -59,11 +77,9 @@ export const theme = createTheme({
       styleOverrides: {
         root: {
           backgroundColor: darkGray,
-          border: `1px solid ${mediumGray}`,
-          '&:hover': {
-            borderColor: accentPink,
-            boxShadow: `0 0 12px ${accentPink}30`,
-          },
+          border: `1px solid ${divider}`,
+          borderRadius: 12,
+          boxShadow: '0 6px 24px rgba(0, 0, 0, 0.25)',
         },
       },
     },
@@ -74,7 +90,7 @@ export const theme = createTheme({
             backgroundColor: darkBackground,
             color: textPrimary,
             '& fieldset': {
-              borderColor: mediumGray,
+              borderColor: divider,
             },
             '&:hover fieldset': {
               borderColor: accentPink,
@@ -92,10 +108,7 @@ export const theme = createTheme({
         root: {
           backgroundColor: darkGray,
           color: textPrimary,
-          border: `1px solid ${mediumGray}`,
-          '&:hover': {
-            borderColor: accentPink,
-          },
+          border: `1px solid ${divider}`,
         },
       },
     },
@@ -103,12 +116,9 @@ export const theme = createTheme({
       styleOverrides: {
         root: {
           backgroundColor: darkBackground,
-          border: `1px solid ${mediumGray}`,
+          border: `1px solid ${divider}`,
           '&:before': {
             display: 'none',
-          },
-          '&:hover': {
-            borderColor: accentPink,
           },
         },
       },
@@ -133,7 +143,22 @@ export const theme = createTheme({
       styleOverrides: {
         root: {
           backgroundColor: darkGray,
-          border: `1px solid ${mediumGray}`,
+          border: `1px solid ${divider}`,
+          borderRadius: 12,
+          boxShadow: '0 6px 24px rgba(0, 0, 0, 0.2)',
+        },
+      },
+    },
+    MuiAlert: {
+      styleOverrides: {
+        root: {
+          borderRadius: 10,
+          backgroundColor: '#1A202A',
+          borderLeft: `4px solid ${errorSoft}`,
+          color: textPrimary,
+        },
+        standardError: {
+          backgroundColor: '#1A202A',
         },
       },
     },

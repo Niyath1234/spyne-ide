@@ -65,14 +65,16 @@ export const NotebookCell: React.FC<NotebookCellProps> = ({
       {/* Cell Container */}
       <Box
         sx={{
-          background: '#2a3843',
-          border: '2px solid #4f6172',
-          borderRadius: '8px',
-          padding: '12px',
-          transition: 'all 0.2s',
+          background: '#161B22',
+          border: '1px solid #232833',
+          borderRadius: '12px',
+          padding: '16px',
+          transition: 'transform 150ms ease, box-shadow 150ms ease, border-color 150ms ease',
+          boxShadow: '0 8px 24px rgba(0, 0, 0, 0.2)',
           '&:hover': {
-            borderColor: '#ff096c',
-            boxShadow: `0 0 12px rgba(255, 9, 108, 0.3)`,
+            borderColor: 'rgba(255, 95, 168, 0.35)',
+            boxShadow: `0 0 16px rgba(255, 95, 168, 0.2)`,
+            transform: 'translateY(-1px)',
           },
         }}
       >
@@ -118,15 +120,20 @@ export const NotebookCell: React.FC<NotebookCellProps> = ({
               onClick={() => onRun(cell.id)}
               disabled={isRunning}
               sx={{
-                color: isRunning ? '#4f6172' : '#ff096c',
+                color: isRunning ? '#4B5262' : '#ff5fa8',
                 padding: '4px',
+                borderRadius: '10px',
+                transition: 'transform 150ms ease, box-shadow 150ms ease, background-color 150ms ease',
                 '&:hover': {
-                  backgroundColor: 'rgba(255, 9, 108, 0.1)',
-                  color: '#ff096c',
-                  boxShadow: `0 0 8px rgba(255, 9, 108, 0.3)`,
+                  backgroundColor: 'rgba(255, 95, 168, 0.12)',
+                  color: '#ff5fa8',
+                  boxShadow: `0 0 10px rgba(255, 95, 168, 0.25)`,
                 },
                 '&:disabled': {
-                  color: '#4f6172',
+                  color: '#4B5262',
+                },
+                '&:active': {
+                  transform: 'scale(0.98)',
                 },
               }}
             >
@@ -141,15 +148,20 @@ export const NotebookCell: React.FC<NotebookCellProps> = ({
               onClick={() => onToggleAI(isAIOpen ? null : cell.id)}
               disabled={isRunning}
               sx={{
-                color: isAIOpen ? '#ff096c' : '#9AA0A6',
+                color: isAIOpen ? '#ff5fa8' : '#A7B0C0',
                 padding: '4px',
+                borderRadius: '10px',
+                transition: 'transform 150ms ease, box-shadow 150ms ease, background-color 150ms ease',
                 '&:hover': {
-                  backgroundColor: 'rgba(255, 9, 108, 0.1)',
-                  color: '#ff096c',
-                  boxShadow: `0 0 8px rgba(255, 9, 108, 0.3)`,
+                  backgroundColor: 'rgba(255, 95, 168, 0.12)',
+                  color: '#ff5fa8',
+                  boxShadow: `0 0 10px rgba(255, 95, 168, 0.25)`,
                 },
                 '&:disabled': {
-                  color: '#4f6172',
+                  color: '#4B5262',
+                },
+                '&:active': {
+                  transform: 'scale(0.98)',
                 },
               }}
             >
@@ -162,7 +174,7 @@ export const NotebookCell: React.FC<NotebookCellProps> = ({
             <CircularProgress
               size={16}
               sx={{
-                color: '#ff096c',
+                color: '#ff5fa8',
                 marginLeft: 'auto',
               }}
             />
@@ -170,7 +182,7 @@ export const NotebookCell: React.FC<NotebookCellProps> = ({
           {isSuccess && (
             <CheckCircle
               sx={{
-                color: '#ff096c',
+                color: '#ff5fa8',
                 fontSize: '18px',
                 marginLeft: 'auto',
               }}
@@ -192,7 +204,8 @@ export const NotebookCell: React.FC<NotebookCellProps> = ({
           sx={{
             position: 'relative',
             '& .cm-editor': {
-              backgroundColor: '#22292f !important',
+              backgroundColor: '#12161D !important',
+              borderRadius: '10px',
             },
             '& .cm-scroller': {
               fontFamily: "'Consolas', 'Menlo', 'Monaco', 'Courier New', monospace",
@@ -200,14 +213,14 @@ export const NotebookCell: React.FC<NotebookCellProps> = ({
             '& .cm-content': {
               padding: '8px 0',
               fontSize: '0.875rem',
-              fontFamily: "'Consolas', 'Menlo', 'Monaco', 'Courier New', monospace",
+              fontFamily: "'JetBrains Mono', 'Fira Code', Menlo, Monaco, Consolas, 'Courier New', monospace",
               color: '#E6EDF3 !important',
             },
             '& .cm-focused': {
               outline: 'none',
             },
             '& .cm-gutters': {
-              backgroundColor: '#22292f !important',
+              backgroundColor: '#12161D !important',
               border: 'none',
             },
             '& .cm-lineNumbers .cm-gutterElement': {
@@ -225,7 +238,7 @@ export const NotebookCell: React.FC<NotebookCellProps> = ({
               EditorView.lineWrapping,
               EditorView.theme({
                 '&': {
-                  backgroundColor: '#22292f',
+                  backgroundColor: '#12161D',
                 },
                 '.cm-content': {
                   color: '#E6EDF3',
@@ -250,8 +263,9 @@ export const NotebookCell: React.FC<NotebookCellProps> = ({
           <Box
             sx={{
               marginTop: '12px',
-              background: '#2a3843',
-              borderTop: '2px solid #ff096c',
+              background: '#12161D',
+              borderTop: '1px solid #232833',
+              borderRadius: '10px',
               paddingTop: '8px',
             }}
           >
@@ -263,19 +277,19 @@ export const NotebookCell: React.FC<NotebookCellProps> = ({
                 cursor: 'pointer',
                 padding: '8px',
                 '&:hover': {
-                  backgroundColor: 'rgba(255, 107, 107, 0.1)',
+                  backgroundColor: 'rgba(229, 115, 115, 0.08)',
                 },
               }}
               onClick={() => setIsErrorExpanded(!isErrorExpanded)}
             >
               {isErrorExpanded ? (
-                <ExpandLess sx={{ color: '#FF6B6B', fontSize: '16px' }} />
+                <ExpandLess sx={{ color: '#E57373', fontSize: '16px' }} />
               ) : (
-                <ExpandMore sx={{ color: '#FF6B6B', fontSize: '16px' }} />
+                <ExpandMore sx={{ color: '#E57373', fontSize: '16px' }} />
               )}
               <Typography
                 sx={{
-                  color: '#FF6B6B',
+                  color: '#E57373',
                   fontFamily: 'monospace',
                   fontSize: '0.75rem',
                   flex: 1,
@@ -294,8 +308,9 @@ export const NotebookCell: React.FC<NotebookCellProps> = ({
           <Box
             sx={{
               marginTop: '12px',
-              background: '#2a3843',
-              borderTop: '2px solid #ff096c',
+              background: '#12161D',
+              borderTop: '1px solid #232833',
+              borderRadius: '10px',
               paddingTop: '8px',
               maxHeight: '400px',
               overflow: 'auto',
@@ -312,8 +327,8 @@ export const NotebookCell: React.FC<NotebookCellProps> = ({
               <thead>
                 <tr
                   style={{
-                    backgroundColor: '#22292f',
-                    borderBottom: '1px solid #4f6172',
+                    backgroundColor: '#12161D',
+                    borderBottom: '1px solid #232833',
                   }}
                 >
                   {cell.result.schema.map((col) => (

@@ -12,6 +12,7 @@ import {
 import {
   PlayArrow,
   Add,
+  InsertDriveFileOutlined,
 } from '@mui/icons-material';
 import { notebookAPI } from '../api/client';
 import type { Notebook, NotebookCell } from '../api/client';
@@ -265,42 +266,50 @@ export const TrinoNotebook: React.FC = () => {
 
   if (isLoading && !notebook) {
     return (
-      <Box sx={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', height: '100%', bgcolor: '#22292f', gap: 2 }}>
-        <CircularProgress sx={{ color: '#ff096c' }} />
-        <Typography sx={{ color: '#9AA0A6' }}>Initializing notebook...</Typography>
+      <Box sx={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', height: '100%', bgcolor: '#0F1117', gap: 2 }}>
+        <CircularProgress sx={{ color: '#ff5fa8' }} />
+        <Typography sx={{ color: '#A7B0C0' }}>Initializing notebook...</Typography>
       </Box>
     );
   }
 
   return (
-    <Box sx={{ display: 'flex', flexDirection: 'column', height: '100%', bgcolor: '#22292f', overflow: 'hidden' }}>
+    <Box sx={{ display: 'flex', flexDirection: 'column', height: '100%', bgcolor: '#0F1117', overflow: 'hidden' }}>
       {/* Top Header Bar */}
       <Box
         sx={{
           height: 48,
-          bgcolor: '#2a3843',
-          borderBottom: '2px solid #ff096c',
+          bgcolor: '#12161D',
+          border: '1px solid #232833',
+          borderRadius: '12px',
+          boxShadow: '0 8px 24px rgba(0, 0, 0, 0.25)',
           display: 'flex',
           alignItems: 'center',
-          px: 2,
+          px: 2.5,
           gap: 1,
+          mb: 2,
         }}
       >
         {/* Left: Commands */}
         <Button
           size="small"
-          startIcon={<Add sx={{ fontSize: 16 }} />}
           onClick={addCell}
           sx={{
-            color: '#9AA0A6',
+            color: '#A7B0C0',
             textTransform: 'none',
             fontSize: '0.875rem',
             minWidth: 'auto',
             px: 1.5,
+            borderRadius: '10px',
+            transition: 'transform 150ms ease, box-shadow 150ms ease, background-color 150ms ease',
             '&:hover': {
-              backgroundColor: 'rgba(255, 9, 108, 0.1)',
-              color: '#ff096c',
-              boxShadow: `0 0 8px rgba(255, 9, 108, 0.3)`,
+              backgroundColor: 'rgba(255, 95, 168, 0.12)',
+              color: '#ff5fa8',
+              boxShadow: `0 0 10px rgba(255, 95, 168, 0.25)`,
+              transform: 'translateY(-1px)',
+            },
+            '&:active': {
+              transform: 'scale(0.98)',
             },
           }}
         >
@@ -308,26 +317,31 @@ export const TrinoNotebook: React.FC = () => {
         </Button>
         <Button
           size="small"
-          startIcon={<PlayArrow sx={{ fontSize: 16 }} />}
           onClick={runAllCells}
           disabled={isExecuting || cells.length === 0}
           sx={{
-            color: '#9AA0A6',
+            color: '#A7B0C0',
             textTransform: 'none',
             fontSize: '0.875rem',
             minWidth: 'auto',
             px: 1.5,
+            borderRadius: '10px',
+            transition: 'transform 150ms ease, box-shadow 150ms ease, background-color 150ms ease',
             '&:hover': {
-              backgroundColor: 'rgba(255, 9, 108, 0.1)',
-              color: '#ff096c',
-              boxShadow: `0 0 8px rgba(255, 9, 108, 0.3)`,
+              backgroundColor: 'rgba(255, 95, 168, 0.12)',
+              color: '#ff5fa8',
+              boxShadow: `0 0 10px rgba(255, 95, 168, 0.25)`,
+              transform: 'translateY(-1px)',
             },
             '&:disabled': {
-              color: '#000000',
+              color: '#4B5262',
+            },
+            '&:active': {
+              transform: 'scale(0.98)',
             },
           }}
         >
-          ▷ Run all
+          Run all
         </Button>
 
         <Box sx={{ flex: 1 }} />
@@ -341,21 +355,21 @@ export const TrinoNotebook: React.FC = () => {
               color: '#E6EDF3',
               fontSize: '0.875rem',
               height: 32,
-              bgcolor: '#2a3843',
+              bgcolor: '#12161D',
               '& .MuiOutlinedInput-notchedOutline': {
-                borderColor: '#4f6172',
+                borderColor: '#232833',
               },
               '&:hover .MuiOutlinedInput-notchedOutline': {
-                borderColor: '#ff096c',
+                borderColor: '#ff5fa8',
               },
               '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
-                borderColor: '#ff096c',
-                boxShadow: `0 0 8px rgba(255, 9, 108, 0.4)`,
+                borderColor: '#ff5fa8',
+                boxShadow: `0 0 8px rgba(255, 95, 168, 0.35)`,
               },
             }}
           >
             {SUPPORTED_ENGINES.map((eng) => (
-              <MenuItem key={eng.value} value={eng.value} sx={{ bgcolor: '#2a3843', color: '#E6EDF3' }}>
+              <MenuItem key={eng.value} value={eng.value} sx={{ bgcolor: '#12161D', color: '#E6EDF3' }}>
                 {eng.label}
               </MenuItem>
             ))}
@@ -371,8 +385,11 @@ export const TrinoNotebook: React.FC = () => {
             flex: 1,
             overflowY: 'auto',
             overflowX: 'hidden',
-            bgcolor: '#22292f',
-            p: 2,
+            bgcolor: '#12161D',
+            p: 3,
+            border: '1px solid #232833',
+            borderRadius: '12px',
+            boxShadow: '0 8px 24px rgba(0, 0, 0, 0.25)',
           }}
         >
           {/* Error Display */}
@@ -382,11 +399,12 @@ export const TrinoNotebook: React.FC = () => {
               onClose={() => setError(null)}
               sx={{
                 mb: 2,
-                bgcolor: '#FF6B6B',
-                color: '#000000',
-                border: '2px solid #ff096c',
-                '& .MuiAlert-icon': { color: '#000000' },
-                '& .MuiAlert-message': { color: '#000000' },
+                bgcolor: '#1A202A',
+                color: '#E6EDF3',
+                borderLeft: '4px solid #E57373',
+                borderRadius: '10px',
+                '& .MuiAlert-icon': { color: '#E57373' },
+                '& .MuiAlert-message': { color: '#E6EDF3' },
               }}
             >
               {error}
@@ -400,10 +418,43 @@ export const TrinoNotebook: React.FC = () => {
                 justifyContent: 'center',
                 alignItems: 'center',
                 height: '100%',
-                color: '#9AA0A6',
               }}
             >
-              <Typography>No cells. Click "+ Code" to add a cell.</Typography>
+              <Box
+                sx={{
+                  backgroundColor: '#161B22',
+                  border: '1px solid #232833',
+                  borderRadius: '12px',
+                  p: 4,
+                  textAlign: 'center',
+                  maxWidth: 420,
+                  boxShadow: '0 8px 24px rgba(0, 0, 0, 0.25)',
+                }}
+              >
+                <InsertDriveFileOutlined sx={{ color: '#ff5fa8', fontSize: 32, mb: 1 }} />
+                <Typography sx={{ fontWeight: 600, color: '#E6EDF3', mb: 0.5 }}>No cells yet</Typography>
+                <Typography sx={{ color: '#A7B0C0', fontSize: '0.875rem', mb: 2 }}>
+                  Create your first SQL cell to start querying.
+                </Typography>
+                <Button
+                  size="small"
+                  startIcon={<Add sx={{ fontSize: 16 }} />}
+                  onClick={addCell}
+                  sx={{
+                    color: '#E6EDF3',
+                    backgroundColor: 'rgba(255, 95, 168, 0.12)',
+                    border: '1px solid rgba(255, 95, 168, 0.35)',
+                    borderRadius: '10px',
+                    px: 2,
+                    '&:hover': {
+                      backgroundColor: 'rgba(255, 95, 168, 0.18)',
+                      boxShadow: '0 0 10px rgba(255, 95, 168, 0.25)',
+                    },
+                  }}
+                >
+                  Add a code cell
+                </Button>
+              </Box>
             </Box>
           ) : (
             <>
@@ -447,7 +498,7 @@ export const TrinoNotebook: React.FC = () => {
                   textAlign: 'center',
                   color: '#9AA0A6',
                   cursor: 'pointer',
-                  '&:hover': { color: '#ff096c' },
+                  '&:hover': { color: '#ff5fa8' },
                 }}
                 onClick={addCell}
               >

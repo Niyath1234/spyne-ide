@@ -1,12 +1,12 @@
 import { EditorView } from '@codemirror/view';
 
 // Dark theme with rim highlights for CodeMirror
-const darkBackground = '#000000';
-const darkGray = '#000000';
-const mediumGray = '#000000';
-const accentPink = '#ff096c';
+const darkBackground = '#12161D';
+const darkGray = '#12161D';
+const mediumGray = '#1F242E';
+const accentPink = '#ff5fa8';
 const textPrimary = '#E6EDF3';
-const textSecondary = '#9AA0A6';
+const textSecondary = '#A7B0C0';
 
 export const colabTheme = EditorView.theme({
   '&': {
@@ -23,12 +23,12 @@ export const colabTheme = EditorView.theme({
     outlineOffset: '-1px',
   },
   '.cm-scroller': {
-    fontFamily: "'Consolas', 'Menlo', 'Monaco', 'Courier New', monospace",
+    fontFamily: "'JetBrains Mono', 'Fira Code', Menlo, Monaco, Consolas, 'Courier New', monospace",
   },
   '.cm-content': {
     padding: '8px 0',
     fontSize: '0.875rem',
-    fontFamily: "'Consolas', 'Menlo', 'Monaco', 'Courier New', monospace",
+    fontFamily: "'JetBrains Mono', 'Fira Code', Menlo, Monaco, Consolas, 'Courier New', monospace",
     color: `${textPrimary} !important`,
   },
   '.cm-focused': {
@@ -47,7 +47,7 @@ export const colabTheme = EditorView.theme({
   },
   '.cm-activeLineGutter': {
     backgroundColor: `${darkGray} !important`,
-    color: `${accentPink} !important`,
+    color: `${textSecondary} !important`,
   },
   '.cm-activeLine': {
     backgroundColor: `${darkGray} !important`,
@@ -56,10 +56,10 @@ export const colabTheme = EditorView.theme({
     backgroundColor: `${mediumGray} !important`,
   },
   '.cm-keyword': { color: `${accentPink} !important`, fontWeight: 'bold' },
-  '.cm-string': { color: `${accentPink} !important` },
-  '.cm-number': { color: `${accentPink} !important` },
+  '.cm-string': { color: '#C4B5FD !important' },
+  '.cm-number': { color: '#93C5FD !important' },
   '.cm-operator': { color: `${textPrimary} !important` },
-  '.cm-variable': { color: `${accentPink} !important` },
-  '.cm-builtin': { color: `${accentPink} !important` },
+  '.cm-variable': { color: '#E6EDF3 !important' },
+  '.cm-builtin': { color: '#8BD5CA !important' },
   '.cm-comment': { color: `${textSecondary} !important`, fontStyle: 'italic' },
 });

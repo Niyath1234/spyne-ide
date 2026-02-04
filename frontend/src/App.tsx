@@ -51,7 +51,9 @@ function App() {
               display: 'flex',
               flexDirection: 'column',
               overflow: 'hidden',
-              backgroundColor: '#000000',
+              backgroundColor: '#0F1117',
+              p: 3,
+              gap: 2,
             }}
           >
             {renderContent()}

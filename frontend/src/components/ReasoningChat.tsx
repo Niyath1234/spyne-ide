@@ -1247,7 +1247,7 @@ cargo run --bin rca-engine run "${userQuery}" --metadata-dir ./metadata --data-d
                     <Typography
                       variant="caption"
                       sx={{
-                        color: isCompletenessStep ? '#ff096c' : '#6E7681',
+                        color: isCompletenessStep ? '#ff5fa8' : '#6E7681',
                         fontSize: '0.65rem',
                         fontStyle: 'italic',
                         opacity: isCompletenessStep ? 0.9 : 0.5,
@@ -1278,7 +1278,7 @@ cargo run --bin rca-engine run "${userQuery}" --metadata-dir ./metadata --data-d
                     <Typography
                       variant="caption"
                       sx={{
-                        color: isCompletenessStep ? '#ff096c' : '#6E7681',
+                        color: isCompletenessStep ? '#ff5fa8' : '#6E7681',
                         fontSize: '0.65rem',
                         pl: 1,
                         opacity: isCompletenessStep ? 0.9 : 0.5,
@@ -1360,7 +1360,7 @@ cargo run --bin rca-engine run "${userQuery}" --metadata-dir ./metadata --data-d
                                   key={idx}
                                   variant="subtitle2"
                                   sx={{
-                                    color: '#ff096c',
+                                    color: '#ff5fa8',
                                     fontWeight: 600,
                                     fontSize: '0.9rem',
                                     mt: idx > 0 ? 2 : 0,
@@ -1484,7 +1484,7 @@ cargo run --bin rca-engine run "${userQuery}" --metadata-dir ./metadata --data-d
                                 startIcon={<DownloadIcon />}
                                 onClick={() => downloadCSV(csvContent, 'rca-results.csv')}
                                 sx={{
-                                  color: '#ff096c',
+                                  color: '#ff5fa8',
                                   fontSize: '0.75rem',
                                   textTransform: 'none',
                                   border: '1px solid rgba(255, 9, 108, 0.3)',
@@ -1493,7 +1493,7 @@ cargo run --bin rca-engine run "${userQuery}" --metadata-dir ./metadata --data-d
                                   py: 0.5,
                                   '&:hover': {
                                     backgroundColor: 'rgba(255, 9, 108, 0.1)',
-                                    borderColor: '#ff096c',
+                                    borderColor: '#ff5fa8',
                                   },
                                 }}
                               >
@@ -1532,7 +1532,7 @@ cargo run --bin rca-engine run "${userQuery}" --metadata-dir ./metadata --data-d
                                       <TableCell
                                         key={idx}
                                         sx={{
-                                          color: '#ff096c',
+                                          color: '#ff5fa8',
                                           borderColor: '#30363D',
                                           fontWeight: 600,
                                           backgroundColor: '#0D1117',
@@ -1589,7 +1589,7 @@ cargo run --bin rca-engine run "${userQuery}" --metadata-dir ./metadata --data-d
                                             }
                                           } else if (isNumericCell && Math.abs(parseFloat(cell)) > 1000) {
                                             // Highlight large numbers
-                                            cellColor = '#ff096c';
+                                            cellColor = '#ff5fa8';
                                           }
                                           
                                           return (
@@ -1667,8 +1667,8 @@ cargo run --bin rca-engine run "${userQuery}" --metadata-dir ./metadata --data-d
           }}
         >
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-            <HelpIcon sx={{ color: '#ff096c', fontSize: 18 }} />
-            <Typography variant="caption" sx={{ color: '#ff096c', fontWeight: 500 }}>
+            <HelpIcon sx={{ color: '#ff5fa8', fontSize: 18 }} />
+            <Typography variant="caption" sx={{ color: '#ff5fa8', fontWeight: 500 }}>
               Awaiting clarification for: "{pendingClarification.originalQuery.substring(0, 50)}..."
             </Typography>
           </Box>
@@ -1744,9 +1744,9 @@ cargo run --bin rca-engine run "${userQuery}" --metadata-dir ./metadata --data-d
                 color: '#E6EDF3',
                 backgroundColor: pendingClarification ? 'rgba(255, 9, 108, 0.05)' : '#000000',
                 '& fieldset': { 
-                  borderColor: pendingClarification ? '#ff096c' : '#000000' 
+                  borderColor: pendingClarification ? '#ff5fa8' : '#000000' 
                 },
-                '&:hover fieldset': { borderColor: '#ff096c' },
+                '&:hover fieldset': { borderColor: '#ff5fa8' },
               },
             }}
           />
@@ -1754,7 +1754,7 @@ cargo run --bin rca-engine run "${userQuery}" --metadata-dir ./metadata --data-d
             onClick={handleSend}
             disabled={!input.trim() || isLoading}
             sx={{
-              backgroundColor: pendingClarification ? '#2EA043' : '#ff096c',
+              backgroundColor: pendingClarification ? '#2EA043' : '#ff5fa8',
               color: '#FFFFFF',
               '&:hover': { 
                 backgroundColor: pendingClarification ? '#238636' : '#E55A2B' 

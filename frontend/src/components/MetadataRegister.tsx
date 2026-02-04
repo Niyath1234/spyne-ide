@@ -115,7 +115,7 @@ export const MetadataRegister: React.FC = () => {
           gap: 2,
         }}
       >
-        <StorageIcon sx={{ color: '#ff096c', fontSize: 24 }} />
+        <StorageIcon sx={{ color: '#ff5fa8', fontSize: 24 }} />
         <Typography variant="h6" sx={{ color: '#E6EDF3', fontWeight: 600 }}>
           Metadata Register
         </Typography>
@@ -134,9 +134,9 @@ export const MetadataRegister: React.FC = () => {
           borderBottom: '1px solid #30363D',
           '& .MuiTab-root': {
             color: '#8B949E',
-            '&.Mui-selected': { color: '#ff096c' },
+            '&.Mui-selected': { color: '#ff5fa8' },
           },
-          '& .MuiTabs-indicator': { backgroundColor: '#ff096c' },
+          '& .MuiTabs-indicator': { backgroundColor: '#ff5fa8' },
         }}
       >
         <Tab label="Tables" />
@@ -163,7 +163,7 @@ export const MetadataRegister: React.FC = () => {
               color: '#E6EDF3',
               backgroundColor: '#161B22',
               '& fieldset': { borderColor: '#30363D' },
-              '&:hover fieldset': { borderColor: '#ff096c' },
+              '&:hover fieldset': { borderColor: '#ff5fa8' },
             },
           }}
         />
@@ -185,19 +185,19 @@ export const MetadataRegister: React.FC = () => {
               <Table>
                 <TableHead>
                   <TableRow>
-                    <TableCell sx={{ color: '#ff096c', fontWeight: 600, borderColor: '#000000' }}>
+                    <TableCell sx={{ color: '#ff5fa8', fontWeight: 600, borderColor: '#000000' }}>
                       Table Name
                     </TableCell>
-                    <TableCell sx={{ color: '#ff096c', fontWeight: 600, borderColor: '#000000' }}>
+                    <TableCell sx={{ color: '#ff5fa8', fontWeight: 600, borderColor: '#000000' }}>
                       System
                     </TableCell>
-                    <TableCell sx={{ color: '#ff096c', fontWeight: 600, borderColor: '#000000' }}>
+                    <TableCell sx={{ color: '#ff5fa8', fontWeight: 600, borderColor: '#000000' }}>
                       Entity
                     </TableCell>
-                    <TableCell sx={{ color: '#ff096c', fontWeight: 600, borderColor: '#000000' }}>
+                    <TableCell sx={{ color: '#ff5fa8', fontWeight: 600, borderColor: '#000000' }}>
                       Columns
                     </TableCell>
-                    <TableCell sx={{ color: '#ff096c', fontWeight: 600, borderColor: '#000000' }}>
+                    <TableCell sx={{ color: '#ff5fa8', fontWeight: 600, borderColor: '#000000' }}>
                       Primary Key
                     </TableCell>
                   </TableRow>
@@ -241,13 +241,13 @@ export const MetadataRegister: React.FC = () => {
             <Table>
               <TableHead>
                 <TableRow>
-                  <TableCell sx={{ color: '#ff096c', fontWeight: 600, borderColor: '#000000' }}>
+                  <TableCell sx={{ color: '#ff5fa8', fontWeight: 600, borderColor: '#000000' }}>
                     Metric Name
                   </TableCell>
-                  <TableCell sx={{ color: '#ff096c', fontWeight: 600, borderColor: '#000000' }}>
+                  <TableCell sx={{ color: '#ff5fa8', fontWeight: 600, borderColor: '#000000' }}>
                     Description
                   </TableCell>
-                  <TableCell sx={{ color: '#ff096c', fontWeight: 600, borderColor: '#000000' }}>
+                  <TableCell sx={{ color: '#ff5fa8', fontWeight: 600, borderColor: '#000000' }}>
                     Dimensions
                   </TableCell>
                 </TableRow>
