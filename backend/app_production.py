@@ -19,10 +19,67 @@ import traceback
 from datetime import datetime
 from functools import wraps
 from typing import Dict, Any, Optional, List, Tuple
+from pathlib import Path
 
 from flask import Flask, Blueprint, request, jsonify, g, Response
 from flask_cors import CORS
 from werkzeug.exceptions import HTTPException
+
+# Load .env file FIRST - before any other imports that might need env vars
+try:
+    from dotenv import load_dotenv
+    # Load .env from project root (parent of backend directory)
+    backend_dir = Path(__file__).parent
+    project_root = backend_dir.parent
+    env_file = project_root / '.env'
+    if env_file.exists():
+        load_dotenv(env_file, override=True)  # override=True to ensure latest values
+        # Verify API key was loaded
+        api_key = os.getenv('OPENAI_API_KEY')
+        if api_key:
+            # Set it explicitly to ensure it's available everywhere
+            os.environ['OPENAI_API_KEY'] = api_key
+            # Also set OPENAI_MODEL if present
+            model = os.getenv('OPENAI_MODEL')
+            if model:
+                os.environ['OPENAI_MODEL'] = model
+            logging.getLogger(__name__).info(f"✓ Loaded .env file from {env_file}")
+            logging.getLogger(__name__).info(f"  - OPENAI_API_KEY: {'*' * 20}...{api_key[-10:]} (length: {len(api_key)})")
+            if model:
+                logging.getLogger(__name__).info(f"  - OPENAI_MODEL: {model}")
+        else:
+            logging.getLogger(__name__).warning(f"⚠ Loaded .env file from {env_file} but OPENAI_API_KEY not found")
+    else:
+        # Try loading from current directory
+        load_dotenv(override=True)
+        api_key = os.getenv('OPENAI_API_KEY')
+        if api_key:
+            os.environ['OPENAI_API_KEY'] = api_key
+            model = os.getenv('OPENAI_MODEL')
+            if model:
+                os.environ['OPENAI_MODEL'] = model
+            logging.getLogger(__name__).info(f"✓ Loaded .env from current directory (API key length: {len(api_key)})")
+except ImportError:
+    logging.getLogger(__name__).warning("python-dotenv not installed. Environment variables must be set manually.")
+except Exception as e:
+    logging.getLogger(__name__).warning(f"Could not load .env file: {e}")
+
+# Ensure OPENAI_API_KEY is set from .env file if not already in environment
+if not os.getenv('OPENAI_API_KEY'):
+    # Try to load it one more time
+    try:
+        from dotenv import load_dotenv
+        backend_dir = Path(__file__).parent
+        project_root = backend_dir.parent
+        env_file = project_root / '.env'
+        if env_file.exists():
+            load_dotenv(env_file, override=True)
+            api_key = os.getenv('OPENAI_API_KEY')
+            if api_key:
+                os.environ['OPENAI_API_KEY'] = api_key
+                logging.getLogger(__name__).info(f"✓ Set OPENAI_API_KEY from .env (length: {len(api_key)})")
+    except:
+        pass
 
 # Ensure backend directory is in path
 backend_dir = os.path.dirname(os.path.abspath(__file__))
@@ -55,8 +112,16 @@ class ProductionConfig:
     # CORS settings
     CORS_ORIGINS = os.getenv('RCA_CORS_ORIGINS', '*').split(',')
     
-    # LLM settings
-    OPENAI_API_KEY = os.getenv('OPENAI_API_KEY', '')
+    # LLM settings - read from environment at runtime
+    @staticmethod
+    def get_openai_api_key():
+        """Get OpenAI API key from environment (read at runtime, not module load time)."""
+        return os.getenv('OPENAI_API_KEY', '')
+    
+    # Keep OPENAI_API_KEY for backward compatibility but read at runtime
+    @property
+    def OPENAI_API_KEY(self):
+        return ProductionConfig.get_openai_api_key()
     LLM_MODEL = os.getenv('RCA_LLM_MODEL', 'gpt-4')
     LLM_TEMPERATURE = float(os.getenv('RCA_LLM_TEMPERATURE', 0.0))
     LLM_MAX_TOKENS = int(os.getenv('RCA_LLM_MAX_TOKENS', 3000))
@@ -388,7 +453,7 @@ def register_middleware(app: Flask):
 
 def register_error_handlers(app: Flask):
     """Register error handlers."""
-    
+
     @app.errorhandler(Exception)
     def handle_exception(e: Exception):
         """Handle all exceptions."""
@@ -422,6 +487,10 @@ def register_blueprints(app: Flask):
     app.register_blueprint(query_bp, url_prefix='/api')
     app.register_blueprint(agent_bp, url_prefix='/api')
     app.register_blueprint(reasoning_bp, url_prefix='/api')
+    
+    # Register knowledge and metadata API
+    from backend.knowledge_metadata_api import knowledge_metadata_bp
+    app.register_blueprint(knowledge_metadata_bp, url_prefix='/api')
     app.register_blueprint(assistant_bp, url_prefix='/api')
     app.register_blueprint(pipelines_bp, url_prefix='/api')
     app.register_blueprint(rules_bp, url_prefix='/api')
@@ -545,7 +614,7 @@ def detailed_health():
         'version': '2.0.0',
         'components': {
             'api': 'operational',
-            'llm': 'operational' if ProductionConfig.OPENAI_API_KEY else 'degraded',
+            'llm': 'operational' if os.getenv('OPENAI_API_KEY', '') else 'degraded',
             'query_engine': 'operational',
             'metrics': 'operational' if ProductionConfig.ENABLE_METRICS else 'disabled',
         },
@@ -723,7 +792,7 @@ def agent_run():
         
         # Generate SQL using query generator
         generate_sql_from_query, _ = get_query_generator()
-        use_llm = bool(ProductionConfig.OPENAI_API_KEY)
+        use_llm = bool(os.getenv('OPENAI_API_KEY', ''))
         # Enable clarification mode (can be overridden via request parameter)
         clarification_mode = request.json.get('clarification_mode', True)
         result = generate_sql_from_query(user_query, use_llm=use_llm, 
@@ -840,8 +909,9 @@ reasoning_bp = Blueprint('reasoning', __name__)
 
 @reasoning_bp.route('/reasoning/query', methods=['POST'])
 def reasoning_query():
-    """Process reasoning query."""
+    """Process reasoning query using new AI SQL System."""
     start_time = time.time()
+    logger = logging.getLogger(__name__)
     try:
         data = request.get_json() or {}
         query_text = data.get('query', '')
@@ -850,82 +920,201 @@ def reasoning_query():
         if not query_text:
             return jsonify({'error': 'Query is required'}), 400
         
-        # Generate SQL
-        generate_sql_from_query, _ = get_query_generator()
-        use_llm = bool(ProductionConfig.OPENAI_API_KEY)
-        result = generate_sql_from_query(query_text, use_llm=use_llm)
-        
-        duration_ms = (time.time() - start_time) * 1000
-        metrics_collector.record_planning(duration_ms)
-        
-        # Build reasoning steps
-        steps = []
-        steps.append({
-            'type': 'thought',
-            'content': f' Analyzing query: "{query_text}"',
-            'timestamp': datetime.utcnow().isoformat() + 'Z',
-        })
-        
-        if result.get('reasoning_steps'):
-            for i, step_content in enumerate(result['reasoning_steps']):
-                step_type = 'thought'
-                if '' in step_content or 'Generated' in step_content:
-                    step_type = 'result'
-                elif '' in step_content or 'Error' in step_content:
-                    step_type = 'error'
-                elif '' in step_content or 'Building' in step_content:
-                    step_type = 'action'
-                elif '' in step_content or 'SQL' in step_content:
-                    step_type = 'result'
+            # Use new AI SQL System
+        try:
+            # Ensure .env is loaded before importing modules that need API key
+            from dotenv import load_dotenv
+            from pathlib import Path
+            backend_dir = Path(__file__).parent
+            project_root = backend_dir.parent
+            env_file = project_root / '.env'
+            if env_file.exists():
+                load_dotenv(env_file, override=True)  # override=True ensures latest values
+            
+            from backend.ai_sql_system.orchestration.graph import LangGraphOrchestrator
+            from backend.ai_sql_system.trino.client import TrinoClient
+            from backend.ai_sql_system.trino.validator import TrinoValidator
+            from backend.ai_sql_system.metadata.semantic_registry import SemanticRegistry
+            from backend.ai_sql_system.planning.join_graph import JoinGraph
+            import json
+            
+            # Reload .env to ensure it's fresh and verify API key is loaded
+            from dotenv import load_dotenv
+            backend_dir = Path(__file__).parent
+            project_root = backend_dir.parent
+            env_file = project_root / '.env'
+            if env_file.exists():
+                load_dotenv(env_file, override=True)
+            
+            # Check API key - Docker should provide it via env_file, but also try loading .env
+            api_key = os.getenv('OPENAI_API_KEY')
+            
+            # Debug: Log all environment variables starting with OPENAI
+            openai_vars = {k: v for k, v in os.environ.items() if k.startswith('OPENAI')}
+            logger.info(f"OpenAI environment variables: {list(openai_vars.keys())}")
+            
+            if not api_key:
+                # Try loading .env file directly (for local development or if Docker env_file didn't work)
+                try:
+                    from dotenv import load_dotenv
+                    backend_dir = Path(__file__).parent
+                    project_root = backend_dir.parent
+                    env_file = project_root / '.env'
+                    
+                    # Also try /app/.env (Docker container path)
+                    docker_env_file = Path('/app/.env')
+                    
+                    for env_path in [env_file, docker_env_file, Path('.env')]:
+                        if env_path.exists():
+                            logger.info(f"Trying to load .env from: {env_path}")
+                            load_dotenv(env_path, override=True)
+                            api_key = os.getenv('OPENAI_API_KEY')
+                            if api_key:
+                                os.environ['OPENAI_API_KEY'] = api_key
+                                model = os.getenv('OPENAI_MODEL')
+                                if model:
+                                    os.environ['OPENAI_MODEL'] = model
+                                logger.info(f"✓ Loaded OPENAI_API_KEY from {env_path} (length: {len(api_key)})")
+                                break
+                except Exception as e:
+                    logger.warning(f"Could not load .env file: {e}")
+            
+            if not api_key:
+                logger.error("OPENAI_API_KEY not found in environment. Available env vars: " + str(list(os.environ.keys())[:20]))
+                return jsonify({
+                    'error': 'OpenAI API key not configured. Please set OPENAI_API_KEY in .env file or environment.',
+                    'steps': [{
+                        'type': 'error',
+                        'content': f'OpenAI API key not configured. Checked environment and .env files. Available vars: {list(openai_vars.keys())}',
+                        'timestamp': datetime.utcnow().isoformat() + 'Z',
+                    }],
+                }), 500
+            else:
+                logger.info(f"✓ OPENAI_API_KEY available (length: {len(api_key)}, starts with: {api_key[:10]}..., model: {os.getenv('OPENAI_MODEL', 'default')})")
+            
+            # Initialize orchestrator (with join graph loading)
+            trino_client = TrinoClient()
+            trino_validator = TrinoValidator(trino_client)
+            
+            # Initialize semantic registry (will fall back to JSON if Postgres unavailable)
+            try:
+                semantic_registry = SemanticRegistry()
+            except Exception as e:
+                logger.warning(f"Could not initialize SemanticRegistry with Postgres: {e}. Using JSON fallback.")
+                semantic_registry = SemanticRegistry(ingestion=None, vector_store=None)
+            
+            join_graph = JoinGraph()
+            
+            # Load join graph from metadata
+            try:
+                metadata_dir = Path(__file__).parent.parent.parent / "metadata"
+                lineage_file = metadata_dir / "lineage.json"
                 
-                steps.append({
-                    'type': step_type,
-                    'content': step_content,
-                    'timestamp': datetime.utcnow().isoformat() + 'Z',
-                })
-        else:
+                if lineage_file.exists():
+                    with open(lineage_file, 'r') as f:
+                        lineage_data = json.load(f)
+                    
+                    for edge in lineage_data.get('edges', []):
+                        from_table = edge.get('from', '').split('.')[-1]
+                        to_table = edge.get('to', '').split('.')[-1]
+                        condition = edge.get('on', '')
+                        join_type = 'LEFT'
+                        
+                        if from_table and to_table and condition:
+                            join_graph.add_join(from_table, to_table, condition, join_type)
+            except Exception as e:
+                logger.warning(f"Could not load join graph: {e}")
+            
+            orchestrator = LangGraphOrchestrator(
+                trino_validator=trino_validator,
+                semantic_registry=semantic_registry,
+                join_graph=join_graph
+            )
+            
+            # Run pipeline
+            result = orchestrator.run(query_text)
+            
+            duration_ms = (time.time() - start_time) * 1000
+            metrics_collector.record_planning(duration_ms)
+            
+            # Build reasoning steps from pipeline result
+            steps = []
             steps.append({
                 'type': 'thought',
-                'content': ' Loading metadata and analyzing available tables...',
+                'content': f' Analyzing query: "{query_text}"',
                 'timestamp': datetime.utcnow().isoformat() + 'Z',
             })
             
-            if result.get('success'):
+            if result.get('intent'):
                 steps.append({
                     'type': 'action',
-                    'content': ' Generating SQL using LLM with comprehensive context...',
+                    'content': f' Extracted intent: {json.dumps(result["intent"], indent=2)}',
                     'timestamp': datetime.utcnow().isoformat() + 'Z',
                 })
-                
-                if result.get('sql'):
-                    steps.append({
-                        'type': 'result',
-                        'content': f' Generated SQL:\n\n```sql\n{result["sql"]}\n```',
-                        'timestamp': datetime.utcnow().isoformat() + 'Z',
-                    })
+            
+            if result.get('resolution'):
+                steps.append({
+                    'type': 'thought',
+                    'content': f' Resolution: {result["resolution"].get("type")} - {result["resolution"].get("reason")}',
+                    'timestamp': datetime.utcnow().isoformat() + 'Z',
+                })
+            
+            if result.get('success') and result.get('sql'):
+                steps.append({
+                    'type': 'action',
+                    'content': ' Generated SQL using LangGraph pipeline',
+                    'timestamp': datetime.utcnow().isoformat() + 'Z',
+                })
+                steps.append({
+                    'type': 'result',
+                    'content': f' Generated SQL:\n\n```sql\n{result["sql"]}\n```',
+                    'timestamp': datetime.utcnow().isoformat() + 'Z',
+                })
             else:
                 steps.append({
                     'type': 'error',
                     'content': f' Error: {result.get("error", "Unknown error")}',
                     'timestamp': datetime.utcnow().isoformat() + 'Z',
                 })
-        
-        if result.get('warnings'):
-            steps.append({
-                'type': 'thought',
-                'content': f'️  Warnings: {result["warnings"]}',
-                'timestamp': datetime.utcnow().isoformat() + 'Z',
+            
+            if result.get('validation_errors'):
+                steps.append({
+                    'type': 'thought',
+                    'content': f' Validation errors: {result["validation_errors"]}',
+                    'timestamp': datetime.utcnow().isoformat() + 'Z',
+                })
+            
+            reasoning_history.extend(steps)
+            
+            return jsonify({
+                'result': result.get('sql') or result.get('error', 'Query processed'),
+                'steps': steps,
+                'sql': result.get('sql'),
+                'intent': result.get('intent'),
+                'method': 'langgraph_pipeline',
             })
-        
-        reasoning_history.extend(steps)
-        
-        return jsonify({
-            'result': result.get('sql') or result.get('error', 'Query processed'),
-            'steps': steps,
-            'sql': result.get('sql'),
-            'intent': result.get('intent'),
-            'method': result.get('method', 'llm_with_full_context'),
-        })
+            
+        except ImportError as e:
+            logging.getLogger(__name__).exception('Error importing AI SQL System')
+            return jsonify({
+                'error': f'AI SQL System not available: {str(e)}',
+                'steps': [{
+                    'type': 'error',
+                    'content': f' Error: {str(e)}',
+                    'timestamp': datetime.utcnow().isoformat() + 'Z',
+                }],
+            }), 500
+        except Exception as e:
+            logging.getLogger(__name__).exception('Error in AI SQL System')
+            return jsonify({
+                'error': str(e),
+                'steps': [{
+                    'type': 'error',
+                    'content': f' Error processing query: {str(e)}',
+                    'timestamp': datetime.utcnow().isoformat() + 'Z',
+                }],
+            }), 500
+            
     except Exception as e:
         logging.getLogger('error').exception('Error in reasoning query')
         return jsonify({
@@ -950,7 +1139,7 @@ def reasoning_assess():
             return jsonify({'error': 'query is required'}), 400
         
         generate_sql_from_query, _ = get_query_generator()
-        use_llm = bool(ProductionConfig.OPENAI_API_KEY)
+        use_llm = bool(os.getenv('OPENAI_API_KEY', ''))
         result = generate_sql_from_query(query_text, use_llm=use_llm)
         
         assessment = {
@@ -1038,7 +1227,7 @@ def assistant_ask():
         
         if is_query_request:
             generate_sql_from_query, _ = get_query_generator()
-            use_llm = bool(ProductionConfig.OPENAI_API_KEY)
+            use_llm = bool(os.getenv('OPENAI_API_KEY', ''))
             result = generate_sql_from_query(question, use_llm=use_llm)
             
             if result.get('success') and result.get('sql'):
@@ -1389,7 +1578,7 @@ if __name__ == '__main__':
     logger = logging.getLogger('startup')
     logger.info(f'Starting RCA Engine on {ProductionConfig.HOST}:{ProductionConfig.PORT}')
     logger.info(f'Debug mode: {ProductionConfig.DEBUG}')
-    logger.info(f'LLM enabled: {bool(ProductionConfig.OPENAI_API_KEY)}')
+    logger.info(f'LLM enabled: {bool(os.getenv("OPENAI_API_KEY", ""))}')
     
     # Run with Flask's development server (use gunicorn in production)
     app.run(

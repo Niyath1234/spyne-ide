@@ -1,0 +1,53 @@
+{
+  "metrics": [],
+  "dimensions": [
+    {
+      "name": "customer_dimension",
+      "base_table": "tpch.tiny.customer",
+      "join_path": [
+        {
+          "from_table": "tpch.tiny.customer",
+          "to_table": "tpch.tiny.nation",
+          "on": "customer.c_nationkey = nation.n_nationkey"
+        },
+        {
+          "from_table": "tpch.tiny.nation",
+          "to_table": "tpch.tiny.region",
+          "on": "nation.n_regionkey = region.r_regionkey"
+        }
+      ]
+    },
+    {
+      "name": "supplier_dimension",
+      "base_table": "tpch.tiny.supplier",
+      "join_path": [
+        {
+          "from_table": "tpch.tiny.supplier",
+          "to_table": "tpch.tiny.nation",
+          "on": "supplier.s_nationkey = nation.n_nationkey"
+        },
+        {
+          "from_table": "tpch.tiny.nation",
+          "to_table": "tpch.tiny.region",
+          "on": "nation.n_regionkey = region.r_regionkey"
+        }
+      ]
+    },
+    {
+      "name": "order_lineitem_dimension",
+      "base_table": "tpch.tiny.orders",
+      "join_path": [
+        {
+          "from_table": "tpch.tiny.orders",
+          "to_table": "tpch.tiny.customer",
+          "on": "orders.o_custkey = customer.c_custkey"
+        },
+        {
+          "from_table": "tpch.tiny.orders",
+          "to_table": "tpch.tiny.lineitem",
+          "on": "orders.o_orderkey = lineitem.l_orderkey"
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,365 @@
+{
+  "tables": [
+    {
+      "name": "tpch.tiny.region",
+      "entity": "region",
+      "system": "tpch",
+      "columns": [
+        {
+          "name": "r_regionkey",
+          "type": "bigint",
+          "description": "Primary key for region"
+        },
+        {
+          "name": "r_name",
+          "type": "varchar",
+          "description": "Region name"
+        },
+        {
+          "name": "r_comment",
+          "type": "varchar",
+          "description": "Comment about region"
+        }
+      ]
+    },
+    {
+      "name": "tpch.tiny.nation",
+      "entity": "nation",
+      "system": "tpch",
+      "columns": [
+        {
+          "name": "n_nationkey",
+          "type": "bigint",
+          "description": "Primary key for nation"
+        },
+        {
+          "name": "n_name",
+          "type": "varchar",
+          "description": "Nation name"
+        },
+        {
+          "name": "n_regionkey",
+          "type": "bigint",
+          "description": "Foreign key to region.r_regionkey"
+        },
+        {
+          "name": "n_comment",
+          "type": "varchar",
+          "description": "Comment about nation"
+        }
+      ]
+    },
+    {
+      "name": "tpch.tiny.customer",
+      "entity": "customer",
+      "system": "tpch",
+      "columns": [
+        {
+          "name": "c_custkey",
+          "type": "bigint",
+          "description": "Primary key for customer"
+        },
+        {
+          "name": "c_name",
+          "type": "varchar",
+          "description": "Customer name"
+        },
+        {
+          "name": "c_address",
+          "type": "varchar",
+          "description": "Customer address"
+        },
+        {
+          "name": "c_nationkey",
+          "type": "bigint",
+          "description": "Foreign key to nation.n_nationkey"
+        },
+        {
+          "name": "c_phone",
+          "type": "varchar",
+          "description": "Customer phone number"
+        },
+        {
+          "name": "c_acctbal",
+          "type": "double",
+          "description": "Customer account balance"
+        },
+        {
+          "name": "c_mktsegment",
+          "type": "varchar",
+          "description": "Market segment"
+        },
+        {
+          "name": "c_comment",
+          "type": "varchar",
+          "description": "Comment about customer"
+        }
+      ]
+    },
+    {
+      "name": "tpch.tiny.supplier",
+      "entity": "supplier",
+      "system": "tpch",
+      "columns": [
+        {
+          "name": "s_suppkey",
+          "type": "bigint",
+          "description": "Primary key for supplier"
+        },
+        {
+          "name": "s_name",
+          "type": "varchar",
+          "description": "Supplier name"
+        },
+        {
+          "name": "s_address",
+          "type": "varchar",
+          "description": "Supplier address"
+        },
+        {
+          "name": "s_nationkey",
+          "type": "bigint",
+          "description": "Foreign key to nation.n_nationkey"
+        },
+        {
+          "name": "s_phone",
+          "type": "varchar",
+          "description": "Supplier phone number"
+        },
+        {
+          "name": "s_acctbal",
+          "type": "double",
+          "description": "Supplier account balance"
+        },
+        {
+          "name": "s_comment",
+          "type": "varchar",
+          "description": "Comment about supplier"
+        }
+      ]
+    },
+    {
+      "name": "tpch.tiny.part",
+      "entity": "part",
+      "system": "tpch",
+      "columns": [
+        {
+          "name": "p_partkey",
+          "type": "bigint",
+          "description": "Primary key for part"
+        },
+        {
+          "name": "p_name",
+          "type": "varchar",
+          "description": "Part name"
+        },
+        {
+          "name": "p_mfgr",
+          "type": "varchar",
+          "description": "Manufacturer"
+        },
+        {
+          "name": "p_brand",
+          "type": "varchar",
+          "description": "Brand"
+        },
+        {
+          "name": "p_type",
+          "type": "varchar",
+          "description": "Part type"
+        },
+        {
+          "name": "p_size",
+          "type": "integer",
+          "description": "Part size"
+        },
+        {
+          "name": "p_container",
+          "type": "varchar",
+          "description": "Container type"
+        },
+        {
+          "name": "p_retailprice",
+          "type": "double",
+          "description": "Retail price"
+        },
+        {
+          "name": "p_comment",
+          "type": "varchar",
+          "description": "Comment about part"
+        }
+      ]
+    },
+    {
+      "name": "tpch.tiny.partsupp",
+      "entity": "partsupp",
+      "system": "tpch",
+      "columns": [
+        {
+          "name": "ps_partkey",
+          "type": "bigint",
+          "description": "Foreign key to part.p_partkey"
+        },
+        {
+          "name": "ps_suppkey",
+          "type": "bigint",
+          "description": "Foreign key to supplier.s_suppkey"
+        },
+        {
+          "name": "ps_availqty",
+          "type": "integer",
+          "description": "Available quantity"
+        },
+        {
+          "name": "ps_supplycost",
+          "type": "double",
+          "description": "Supply cost"
+        },
+        {
+          "name": "ps_comment",
+          "type": "varchar",
+          "description": "Comment about part-supplier relationship"
+        }
+      ]
+    },
+    {
+      "name": "tpch.tiny.orders",
+      "entity": "orders",
+      "system": "tpch",
+      "columns": [
+        {
+          "name": "o_orderkey",
+          "type": "bigint",
+          "description": "Primary key for order"
+        },
+        {
+          "name": "o_custkey",
+          "type": "bigint",
+          "description": "Foreign key to customer.c_custkey"
+        },
+        {
+          "name": "o_orderstatus",
+          "type": "varchar",
+          "description": "Order status"
+        },
+        {
+          "name": "o_totalprice",
+          "type": "double",
+          "description": "Total order price"
+        },
+        {
+          "name": "o_orderdate",
+          "type": "date",
+          "description": "Order date"
+        },
+        {
+          "name": "o_orderpriority",
+          "type": "varchar",
+          "description": "Order priority"
+        },
+        {
+          "name": "o_clerk",
+          "type": "varchar",
+          "description": "Clerk who processed order"
+        },
+        {
+          "name": "o_shippriority",
+          "type": "integer",
+          "description": "Shipping priority"
+        },
+        {
+          "name": "o_comment",
+          "type": "varchar",
+          "description": "Comment about order"
+        }
+      ]
+    },
+    {
+      "name": "tpch.tiny.lineitem",
+      "entity": "lineitem",
+      "system": "tpch",
+      "columns": [
+        {
+          "name": "l_orderkey",
+          "type": "bigint",
+          "description": "Foreign key to orders.o_orderkey"
+        },
+        {
+          "name": "l_partkey",
+          "type": "bigint",
+          "description": "Foreign key to part.p_partkey"
+        },
+        {
+          "name": "l_suppkey",
+          "type": "bigint",
+          "description": "Foreign key to supplier.s_suppkey"
+        },
+        {
+          "name": "l_linenumber",
+          "type": "integer",
+          "description": "Line number within order"
+        },
+        {
+          "name": "l_quantity",
+          "type": "double",
+          "description": "Quantity ordered"
+        },
+        {
+          "name": "l_extendedprice",
+          "type": "double",
+          "description": "Extended price"
+        },
+        {
+          "name": "l_discount",
+          "type": "double",
+          "description": "Discount"
+        },
+        {
+          "name": "l_tax",
+          "type": "double",
+          "description": "Tax"
+        },
+        {
+          "name": "l_returnflag",
+          "type": "varchar",
+          "description": "Return flag"
+        },
+        {
+          "name": "l_linestatus",
+          "type": "varchar",
+          "description": "Line status"
+        },
+        {
+          "name": "l_shipdate",
+          "type": "date",
+          "description": "Ship date"
+        },
+        {
+          "name": "l_commitdate",
+          "type": "date",
+          "description": "Commit date"
+        },
+        {
+          "name": "l_receiptdate",
+          "type": "date",
+          "description": "Receipt date"
+        },
+        {
+          "name": "l_shipinstruct",
+          "type": "varchar",
+          "description": "Shipping instructions"
+        },
+        {
+          "name": "l_shipmode",
+          "type": "varchar",
+          "description": "Shipping mode"
+        },
+        {
+          "name": "l_comment",
+          "type": "varchar",
+          "description": "Comment about line item"
+        }
+      ]
+    }
+  ]
+}

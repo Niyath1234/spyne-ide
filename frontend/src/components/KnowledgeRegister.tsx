@@ -44,25 +44,8 @@ export const KnowledgeRegister: React.FC = () => {
       if (response?.data) {
         setEntries(response.data);
       } else {
-        // Mock data for demonstration
-        setEntries([
-          {
-            id: '1',
-            title: 'Loan Disbursement Process',
-            content: 'Loan disbursements are tracked in loan_disbursements_b table...',
-            type: 'process',
-            tags: ['loan', 'disbursement'],
-            created_at: new Date().toISOString(),
-          },
-          {
-            id: '2',
-            title: 'Customer Account Reconciliation',
-            content: 'Customer accounts are reconciled between system_a and system_b...',
-            type: 'rule',
-            tags: ['reconciliation', 'customer'],
-            created_at: new Date().toISOString(),
-          },
-        ]);
+        // Fallback: empty entries if API fails
+        setEntries([]);
       }
     } catch (error) {
       console.error('Failed to load knowledge entries:', error);

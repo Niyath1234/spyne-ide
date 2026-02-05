@@ -325,18 +325,43 @@ class KnowledgeGraph:
         # Build rule nodes and relationships
         rules = metadata.get('rules', [])
         for rule in rules:
-            rule_id = rule.get('id', f"rule:{len(self.find_nodes_by_type(NodeType.RULE))}")
-            rule_node = KnowledgeNode(
-                id=rule_id,
-                type=NodeType.RULE,
-                properties={
-                    'id': rule_id,
-                    'description': rule.get('computation', {}).get('description', ''),
-                    'source_table': rule.get('computation', {}).get('source_table', '')
-                },
-                metadata={'rule_data': rule}
-            )
-            self.add_node(rule_node)
+            # Handle both dict and string formats
+            if isinstance(rule, str):
+                # String format - create a simple rule node
+                rule_id = f"rule:{len(self.find_nodes_by_type(NodeType.RULE))}"
+                rule_node = KnowledgeNode(
+                    id=rule_id,
+                    type=NodeType.RULE,
+                    properties={
+                        'id': rule_id,
+                        'description': rule,
+                        'source_table': ''
+                    },
+                    metadata={'rule_data': rule}
+                )
+                self.add_node(rule_node)
+            elif isinstance(rule, dict):
+                # Dict format - extract properties
+                rule_id = rule.get('id', f"rule:{len(self.find_nodes_by_type(NodeType.RULE))}")
+                computation = rule.get('computation', {})
+                if isinstance(computation, dict):
+                    description = computation.get('description', rule.get('description', ''))
+                    source_table = computation.get('source_table', '')
+                else:
+                    description = rule.get('description', '')
+                    source_table = ''
+                
+                rule_node = KnowledgeNode(
+                    id=rule_id,
+                    type=NodeType.RULE,
+                    properties={
+                        'id': rule_id,
+                        'description': description,
+                        'source_table': source_table
+                    },
+                    metadata={'rule_data': rule}
+                )
+                self.add_node(rule_node)
             
             # Add relationship to source table
             source_table = rule.get('computation', {}).get('source_table')

@@ -306,12 +306,28 @@ class NodeLevelMetadataAccessor:
         table_set = set(table_names)
         
         for rule in self._rules_cache:
-            # Check if rule mentions any of our tables
-            computation = rule.get('computation', {})
-            source_table = computation.get('source_table', '')
-            
-            if source_table in table_set:
-                relevant_rules.append(rule)
+            # Handle both dict and string formats
+            if isinstance(rule, str):
+                # String format - check if it mentions any table names
+                rule_lower = rule.lower()
+                for table_name in table_names:
+                    if table_name.lower() in rule_lower:
+                        relevant_rules.append(rule)
+                        break
+            elif isinstance(rule, dict):
+                # Dict format - check computation.source_table
+                computation = rule.get('computation', {})
+                if isinstance(computation, dict):
+                    source_table = computation.get('source_table', '')
+                    if source_table in table_set:
+                        relevant_rules.append(rule)
+                else:
+                    # Fallback: check if rule dict mentions table names
+                    rule_str = str(rule).lower()
+                    for table_name in table_names:
+                        if table_name.lower() in rule_str:
+                            relevant_rules.append(rule)
+                            break
         
         return relevant_rules
     

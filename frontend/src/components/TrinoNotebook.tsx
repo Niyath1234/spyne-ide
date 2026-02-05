@@ -10,7 +10,6 @@ import {
   MenuItem,
 } from '@mui/material';
 import {
-  PlayArrow,
   Add,
   InsertDriveFileOutlined,
 } from '@mui/icons-material';
@@ -218,9 +217,12 @@ export const TrinoNotebook: React.FC = () => {
         });
       }
     } catch (err: any) {
+      // Extract error message from API response
+      const errorMessage = err.error || err.response?.data?.error || err.message || 'Execution failed';
+      console.error('Cell execution error:', err);
       updateCell(cellId, {
         status: 'error',
-        error: err.message || 'Execution failed',
+        error: errorMessage,
         result: undefined,
       });
     } finally {

@@ -112,8 +112,15 @@ class KnowledgeRegisterRules:
         
         # Check general rules for node references
         for rule in self.rules_cache.get('general', []):
+            # Handle both dict and string formats
+            if isinstance(rule, str):
+                continue  # Skip string rules
+            if not isinstance(rule, dict):
+                continue
             # Check if rule applies to this node
             computation = rule.get('computation', {})
+            if not isinstance(computation, dict):
+                continue
             filter_conditions = computation.get('filter_conditions', {})
             
             # Check if node is mentioned in filter conditions
@@ -223,7 +230,14 @@ class KnowledgeRegisterRules:
         
         # Check rules for table-specific filters
         for rule in self.rules_cache.get('general', []):
+            # Handle both dict and string formats
+            if isinstance(rule, str):
+                continue  # Skip string rules
+            if not isinstance(rule, dict):
+                continue
             computation = rule.get('computation', {})
+            if not isinstance(computation, dict):
+                continue
             source_table = computation.get('source_table', '')
             
             if source_table.lower() == table_name.lower():

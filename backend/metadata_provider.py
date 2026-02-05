@@ -43,26 +43,87 @@ class MetadataProvider:
         if MetadataProvider._cache is None:
             logger.info("Loading metadata from disk...")
             try:
-                # Try to import from test file, but handle gracefully if it doesn't exist
-                import sys
                 from pathlib import Path
-                test_file = Path(__file__).parent.parent / "test_outstanding_daily_regeneration.py"
-                if test_file.exists():
-                    sys.path.insert(0, str(test_file.parent))
-                    from test_outstanding_daily_regeneration import load_metadata as _load_metadata
-                    MetadataProvider._cache = _load_metadata()
-                    logger.info(f"Metadata loaded: {len(MetadataProvider._cache.get('tables', {}).get('tables', []))} tables")
+                import json
+                
+                metadata_dir = Path(__file__).parent.parent / "metadata"
+                
+                # Load metadata files from metadata directory
+                metadata = {}
+                
+                # Load tables.json
+                tables_file = metadata_dir / "tables.json"
+                if tables_file.exists():
+                    with open(tables_file, 'r') as f:
+                        metadata['tables'] = json.load(f)
+                    logger.info(f"Loaded tables from {tables_file}")
+                
+                # Load semantic_registry.json
+                registry_file = metadata_dir / "semantic_registry.json"
+                if registry_file.exists():
+                    with open(registry_file, 'r') as f:
+                        metadata['semantic_registry'] = json.load(f)
+                    logger.info(f"Loaded semantic registry from {registry_file}")
+                
+                # Load lineage.json
+                lineage_file = metadata_dir / "lineage.json"
+                if lineage_file.exists():
+                    with open(lineage_file, 'r') as f:
+                        metadata['lineage'] = json.load(f)
+                    logger.info(f"Loaded lineage from {lineage_file}")
+                
+                # Load knowledge_base.json
+                kb_file = metadata_dir / "knowledge_base.json"
+                if kb_file.exists():
+                    with open(kb_file, 'r') as f:
+                        metadata['knowledge_base'] = json.load(f)
+                    logger.info(f"Loaded knowledge base from {kb_file}")
+                
+                # Load rules.json
+                rules_file = metadata_dir / "rules.json"
+                if rules_file.exists():
+                    try:
+                        with open(rules_file, 'r') as f:
+                            rules_data = json.load(f)
+                            # Handle both list and dict formats
+                            if isinstance(rules_data, list):
+                                metadata['rules'] = rules_data
+                            elif isinstance(rules_data, dict) and 'rules' in rules_data:
+                                metadata['rules'] = rules_data['rules']
+                            else:
+                                metadata['rules'] = []
+                        logger.info(f"Loaded rules from {rules_file}")
+                    except (json.JSONDecodeError, ValueError) as e:
+                        logger.warning(f"Failed to parse rules.json: {e}, using empty list")
+                        metadata['rules'] = []
                 else:
-                    logger.warning("test_outstanding_daily_regeneration.py not found, returning empty metadata")
-                    MetadataProvider._cache = {
-                        "semantic_registry": {"metrics": [], "dimensions": []},
-                        "tables": {"tables": []}
-                    }
+                    metadata['rules'] = []
+                
+                # Ensure required keys exist
+                if 'tables' not in metadata:
+                    metadata['tables'] = {"tables": []}
+                if 'semantic_registry' not in metadata:
+                    metadata['semantic_registry'] = {"metrics": [], "dimensions": []}
+                if 'lineage' not in metadata:
+                    metadata['lineage'] = {"edges": []}
+                if 'knowledge_base' not in metadata:
+                    metadata['knowledge_base'] = {}
+                if 'rules' not in metadata:
+                    metadata['rules'] = []
+                
+                MetadataProvider._cache = metadata
+                table_count = len(metadata.get('tables', {}).get('tables', []))
+                edge_count = len(metadata.get('lineage', {}).get('edges', []))
+                logger.info(f"Metadata loaded: {table_count} tables, {edge_count} relationships")
+                
             except Exception as e:
                 logger.error(f"Failed to load metadata: {e}", exc_info=True)
                 MetadataProvider._cache = {
                     "semantic_registry": {"metrics": [], "dimensions": []},
-                    "tables": {"tables": []}
+                    "tables": {"tables": []},
+                    "lineage": {"edges": []},
+                    "knowledge_base": {},
+                    "rules": []
                 }
         return MetadataProvider._cache
     

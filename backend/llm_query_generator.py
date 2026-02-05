@@ -100,8 +100,8 @@ class LLMQueryGenerator:
             print(f"️  KnowledgeBase client initialization failed: {e}, RAG disabled")
             self.kb_client = None
         
-        # Initialize cache
-        self._cache_enabled = True
+        # Initialize cache - DISABLED for now to ensure fresh LLM calls
+        self._cache_enabled = False  # Disable cache to get fresh LLM responses
         self._cache: Dict[str, Dict[str, Any]] = {}
     
     def _count_tokens(self, text: str, model: str = None) -> int:
@@ -436,13 +436,18 @@ class LLMQueryGenerator:
             context_parts.append("=" * 80)
             
             for rule in rules:
-                context_parts.append(f"\nRule: {rule.get('name', 'Unnamed')}")
-                if rule.get('description'):
-                    context_parts.append(f"  Description: {rule.get('description')}")
-                if rule.get('sql_expression'):
-                    context_parts.append(f"  SQL Expression: {rule.get('sql_expression')}")
-                if rule.get('condition'):
-                    context_parts.append(f"  Condition: {rule.get('condition')}")
+                # Handle both dict and string formats
+                if isinstance(rule, dict):
+                    context_parts.append(f"\nRule: {rule.get('name', 'Unnamed')}")
+                    if rule.get('description'):
+                        context_parts.append(f"  Description: {rule.get('description')}")
+                    if rule.get('sql_expression'):
+                        context_parts.append(f"  SQL Expression: {rule.get('sql_expression')}")
+                    if rule.get('condition'):
+                        context_parts.append(f"  Condition: {rule.get('condition')}")
+                elif isinstance(rule, str):
+                    # Handle string format rules
+                    context_parts.append(f"\nRule: {rule}")
         
         return "\n".join(context_parts)
     
@@ -458,16 +463,22 @@ class LLMQueryGenerator:
         Returns:
             Isolated metadata dictionary
         """
-        try:
-            from backend.node_level_metadata_accessor import get_node_level_accessor
-            accessor = get_node_level_accessor()
-            isolated_metadata = accessor.build_isolated_context(query)
-            # Merge with provided metadata (isolated takes precedence)
-            logger.debug(f"Metadata isolated: {len(isolated_metadata.get('tables', {}).get('tables', []))} tables")
-            return {**metadata, **isolated_metadata}
-        except Exception as e:
-            logger.warning(f"Node-level isolation failed, using full metadata: {e}", exc_info=True)
-            return metadata  # Fallback to full metadata
+        # For now, skip isolation and use full metadata to ensure LLM sees all tables
+        # This ensures queries like "discount at customer level" can find lineitem table
+        logger.debug(f"Using full metadata (isolation disabled for LLM): {len(metadata.get('tables', {}).get('tables', []))} tables")
+        return metadata  # Use full metadata to ensure all tables are available
+        
+        # OLD CODE - disabled to ensure all tables are visible
+        # try:
+        #     from backend.node_level_metadata_accessor import get_node_level_accessor
+        #     accessor = get_node_level_accessor()
+        #     isolated_metadata = accessor.build_isolated_context(query)
+        #     # Merge with provided metadata (isolated takes precedence)
+        #     logger.debug(f"Metadata isolated: {len(isolated_metadata.get('tables', {}).get('tables', []))} tables")
+        #     return {**metadata, **isolated_metadata}
+        # except Exception as e:
+        #     logger.warning(f"Node-level isolation failed, using full metadata: {e}", exc_info=True)
+        #     return metadata  # Fallback to full metadata
     
     def _build_context_bundle(self, query: str, metadata: Dict[str, Any]) -> ContextBundle:
         """
@@ -662,12 +673,19 @@ class LLMQueryGenerator:
         general_rules = knowledge_rules.rules_cache.get('general', [])
         if general_rules:
             context_parts.append(f"\nGeneral Rules ({len(general_rules)} rules):")
-            for rule in general_rules[:5]:  # Limit to first 5
-                rule_id = rule.get('id', '')
-                computation = rule.get('computation', {})
-                filter_conditions = computation.get('filter_conditions', {})
-                if filter_conditions:
-                    context_parts.append(f"  - {rule_id}: {filter_conditions}")
+            # Convert to list if it's not already
+            rules_list = list(general_rules) if not isinstance(general_rules, list) else general_rules
+            for rule in rules_list[:5]:  # Limit to first 5
+                # Handle both dict and string formats
+                if isinstance(rule, dict):
+                    rule_id = rule.get('id', '')
+                    computation = rule.get('computation', {})
+                    if isinstance(computation, dict):
+                        filter_conditions = computation.get('filter_conditions', {})
+                        if filter_conditions:
+                            context_parts.append(f"  - {rule_id}: {filter_conditions}")
+                elif isinstance(rule, str):
+                    context_parts.append(f"  - {rule}")
         
         return "\n".join(context_parts)
     
@@ -804,21 +822,26 @@ Examples:
 - "also show originator" → Add originator column with proper handling
 """
         
-        system_prompt = """You are an expert SQL query generator with conversational capabilities. Your task is to analyze natural language queries and generate SQL queries using ALL available information from:
-1. Table metadata (columns, types, primary keys, time columns)
-2. Semantic registry (metrics, dimensions, their SQL expressions, join paths)
-3. Relationship information (how tables connect)
-4. Business terms & definitions (aliases, related tables, business meanings)
-5. Business rules (constraints and validation rules)
+        system_prompt = """You are an expert SQL query generator for Trino. Your task is to analyze natural language queries and generate CORRECT Trino SQL queries using ALL available information from the provided context.
+
+MANDATORY REQUIREMENTS - YOU MUST:
+1. READ AND USE ALL TABLE METADATA - Check every table in the context to find columns mentioned in the query
+2. READ AND USE ALL RELATIONSHIPS - Use the exact join relationships provided in the lineage/edges section
+3. READ AND USE ALL BUSINESS TERMS - Check knowledge base for aliases, definitions, and related tables
+4. READ AND USE ALL METRICS/DIMENSIONS - Check semantic registry for pre-defined metrics and dimensions
+5. USE EXACT FORMULAS PROVIDED - If user provides a formula (e.g., "SUM(extendedprice * (1 - discount))"), use it EXACTLY as specified
+6. USE EXACT TABLE NAMES - Use the full qualified table names from metadata (e.g., "tpch.tiny.lineitem", not just "lineitem")
+7. USE EXACT COLUMN NAMES - Use the exact column names from table metadata
+8. FOLLOW JOIN PATHS - Use the relationships/edges provided to determine correct joins
 
 CRITICAL INSTRUCTIONS:
 - ALWAYS check ALL available tables, metrics, dimensions, business terms, and rules before generating SQL
-- Use the EXACT table names and column names from metadata
-- For metrics, use the provided SQL expressions from semantic registry
-- For dimensions, follow the join paths specified in metadata
-- Check business terms for aliases - if user mentions an alias, use the actual term/column name
-- Apply business rules - ensure generated SQL complies with all business rules
-- Distinguish between relational queries (individual records) and metric queries (aggregations)
+- NEVER generate a query without checking if the columns exist in the metadata
+- NEVER use a table without verifying it exists in the metadata
+- ALWAYS use the exact formula provided by the user if they specify one
+- ALWAYS join tables using the relationships specified in the lineage/edges section
+- For aggregations, ensure you GROUP BY all non-aggregated columns
+- Use Trino SQL syntax (not PostgreSQL or MySQL)
 
 HANDLING VAGUE/AMBIGUOUS QUERIES (Cursor-like behavior):
 - When a query is vague or ambiguous, MAKE REASONABLE ASSUMPTIONS rather than failing
@@ -832,19 +855,30 @@ HANDLING VAGUE/AMBIGUOUS QUERIES (Cursor-like behavior):
 - Prefer to generate something reasonable with warnings rather than rejecting the query
 
 QUERY TYPE DETECTION:
-- If query asks for "total", "sum", "count", "average", "aggregate", or mentions a metric name → METRIC query
+- If query asks for "total", "sum", "count", "average", "aggregate", mentions a metric name, OR provides a formula → METRIC query
 - If query asks for individual records, rows, or "show me all" without aggregation → RELATIONAL query
 - Examples:
   * "Show me all loans" → RELATIONAL
   * "Show me the total principal outstanding" → METRIC
   * "Total principal outstanding grouped by order type" → METRIC
+  * "given the formula for discount is SUM(extendedprice * (1 - discount)), give me discount at customer level" → METRIC query with metric: {{"name": "discount", "sql_expression": "SUM(extendedprice * (1 - discount))"}} and group_by: ["customer.c_custkey"]
 
 FOR METRIC QUERIES:
-- MUST include the metric in the intent (find matching metric from semantic registry)
-- MUST include all GROUP BY dimensions in the intent
+- MUST include the metric in the intent (find matching metric from semantic registry OR use formula provided by user)
+- CRITICAL: If user provides a formula (e.g., "given the formula for discount is SUM(extendedprice * (1 - discount))"), 
+  you MUST create a metric object: metric: {{"name": "discount", "sql_expression": "SUM(extendedprice * (1 - discount))"}}
+- DO NOT put formulas in columns - formulas MUST go in the metric field
+- When user says "at X level" (e.g., "at customer level"), group by the X dimension (e.g., customer.c_custkey)
+- MUST include all GROUP BY dimensions in the intent (these are the dimensions you're grouping by, NOT the metric)
 - Use SUM() aggregation for "total" queries
 - Metric SQL expression should be wrapped in aggregation if not already aggregated
 - Dimensions come FIRST in SELECT, metric comes AFTER (for proper GROUP BY)
+- Example: Query "given the formula for discount is SUM(extendedprice * (1 - discount)), give me discount at customer level"
+  → query_type: "metric"
+  → metric: {{"name": "discount", "sql_expression": "SUM(extendedprice * (1 - discount))"}}
+  → columns: ["customer.c_custkey"] (or empty if you prefer group_by)
+  → group_by: ["customer.c_custkey"]
+  → base_table: "tpch.tiny.lineitem" (where extendedprice and discount columns exist)
 
 COMPUTED DIMENSIONS (CRITICAL):
 - When user describes business logic in natural language, generate CASE statements automatically
@@ -878,12 +912,15 @@ FILTER PARSING:
 - "DPD > 90" → WHERE outstanding_daily.dpd > 90
 - Parse ALL filters mentioned in the query
 
-IMPORTANT: You must provide a "reasoning" field in your JSON response that shows your chain of thought:
-- Which tables you considered and why
-- Which metrics/dimensions you evaluated
-- Why you chose specific joins
+CRITICAL: You must provide a "reasoning" field in your JSON response that shows your chain of thought:
+- Which tables you checked from the metadata and why you selected them
+- Which columns you found in those tables that match the query requirements
+- Which relationships/joins you identified from the lineage/edges section
+- Which business terms from knowledge base are relevant
+- How you used the exact formula provided by the user (if any)
+- Why you chose specific joins based on the relationships provided
 - Why you applied certain filters
-- Your decision-making process
+- Your complete decision-making process showing you used ALL available context
 
 KNOWLEDGE REGISTER RULES (CRITICAL):
 - ALWAYS check knowledge register rules for each column/node mentioned
@@ -896,12 +933,30 @@ Return JSON with both "intent" and "reasoning" fields."""
         
         user_prompt = f"""{conversational_prompt}
 
-Analyze this query step-by-step and generate SQL intent JSON with reasoning:
+CRITICAL: You MUST use ALL available information from the context below to generate the CORRECT SQL query.
 
 QUERY: "{query}"
 
-COMPREHENSIVE CONTEXT:
+STEP-BY-STEP ANALYSIS REQUIRED:
+1. Read ALL tables in the context - find which tables contain columns mentioned in the query
+2. Read ALL relationships/edges - determine how to join tables correctly
+3. Read ALL business terms - check for aliases or definitions
+4. If user provides a formula (e.g., "SUM(extendedprice * (1 - discount))"), use it EXACTLY as specified
+5. Determine the correct base table based on where the formula columns exist
+6. Determine all necessary joins based on relationships provided
+7. Determine grouping level (e.g., "at customer level" means GROUP BY customer columns)
+
+COMPREHENSIVE CONTEXT (READ ALL OF THIS):
 {context}
+
+EXAMPLE ANALYSIS FOR REFERENCE:
+If query is "given the formula for discount is SUM(extendedprice * (1 - discount)), give me discount at customer level":
+- Step 1: Find tables with "extendedprice" and "discount" columns → lineitem table
+- Step 2: Find "customer level" → need customer table
+- Step 3: Check relationships → lineitem -> orders -> customer (from edges/relationships)
+- Step 4: Use EXACT formula: SUM(extendedprice * (1 - discount))
+- Step 5: Group by customer columns (c_custkey, c_name, etc.)
+- Step 6: Join: lineitem JOIN orders ON lineitem.l_orderkey = orders.o_orderkey JOIN customer ON orders.o_custkey = customer.c_custkey
 
 Generate a JSON object with this structure:
 {{
@@ -916,9 +971,9 @@ Generate a JSON object with this structure:
   }},
   "intent": {{
     "query_type": "relational" | "metric",
-    "base_table": "exact_table_name_from_metadata",
-    "metric": {{"name": "metric_name", "sql_expression": "..."}} | null,
-    "columns": ["column1", "column2", ...],
+    "base_table": "exact_table_name_from_metadata",  // REQUIRED: Must be a table from the metadata tables list
+    "metric": {{"name": "metric_name", "sql_expression": "..."}} | null,  // REQUIRED for metric queries - use EXACT formula if user provides one (e.g., "SUM(extendedprice * (1 - discount))")
+    "columns": ["column1", "column2", ...],  // REQUIRED: List of column names for GROUP BY dimensions (for metric queries) or SELECT columns (for relational queries)
     "joins": [
       {{
         "table": "table_name",
@@ -955,6 +1010,18 @@ COMPUTED DIMENSIONS (when user describes business logic):
 - Use IN for multiple values
 - Support nested CASE for complex logic
 
+MANDATORY CHECKLIST - VERIFY BEFORE GENERATING SQL:
+1. [ ] Did I check ALL tables in the metadata to find columns mentioned in the query?
+2. [ ] Did I verify the columns exist in the tables I selected?
+3. [ ] Did I check ALL relationships/edges to determine correct joins?
+4. [ ] Did I use the exact formula provided by the user (if any)?
+5. [ ] Did I check business terms/knowledge base for aliases or definitions?
+6. [ ] Did I check semantic registry for pre-defined metrics/dimensions?
+7. [ ] Did I use the exact table names from metadata (with schema prefix)?
+8. [ ] Did I use the exact column names from metadata?
+9. [ ] Did I include all necessary GROUP BY columns for aggregations?
+10. [ ] Did I verify the query makes sense for Trino SQL?
+
 IMPORTANT:
 - Show your chain of thought in the "reasoning" field
 - Check ALL tables to find the best match for the query
@@ -963,8 +1030,9 @@ IMPORTANT:
 - Include ALL joins needed based on relationships
 - Parse ALL filters from the query text
 - Generate computed_dimensions when user describes business logic
-- Use exact names from metadata
+- Use exact names from metadata (schema.table.column format)
 - Explain your reasoning for each decision
+- If user provides a formula, use it EXACTLY as specified
 
 Return ONLY the JSON object:"""
         
@@ -983,7 +1051,7 @@ Return ONLY the JSON object:"""
             response = self.call_llm(user_prompt, system_prompt)
             reasoning_steps.append(" LLM response received, parsing...")
             
-            # Clean JSON response
+            # Clean JSON response - handle multiline strings and code blocks
             response = response.strip()
             if response.startswith("```json"):
                 response = response[7:]
@@ -993,7 +1061,25 @@ Return ONLY the JSON object:"""
                 response = response[:-3]
             response = response.strip()
             
-            full_response = json.loads(response)
+            # Try to fix common JSON issues
+            # Remove trailing commas before closing braces/brackets
+            import re
+            response = re.sub(r',(\s*[}\]])', r'\1', response)
+            
+            # Try to parse JSON - if it fails, try to extract JSON from the response
+            try:
+                full_response = json.loads(response)
+            except json.JSONDecodeError as json_err:
+                # Try to extract JSON object from response if it's embedded in text
+                json_match = re.search(r'\{[\s\S]*\}', response)
+                if json_match:
+                    try:
+                        full_response = json.loads(json_match.group(0))
+                        logger.warning(f"Extracted JSON from response text")
+                    except:
+                        raise json_err
+                else:
+                    raise json_err
             
             # Extract reasoning and intent
             reasoning_data = full_response.get("reasoning", {})
@@ -1037,9 +1123,12 @@ Return ONLY the JSON object:"""
             return intent, reasoning_steps
         except json.JSONDecodeError as e:
             reasoning_steps.append(f" Failed to parse LLM response: {e}")
+            reasoning_steps.append(f" Response preview: {response[:500]}")
+            logger.error(f"Failed to parse LLM response: {e}\nResponse: {response[:500]}", exc_info=True)
             raise Exception(f"Failed to parse LLM response as JSON: {e}\nResponse: {response[:500]}")
         except Exception as e:
             reasoning_steps.append(f" LLM generation failed: {e}")
+            logger.error(f"LLM query generation failed: {e}", exc_info=True)
             raise Exception(f"LLM query generation failed: {e}")
     
     def intent_to_sql(self, intent: Dict[str, Any], metadata: Dict[str, Any], query_text: Optional[str] = None) -> Tuple[str, Optional[str], Optional[str]]:
@@ -1153,8 +1242,13 @@ Return ONLY the JSON object:"""
             raise ValueError(error_msg)
         
         # DEPRECATED: Build SQL using Python builder (migration only)
+        # Log intent for debugging
+        logger.info(f"Intent passed to SQLBuilder: base_table={intent.get('base_table')}, columns={intent.get('columns')}, metric={intent.get('metric')}, joins={len(intent.get('joins', []))} joins, group_by={intent.get('group_by')}")
+        
         builder = SQLBuilder(resolver)
         sql, explain_plan = builder.build(intent, include_explain=True)
+        
+        logger.info(f"Generated SQL: {sql[:500] if sql else 'None'}")
         
         warnings_str = "\n".join([f"️  {w}" for w in warnings]) if warnings else None
         

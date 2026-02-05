@@ -1,0 +1,101 @@
+{
+  "tables": {
+    "tpch.tiny.region": {
+      "description": "Geographic regions in the TPCH benchmark",
+      "entity": "region",
+      "system": "tpch"
+    },
+    "tpch.tiny.nation": {
+      "description": "Nations within regions in the TPCH benchmark",
+      "entity": "nation",
+      "system": "tpch"
+    },
+    "tpch.tiny.customer": {
+      "description": "Customers who place orders in the TPCH benchmark",
+      "entity": "customer",
+      "system": "tpch"
+    },
+    "tpch.tiny.supplier": {
+      "description": "Suppliers who provide parts in the TPCH benchmark",
+      "entity": "supplier",
+      "system": "tpch"
+    },
+    "tpch.tiny.part": {
+      "description": "Parts/products available in the TPCH benchmark",
+      "entity": "part",
+      "system": "tpch"
+    },
+    "tpch.tiny.partsupp": {
+      "description": "Junction table linking parts to suppliers with availability and cost information",
+      "entity": "partsupp",
+      "system": "tpch"
+    },
+    "tpch.tiny.orders": {
+      "description": "Customer orders in the TPCH benchmark",
+      "entity": "orders",
+      "system": "tpch"
+    },
+    "tpch.tiny.lineitem": {
+      "description": "Individual line items within orders in the TPCH benchmark",
+      "entity": "lineitem",
+      "system": "tpch"
+    }
+  },
+  "relationships": {
+    "customer_to_nation": {
+      "from": "tpch.tiny.customer",
+      "to": "tpch.tiny.nation",
+      "type": "belongs_to",
+      "description": "Customer is located in a nation"
+    },
+    "supplier_to_nation": {
+      "from": "tpch.tiny.supplier",
+      "to": "tpch.tiny.nation",
+      "type": "belongs_to",
+      "description": "Supplier is located in a nation"
+    },
+    "nation_to_region": {
+      "from": "tpch.tiny.nation",
+      "to": "tpch.tiny.region",
+      "type": "belongs_to",
+      "description": "Nation belongs to a region"
+    },
+    "orders_to_customer": {
+      "from": "tpch.tiny.orders",
+      "to": "tpch.tiny.customer",
+      "type": "placed_by",
+      "description": "Order is placed by a customer"
+    },
+    "lineitem_to_orders": {
+      "from": "tpch.tiny.lineitem",
+      "to": "tpch.tiny.orders",
+      "type": "belongs_to",
+      "description": "Line item belongs to an order"
+    },
+    "lineitem_to_part": {
+      "from": "tpch.tiny.lineitem",
+      "to": "tpch.tiny.part",
+      "type": "references",
+      "description": "Line item references a part"
+    },
+    "lineitem_to_supplier": {
+      "from": "tpch.tiny.lineitem",
+      "to": "tpch.tiny.supplier",
+      "type": "references",
+      "description": "Line item references a supplier"
+    },
+    "partsupp_to_part": {
+      "from": "tpch.tiny.partsupp",
+      "to": "tpch.tiny.part",
+      "type": "references",
+      "description": "Part-supplier relationship references a part"
+    },
+    "partsupp_to_supplier": {
+      "from": "tpch.tiny.partsupp",
+      "to": "tpch.tiny.supplier",
+      "type": "references",
+      "description": "Part-supplier relationship references a supplier"
+    }
+  },
+  "terms": {}
+}

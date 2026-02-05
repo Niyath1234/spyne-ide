@@ -112,19 +112,27 @@ def generate_sql_from_query(query: str, use_llm: bool = True,
         if use_llm:
             try:
                 from backend.llm_query_generator import generate_sql_with_llm
+                import logging
+                logger = logging.getLogger(__name__)
+                logger.info(f"Attempting LLM generation for query: {query[:100]}")
                 result = generate_sql_with_llm(query, use_llm=True)
+                logger.info(f"LLM generation result: success={result.get('success')}, method={result.get('method')}")
                 if result.get("success"):
                     # Ensure reasoning_steps are included
                     if "reasoning_steps" not in result:
                         result["reasoning_steps"] = []
+                    logger.info(f"LLM generation successful, returning result")
                     return result
+                else:
+                    logger.warning(f"LLM generation returned success=False: {result.get('error')}")
                 # Fall through to rule-based if LLM fails
             except Exception as e:
                 # Fall back to rule-based if LLM not available
                 import traceback
-                import sys
-                print(f"LLM generation failed, using fallback: {e}", file=sys.stderr)
-                traceback.print_exc(file=sys.stderr)
+                import logging
+                logger = logging.getLogger(__name__)
+                logger.error(f"LLM generation failed with exception, using fallback: {e}", exc_info=True)
+                # Don't return error - fall through to rule-based
                 pass
         
         # Fallback: Rule-based generation
@@ -275,17 +283,23 @@ def load_prerequisites() -> dict:
         metadata = MetadataProvider.load()
         registry = metadata.get("semantic_registry", {})
         tables = metadata.get("tables", {})
+        lineage = metadata.get("lineage", {})
+        knowledge_base = metadata.get("knowledge_base", {})
         
         return {
             "success": True,
             "metadata": {
                 "semantic_registry": registry,
                 "tables": tables,
+                "lineage": lineage,
+                "knowledge_base": knowledge_base,
             },
             "loaded": {
                 "metrics": len(registry.get("metrics", [])),
                 "dimensions": len(registry.get("dimensions", [])),
                 "tables": len(tables.get("tables", [])),
+                "edges": len(lineage.get("edges", [])),
+                "knowledge_base_tables": len(knowledge_base.get("tables", {})),
             },
         }
     except Exception as e:

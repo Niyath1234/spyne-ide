@@ -209,12 +209,26 @@ def _compile_notebook(notebook: Dict[str, Any], target_cell_id: Optional[str] = 
         
         for line in lines:
             stripped = line.strip()
+            # Check for %%ref directive
             if stripped.startswith('%%ref'):
                 match = re.match(r'%%ref\s+(\w+)\s+AS\s+(\w+)', stripped, re.IGNORECASE)
                 if match:
                     ref_cell_id = match.group(1)
                     alias = match.group(2)
                     refs.append((ref_cell_id, alias))
+                else:
+                    # Invalid %%ref syntax
+                    return "", (
+                        f"Cell {cell_id}: Invalid %%ref syntax: '{stripped}'. "
+                        f"Use format: '%%ref <cell_id> AS <alias>'"
+                    )
+            elif stripped.startswith('ref ') and not stripped.startswith('%%ref'):
+                # User wrote 'ref' instead of '%%ref' - provide helpful error
+                return "", (
+                    f"Cell {cell_id}: Missing '%%' prefix in ref directive: '{stripped}'. "
+                    f"Use format: '%%ref <cell_id> AS <alias>' (with double percent signs). "
+                    f"Example: '%%ref {stripped.replace('ref ', '').split()[0] if stripped.split() else 'cell_id'} AS base'"
+                )
             else:
                 sql_lines.append(line)
         
@@ -632,6 +646,7 @@ def execute_notebook(notebook_id: str):
             
             # Fetch all data chunks
             iteration = 0
+            chunk_data = None  # Initialize to avoid NameError
             while next_uri:
                 iteration += 1
                 logger.debug(f'Fetching chunk {iteration}: {next_uri[:80]}...')
@@ -643,20 +658,28 @@ def execute_notebook(notebook_id: str):
                 else:
                     chunk_url = f'{trino_url}{next_uri}'
                 
-                chunk_response = requests.get(chunk_url, headers=headers, timeout=300)
-                if chunk_response.status_code != 200:
-                    error_text = chunk_response.text or f'HTTP {chunk_response.status_code}'
-                    logger.error(f'Trino chunk fetch failed: {error_text}')
-                    raise Exception(f'Trino data fetch failed: {error_text}')
-                
-                chunk_data = chunk_response.json()
-                logger.debug(f'Chunk {iteration} state: {chunk_data.get("stats", {}).get("state")}, has_data: {"data" in chunk_data}, has_columns: {"columns" in chunk_data}')
+                try:
+                    chunk_response = requests.get(chunk_url, headers=headers, timeout=300)
+                    if chunk_response.status_code != 200:
+                        error_text = chunk_response.text or f'HTTP {chunk_response.status_code}'
+                        logger.error(f'Trino chunk fetch failed (HTTP {chunk_response.status_code}): {error_text[:500]}')
+                        raise Exception(f'Trino data fetch failed (HTTP {chunk_response.status_code}): {error_text[:200]}')
+                    
+                    chunk_data = chunk_response.json()
+                    logger.debug(f'Chunk {iteration} state: {chunk_data.get("stats", {}).get("state")}, has_data: {"data" in chunk_data}, has_columns: {"columns" in chunk_data}')
+                except json.JSONDecodeError as e:
+                    logger.error(f'Failed to parse Trino chunk response: {chunk_response.text[:500] if "chunk_response" in locals() else "No response"}')
+                    raise Exception(f'Invalid JSON response from Trino chunk: {str(e)}')
+                except requests.exceptions.RequestException as e:
+                    logger.error(f'Request exception fetching Trino chunk: {str(e)}')
+                    raise Exception(f'Failed to fetch Trino data chunk: {str(e)}')
                 
                 # Check for errors in chunk
                 if chunk_data.get('error'):
                     error_info = chunk_data['error']
                     error_msg = error_info.get('message', 'Unknown error')
                     error_code = error_info.get('errorCode', 'UNKNOWN')
+                    logger.error(f'Trino query error in chunk {iteration}: [{error_code}] {error_msg}')
                     raise Exception(f'Trino query error [{error_code}]: {error_msg}')
                 
                 # Check query state
@@ -665,6 +688,7 @@ def execute_notebook(notebook_id: str):
                     error_info = chunk_data.get('error', {})
                     error_msg = error_info.get('message', 'Query failed')
                     error_code = error_info.get('errorCode', 'UNKNOWN')
+                    logger.error(f'Trino query failed in chunk {iteration}: [{error_code}] {error_msg}')
                     raise Exception(f'Trino query failed [{error_code}]: {error_msg}')
                 
                 # Extract data if available
@@ -682,6 +706,7 @@ def execute_notebook(notebook_id: str):
                 # If query is finished (no more nextUri), break out of loop
                 next_uri = chunk_data.get('nextUri')
                 if not next_uri or query_state == 'FINISHED':
+                    logger.info(f'Query finished after {iteration} chunks: state={query_state}')
                     break
                 
                 # If still QUEUED or RUNNING, continue polling (small delay for QUEUED)
@@ -690,8 +715,8 @@ def execute_notebook(notebook_id: str):
                     time.sleep(0.1)  # Small delay for queued queries
             
             # After loop completes, update cell with final results
-            # Get final stats from last chunk if available
-            final_stats = chunk_data.get('stats', {}) if 'chunk_data' in locals() else stats
+            # Get final stats from last chunk if available, otherwise use initial stats
+            final_stats = chunk_data.get('stats', {}) if chunk_data else stats
             logger.info(f'Query completed: {len(rows)} rows, {len(schema)} columns')
             cell['result'] = {
                 'schema': schema,
@@ -722,7 +747,7 @@ def execute_notebook(notebook_id: str):
             cell['status'] = 'error'
             cell['error'] = error_msg
             cell['result'] = None
-            _notebooks[notebook_id] = notebook
+            _set_notebook(notebook_id, notebook)
             return jsonify({
                 'success': False,
                 'error': error_msg,
@@ -734,7 +759,7 @@ def execute_notebook(notebook_id: str):
             cell['status'] = 'error'
             cell['error'] = error_msg
             cell['result'] = None
-            _notebooks[notebook_id] = notebook
+            _set_notebook(notebook_id, notebook)
             return jsonify({
                 'success': False,
                 'error': error_msg,
@@ -743,10 +768,18 @@ def execute_notebook(notebook_id: str):
             }), 500
         except Exception as e:
             # Update cell with error
+            import traceback
             error_details = str(e)
+            error_traceback = traceback.format_exc()
+            
+            # Log the full exception for debugging
+            logger.error(f'Exception executing notebook cell {cell_id}: {error_details}')
+            logger.error(f'Traceback: {error_traceback}')
+            
             # Include more context for debugging
             if 'trino_url' in locals():
                 error_details += f' (Trino URL: {trino_url}, Catalog: {trino_catalog}, Schema: {trino_schema})'
+            
             cell['status'] = 'error'
             cell['error'] = error_details
             cell['result'] = None
@@ -811,6 +844,7 @@ def execute_notebook(notebook_id: str):
 
 @notebook_router.route('/notebooks/<notebook_id>/cells/<cell_id>/generate-sql', methods=['POST'])
 def generate_sql_for_cell(notebook_id: str, cell_id: str):
+    """Generate SQL for a cell using new AI SQL System."""
     """Generate SQL for a cell using LLM (Cursor-style - only writes to current cell)."""
     notebooks = _get_notebooks()
     notebook = notebooks.get(notebook_id)
@@ -842,39 +876,68 @@ def generate_sql_for_cell(notebook_id: str, cell_id: str):
             'error': f'Cell {cell_id} not found'
         }), 404
     
-    # Call LLM to generate SQL (only for this cell - no cross-cell references)
-    # This follows Cursor-style: LLM only writes SQL in the current cell
+    # Use new AI SQL System to generate SQL
     try:
-        # Try to use query generation API
+        from backend.ai_sql_system.orchestration.graph import LangGraphOrchestrator
+        from backend.ai_sql_system.trino.client import TrinoClient
+        from backend.ai_sql_system.trino.validator import TrinoValidator
+        from backend.ai_sql_system.metadata.semantic_registry import SemanticRegistry
+        from backend.ai_sql_system.planning.join_graph import JoinGraph
+        from pathlib import Path
+        import json
+        
+        # Initialize orchestrator (with join graph loading)
+        trino_client = TrinoClient()
+        trino_validator = TrinoValidator(trino_client)
+        semantic_registry = SemanticRegistry()
+        join_graph = JoinGraph()
+        
+        # Load join graph from metadata
         try:
-            from query_regeneration_api import generate_sql_from_query
-        except ImportError:
-            try:
-                from backend.query_regeneration_api import generate_sql_from_query
-            except ImportError:
-                # Fallback: simple SQL generation
-                return jsonify({
-                    'success': False,
-                    'error': 'LLM query generator not available'
-                }), 503
+            metadata_dir = Path(__file__).parent.parent.parent / "metadata"
+            lineage_file = metadata_dir / "lineage.json"
+            
+            if lineage_file.exists():
+                with open(lineage_file, 'r') as f:
+                    lineage_data = json.load(f)
+                
+                for edge in lineage_data.get('edges', []):
+                    from_table = edge.get('from', '').split('.')[-1]
+                    to_table = edge.get('to', '').split('.')[-1]
+                    condition = edge.get('on', '')
+                    join_type = 'LEFT'
+                    
+                    if from_table and to_table and condition:
+                        join_graph.add_join(from_table, to_table, condition, join_type)
+        except Exception as e:
+            import logging
+            logging.getLogger(__name__).warning(f"Could not load join graph: {e}")
         
-        # Generate SQL using LLM (use_llm=True to ensure LLM is used)
-        sql_result = generate_sql_from_query(user_query, use_llm=True)
+        orchestrator = LangGraphOrchestrator(
+            trino_validator=trino_validator,
+            semantic_registry=semantic_registry,
+            join_graph=join_graph
+        )
         
-        if sql_result.get('success') and sql_result.get('sql'):
+        # Run pipeline
+        result = orchestrator.run(user_query)
+        
+        if result.get('success') and result.get('sql'):
             # Update cell SQL
-            cell['sql'] = sql_result['sql']
-            _notebooks[notebook_id] = notebook
+            cell['sql'] = result['sql']
+            _set_notebook(notebook_id, notebook)
             
             return jsonify({
                 'success': True,
                 'cell_id': cell_id,
-                'sql': sql_result['sql']
+                'sql': result['sql'],
+                'intent': result.get('intent'),
+                'method': 'langgraph_pipeline'
             })
         else:
             return jsonify({
                 'success': False,
-                'error': sql_result.get('error', 'Failed to generate SQL')
+                'error': result.get('error', 'Failed to generate SQL')
             }), 500
     except Exception as e:
         import traceback

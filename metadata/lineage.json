@@ -1,0 +1,64 @@
+{
+  "edges": [
+    {
+      "from": "tpch.tiny.nation",
+      "to": "tpch.tiny.region",
+      "on": "nation.n_regionkey = region.r_regionkey",
+      "description": "Nation belongs to region"
+    },
+    {
+      "from": "tpch.tiny.customer",
+      "to": "tpch.tiny.nation",
+      "on": "customer.c_nationkey = nation.n_nationkey",
+      "description": "Customer located in nation"
+    },
+    {
+      "from": "tpch.tiny.supplier",
+      "to": "tpch.tiny.nation",
+      "on": "supplier.s_nationkey = nation.n_nationkey",
+      "description": "Supplier located in nation"
+    },
+    {
+      "from": "tpch.tiny.orders",
+      "to": "tpch.tiny.customer",
+      "on": "orders.o_custkey = customer.c_custkey",
+      "description": "Order placed by customer"
+    },
+    {
+      "from": "tpch.tiny.lineitem",
+      "to": "tpch.tiny.orders",
+      "on": "lineitem.l_orderkey = orders.o_orderkey",
+      "description": "Line item belongs to order"
+    },
+    {
+      "from": "tpch.tiny.partsupp",
+      "to": "tpch.tiny.part",
+      "on": "partsupp.ps_partkey = part.p_partkey",
+      "description": "Part-supplier relationship for part"
+    },
+    {
+      "from": "tpch.tiny.partsupp",
+      "to": "tpch.tiny.supplier",
+      "on": "partsupp.ps_suppkey = supplier.s_suppkey",
+      "description": "Part-supplier relationship for supplier"
+    },
+    {
+      "from": "tpch.tiny.lineitem",
+      "to": "tpch.tiny.part",
+      "on": "lineitem.l_partkey = part.p_partkey",
+      "description": "Line item references part"
+    },
+    {
+      "from": "tpch.tiny.lineitem",
+      "to": "tpch.tiny.supplier",
+      "on": "lineitem.l_suppkey = supplier.s_suppkey",
+      "description": "Line item references supplier"
+    },
+    {
+      "from": "tpch.tiny.lineitem",
+      "to": "tpch.tiny.partsupp",
+      "on": "lineitem.l_partkey = partsupp.ps_partkey AND lineitem.l_suppkey = partsupp.ps_suppkey",
+      "description": "Line item references part-supplier relationship"
+    }
+  ]
+}

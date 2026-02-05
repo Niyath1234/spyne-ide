@@ -45,3 +45,21 @@ requests>=2.31.0
 # Optional: For async HTTP client
 httpx>=0.25.0
 
+# AI SQL System Dependencies
+langgraph>=0.0.40
+langchain>=0.1.0
+langchain-openai>=0.0.5
+sqlglot>=24.0.0
+networkx>=3.2
+pgvector>=0.2.4
+llama-index>=0.10.0
+trino>=0.330.0
+sqlalchemy>=2.0.0
+psycopg2-binary>=2.9.0
+redis>=5.0.0
+fastapi>=0.104.0
+uvicorn>=0.24.0
+pydantic>=2.5.0
+sentence-transformers>=2.2.0
+torch>=2.0.0
+

@@ -823,18 +823,26 @@ export const ReasoningChat: React.FC = () => {
       }
 
       // Fallback to reasoning API
-      const response = await reasoningAPI.query(userQuery);
+      try {
+        const response = await reasoningAPI.query(userQuery);
+        console.log('Reasoning API response:', response);
 
-      // Parse response - check if it has steps array
-      const responseData = response.data;
-      let stepsToShow: Array<{type: 'thought' | 'action' | 'result' | 'error', content: string}> = [];
-      
-      if (responseData?.steps && Array.isArray(responseData.steps)) {
-        // Use steps from API response
-        stepsToShow = responseData.steps.map((s: any) => ({
-          type: s.type || 'thought',
-          content: s.content || '',
-        }));
+        // Parse response - reasoningAPI.query already returns response.data, so response IS the data
+        const responseData = response; // response is already the parsed data
+        let stepsToShow: Array<{type: 'thought' | 'action' | 'result' | 'error', content: string}> = [];
+        
+        console.log('Response data:', responseData);
+        console.log('Steps array:', responseData?.steps);
+        
+        if (responseData?.steps && Array.isArray(responseData.steps) && responseData.steps.length > 0) {
+          console.log('Found steps:', responseData.steps.length);
+          // Use steps from API response
+          stepsToShow = responseData.steps.map((s: any) => {
+            return {
+              type: s.type || 'thought',
+              content: s.content || '',
+            };
+          });
         
         // If there's a detailed result field, replace the last result step with it
         if (responseData?.result && typeof responseData.result === 'string') {
@@ -996,18 +1004,40 @@ cargo run --bin rca-engine run "${userQuery}" --metadata-dir ./metadata --data-d
       }
 
       // Add reasoning steps with delay for visual effect
-      for (const step of stepsToShow) {
-        await new Promise((resolve) => setTimeout(resolve, 800));
+      console.log('Steps to show:', stepsToShow.length);
+      if (stepsToShow.length > 0) {
+        for (let i = 0; i < stepsToShow.length; i++) {
+          const step = stepsToShow[i];
+          await new Promise((resolve) => setTimeout(resolve, 300)); // Reduced delay for faster display
+          addReasoningStep({
+            id: `step-${Date.now()}-${i}-${Math.random()}`,
+            type: step.type,
+            content: step.content,
+            timestamp: new Date().toISOString(),
+          });
+          
+          // Scroll to bottom after adding step
+          setTimeout(() => {
+            const chatContainer = document.querySelector('[data-chat-container]');
+            if (chatContainer) {
+              chatContainer.scrollTop = chatContainer.scrollHeight;
+            }
+          }, 50);
+        }
+        setIsLoading(false);
+      } else {
+        console.warn('No steps to display');
         addReasoningStep({
-          id: `step-${Date.now()}-${Math.random()}`,
-          type: step.type,
-          content: step.content,
+          id: `error-${Date.now()}`,
+          type: 'error',
+          content: 'No reasoning steps returned from API',
           timestamp: new Date().toISOString(),
         });
+        setIsLoading(false);
       }
-        } catch (apiError: any) {
-      // Better error handling
-      console.error('API Error:', apiError);
+      } catch (apiError: any) {
+        // Better error handling
+        console.error('API Error:', apiError);
       const errorMessage = apiError.response?.data?.error || 
                           apiError.response?.data?.message || 
                           apiError.message || 
@@ -1159,7 +1189,17 @@ cargo run --bin rca-engine run "${userQuery}" --metadata-dir ./metadata --data-d
           : errorMessage,
         timestamp: new Date().toISOString(),
       });
-    } finally {
+        setIsLoading(false);
+      }
+    } catch (outerError: any) {
+      // Catch any unexpected errors from the outer try block
+      console.error('Unexpected error in handleSend:', outerError);
+      addReasoningStep({
+        id: `error-${Date.now()}`,
+        type: 'error',
+        content: `Unexpected error: ${outerError.message || 'Unknown error'}`,
+        timestamp: new Date().toISOString(),
+      });
       setIsLoading(false);
     }
   };

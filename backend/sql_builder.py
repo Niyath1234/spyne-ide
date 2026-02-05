@@ -232,18 +232,25 @@ class TableRelationshipResolver:
         self.metadata = metadata
         
         # Use node-level isolation if query_text provided
-        if query_text:
-            try:
-                from backend.node_level_metadata_accessor import get_node_level_accessor
-                accessor = get_node_level_accessor()
-                isolated_metadata = accessor.build_isolated_context(query_text)
-                # Merge isolated metadata (isolated takes precedence)
-                metadata = {**metadata, **isolated_metadata}
-            except Exception as e:
-                print(f"Node-level isolation failed, using full metadata: {e}")
+        # DISABLED: Isolation was filtering out necessary tables (e.g., lineitem for discount query)
+        # Use full metadata to ensure all tables are available for LLM queries
+        # if query_text:
+        #     try:
+        #         from backend.node_level_metadata_accessor import get_node_level_accessor
+        #         accessor = get_node_level_accessor()
+        #         isolated_metadata = accessor.build_isolated_context(query_text)
+        #         # Merge isolated metadata (isolated takes precedence)
+        #         metadata = {**metadata, **isolated_metadata}
+        #     except Exception as e:
+        #         print(f"Node-level isolation failed, using full metadata: {e}")
         
-        # Only load tables that are in metadata (now isolated)
-        self.tables = {t.get('name'): t for t in metadata.get('tables', {}).get('tables', [])}
+        # Load tables from metadata - ensure we have tables
+        tables_list = metadata.get('tables', {}).get('tables', [])
+        if not tables_list:
+            # Fallback: try direct 'tables' key if it's a list
+            if isinstance(metadata.get('tables'), list):
+                tables_list = metadata.get('tables')
+        self.tables = {t.get('name'): t for t in tables_list}
         self.registry = metadata.get('semantic_registry', {})
         self.enable_learning = enable_learning
         self._build_relationship_graph()
@@ -578,9 +585,28 @@ class IntentValidator:
             warnings.append("Missing anchor_entity - using base_table as anchor")
             anchor_entity = base_table
         
-        # Check if base_table exists
-        if base_table and base_table not in self.resolver.tables:
-            errors.append(f"Base table '{base_table}' not found in metadata")
+        # Check if base_table exists - try exact match first, then normalized
+        if base_table:
+            # Try exact match
+            if base_table not in self.resolver.tables:
+                # Try normalized (schema.table -> table)
+                normalized = base_table.split('.')[-1] if '.' in base_table else base_table
+                found = False
+                # Check all tables for a match (case-insensitive, with or without schema)
+                for table_name in self.resolver.tables.keys():
+                    if (table_name.lower() == base_table.lower() or 
+                        table_name.lower() == normalized.lower() or
+                        table_name.split('.')[-1].lower() == normalized.lower()):
+                        # Found a match - update base_table to the correct name
+                        warnings.append(f"Normalized base_table from '{base_table}' to '{table_name}'")
+                        intent['base_table'] = table_name
+                        base_table = table_name
+                        found = True
+                        break
+                if not found:
+                    # List available tables for debugging
+                    available_tables = list(self.resolver.tables.keys())[:10]
+                    errors.append(f"Base table '{base_table}' not found in metadata. Available tables (first 10): {available_tables}")
         
         # Validate anchor entity is present
         if anchor_entity and anchor_entity != base_table:
@@ -624,14 +650,30 @@ class IntentValidator:
                 on_tables = self.resolver.resolve_table_references(join_on)
                 missing_tables = on_tables - all_available_tables
                 if missing_tables:
-                    # Check if missing tables exist in metadata
-                    unknown_tables = [t for t in missing_tables if t not in self.resolver.tables]
+                    # Check if missing tables exist in metadata (try with and without schema prefix)
+                    unknown_tables = []
+                    for t in missing_tables:
+                        # Try exact match
+                        if t in self.resolver.tables:
+                            continue
+                        # Try with schema prefix (tpch.tiny.table)
+                        schema_table = f"tpch.tiny.{t}"
+                        if schema_table in self.resolver.tables:
+                            continue
+                        # Try matching by table name suffix
+                        found = False
+                        for table_name in self.resolver.tables.keys():
+                            if table_name.split('.')[-1].lower() == t.lower():
+                                found = True
+                                break
+                        if not found:
+                            unknown_tables.append(t)
                     if unknown_tables:
                         errors.append(f"Join ON clause references unknown table(s): {unknown_tables}")
-                    else:
-                        # Tables exist in metadata but not in joins - this should have been fixed by fix_intent
-                        # If we're here after fix_intent ran, it's a real error
-                        errors.append(f"Join ON clause references tables not in FROM/JOINs: {missing_tables}")
+                else:
+                    # Tables exist in metadata but not in joins - this should have been fixed by fix_intent
+                    # If we're here after fix_intent ran, it's a real error
+                    errors.append(f"Join ON clause references tables not in FROM/JOINs: {missing_tables}")
         
         # Validate filters
         filters = intent.get('filters', [])
@@ -645,7 +687,26 @@ class IntentValidator:
         for col in columns:
             col_str = str(col)
             col_tables = self.resolver.resolve_table_references(col_str)
-            missing = col_tables - referenced_tables
+            # Normalize table names - check if they match referenced tables (with or without schema)
+            missing = set()
+            for col_table in col_tables:
+                found = False
+                # Try exact match
+                if col_table in referenced_tables:
+                    found = True
+                # Try with schema prefix
+                if not found:
+                    schema_table = f"tpch.tiny.{col_table}"
+                    if schema_table in referenced_tables:
+                        found = True
+                # Try matching by table name suffix
+                if not found:
+                    for ref_table in referenced_tables:
+                        if ref_table.split('.')[-1].lower() == col_table.lower():
+                            found = True
+                            break
+                if not found:
+                    missing.add(col_table)
             if missing:
                 errors.append(f"Column expression references tables not in FROM/JOINs: {missing}")
         
@@ -2265,6 +2326,17 @@ class SQLBuilder:
                         select_parts.append(f"{sql_expr} AS {col_str}")
                     else:
                         select_parts.append(self._process_column_expression(col_str, join_aliases, base_alias))
+                
+                # Add metric if present (even when columns are provided)
+                metric = intent.get('metric')
+                if metric:
+                    expr = metric.get('sql_expression', '')
+                    if expr:
+                        expr = self._replace_table_names(expr, join_aliases)
+                        # Don't double-wrap if already aggregated
+                        if not any(op in expr.upper() for op in ['SUM(', 'COUNT(', 'AVG(', 'MAX(', 'MIN(']):
+                            expr = f"SUM({expr})"
+                        select_parts.append(f"{expr} AS {metric.get('name', 'value')}")
             elif has_computed_in_columns or computed_dims:
                 # Process computed dimensions from columns or computed_dimensions field
                 # If columns is empty but computed_dims exists, use group_by_cols instead
@@ -2288,16 +2360,17 @@ class SQLBuilder:
                         else:
                             select_parts.append(self._process_column_expression(col, join_aliases, base_alias))
                 
-                # Add metric if this is a metric query and columns was empty
-                if not columns and query_type == 'metric':
+                # Add metric if this is a metric query (always add metric for metric queries)
+                if query_type == 'metric':
                     metric = intent.get('metric')
                     if metric:
                         expr = metric.get('sql_expression', '')
                         if expr:
                             expr = self._replace_table_names(expr, join_aliases)
+                            # Don't double-wrap if already aggregated
                             if not any(op in expr.upper() for op in ['SUM(', 'COUNT(', 'AVG(', 'MAX(', 'MIN(']):
                                 expr = f"SUM({expr})"
-                            select_parts.append(f"{expr} as {metric.get('name', 'value')}")
+                            select_parts.append(f"{expr} AS {metric.get('name', 'value')}")
             else:
                 # Build from dimensions and metric using semantic dimension resolution
                 # First, handle computed dimensions from intent (user-described business logic)
@@ -2511,6 +2584,7 @@ class SQLBuilder:
             return None
         
         group_parts = []
+        computed_dim_map = {dim.get('name'): dim for dim in intent.get('computed_dimensions', [])}
         
         # Use resolved dimensions if available (from SELECT clause)
         resolved_dims = intent.get('_resolved_dimensions')
@@ -2525,14 +2599,18 @@ class SQLBuilder:
                     else:
                         group_parts.append(resolved_dim.expression)
         else:
-            # Fallback: resolve dimensions again
-            resolved_dims = self.dimension_resolver.resolve_dimensions(group_by_cols, join_aliases, base_alias)
-            for resolved_dim in resolved_dims:
-                if resolved_dim.groupable:
-                    if resolved_dim.dimension_type.value == 'computed':
-                        group_parts.append(resolved_dim.alias)
-                    else:
-                        group_parts.append(resolved_dim.expression)
+            # Fallback: process group_by columns directly
+            for col in group_by_cols:
+                if col in computed_dim_map:
+                    # Computed dimension - use alias (same as in SELECT)
+                    group_parts.append(col)
+                else:
+                    # Regular column - resolve with table aliases
+                    col_expr = self._replace_table_names(col, join_aliases)
+                    # If no table prefix, add base alias
+                    if '.' not in col_expr:
+                        col_expr = f"{base_alias}.{col_expr}"
+                    group_parts.append(col_expr)
         
         return f"GROUP BY {', '.join(group_parts)}" if group_parts else None
     
@@ -2577,12 +2655,60 @@ class SQLBuilder:
         return expr
     
     def _replace_table_names(self, expression: str, join_aliases: Dict[str, str]) -> str:
-        """Replace table names with aliases in an expression."""
+        """Replace table names with aliases in an expression.
+        
+        Handles both fully qualified names (tpch.tiny.orders) and short names (orders).
+        The LLM often generates ON clauses with short names like "orders.o_custkey",
+        but join_aliases has keys like "tpch.tiny.orders".
+        
+        Trino-compatible: Ensures aliases are properly scoped and table references
+        are correctly replaced with their corresponding aliases.
+        """
+        if not expression:
+            return expression
+        
         result = expression
         
+        # Build a mapping that includes both full qualified names and short names
+        # e.g., {"tpch.tiny.orders": "t2"} -> {"tpch.tiny.orders": "t2", "orders": "t2"}
+        extended_mapping = {}
+        for table_name, alias in join_aliases.items():
+            # Normalize alias to lowercase for consistency
+            alias_lower = alias.lower() if alias else ''
+            
+            # Add the full qualified name (case-insensitive)
+            extended_mapping[table_name.lower()] = alias_lower
+            extended_mapping[table_name] = alias_lower
+            
+            # Extract short table name (last component after dots)
+            # e.g., "tpch.tiny.orders" -> "orders"
+            # e.g., "orders" -> "orders" (already short)
+            parts = table_name.split('.')
+            short_name = parts[-1]
+            short_name_lower = short_name.lower()
+            
+            # Add short name mapping (case-insensitive)
+            # Only add if it's different from full name
+            if short_name_lower != table_name.lower():
+                # If multiple tables have same short name, last one wins (but this is rare)
+                extended_mapping[short_name_lower] = alias_lower
+                extended_mapping[short_name] = alias_lower
+        
         # Sort by length (longest first) to avoid partial matches
-        for table_name, alias in sorted(join_aliases.items(), key=lambda x: len(x[0]), reverse=True):
-            result = result.replace(f"{table_name}.", f"{alias}.")
+        # This ensures "tpch.tiny.orders" is replaced before "orders"
+        # Also sort by case sensitivity (exact match first)
+        sorted_items = sorted(
+            extended_mapping.items(), 
+            key=lambda x: (-len(x[0]), x[0].islower())
+        )
+        
+        for table_name, alias in sorted_items:
+            # Replace table_name.column with alias.column
+            # Use word boundaries to avoid partial matches within column names
+            # Pattern: table_name followed by a dot (not part of another identifier)
+            # Use case-insensitive matching
+            pattern = re.compile(r'\b' + re.escape(table_name) + r'\.', re.IGNORECASE)
+            result = pattern.sub(f"{alias}.", result)
         
         return result
 

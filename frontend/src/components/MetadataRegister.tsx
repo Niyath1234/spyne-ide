@@ -50,38 +50,13 @@ export const MetadataRegister: React.FC = () => {
     try {
       // Try to load from metadata API
       const response = await axios.get(`${API_BASE_URL}/api/metadata`).catch(() => null);
-      if (response?.data) {
+      if (response?.data?.success && response.data.tables) {
         setTables(response.data.tables || []);
         setMetrics(response.data.metrics || []);
       } else {
-        // Mock data for demonstration
-        setTables([
-          {
-            name: 'loan_master_b',
-            system: 'system_b',
-            entity: 'loan',
-            columns: [
-              { name: 'loan_id', data_type: 'varchar' },
-              { name: 'loan_amount', data_type: 'decimal' },
-            ],
-            primary_key: ['loan_id'],
-          },
-          {
-            name: 'loan_disbursements_b',
-            system: 'system_b',
-            entity: 'disbursement',
-            columns: [
-              { name: 'disbursement_id', data_type: 'varchar' },
-              { name: 'loan_id', data_type: 'varchar' },
-              { name: 'disbursement_date', data_type: 'date' },
-            ],
-            primary_key: ['disbursement_id'],
-          },
-        ]);
-        setMetrics([
-          { id: '1', name: 'Total Loans', description: 'Total number of loans', dimensions: ['system'] },
-          { id: '2', name: 'Disbursement Amount', description: 'Total disbursed amount', dimensions: ['date'] },
-        ]);
+        // Fallback: empty data if API fails
+        setTables([]);
+        setMetrics([]);
       }
     } catch (error) {
       console.error('Failed to load metadata:', error);
