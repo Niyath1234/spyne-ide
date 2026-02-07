@@ -6,6 +6,7 @@ import {
   Tooltip,
   CircularProgress,
   Chip,
+  TextField,
 } from '@mui/material';
 import {
   PlayArrow,
@@ -16,6 +17,9 @@ import {
   ExpandLess,
   ContentCopy,
   Check,
+  Edit,
+  Check as CheckIcon,
+  Close,
 } from '@mui/icons-material';
 import CodeMirror from '@uiw/react-codemirror';
 import { sql } from '@codemirror/lang-sql';
@@ -28,6 +32,7 @@ interface NotebookCellProps {
   cell: NotebookCellType;
   onRun: (cellId: string) => void;
   onChange: (cellId: string, sql: string) => void;
+  onNameChange: (cellId: string, name: string) => void;
   isAIOpen: boolean;
   onToggleAI: (cellId: string | null) => void;
 }
@@ -36,11 +41,14 @@ export const NotebookCell: React.FC<NotebookCellProps> = ({
   cell,
   onRun,
   onChange,
+  onNameChange,
   isAIOpen,
   onToggleAI,
 }) => {
   const [isErrorExpanded, setIsErrorExpanded] = useState(false);
   const [cellIdCopied, setCellIdCopied] = useState(false);
+  const [isEditingName, setIsEditingName] = useState(false);
+  const [editedName, setEditedName] = useState(cell.name || cell.id);
 
   const isRunning = cell.status === 'running';
   const isSuccess = cell.status === 'success';
@@ -55,6 +63,36 @@ export const NotebookCell: React.FC<NotebookCellProps> = ({
       console.error('Failed to copy cell ID:', err);
     }
   };
+
+  const handleNameEdit = () => {
+    setIsEditingName(true);
+    setEditedName(cell.name || cell.id);
+  };
+
+  const handleNameSave = () => {
+    const trimmedName = editedName.trim();
+    if (trimmedName && trimmedName !== cell.name) {
+      onNameChange(cell.id, trimmedName);
+    }
+    setIsEditingName(false);
+  };
+
+  const handleNameCancel = () => {
+    setEditedName(cell.name || cell.id);
+    setIsEditingName(false);
+  };
+
+  const handleNameKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      handleNameSave();
+    } else if (e.key === 'Escape') {
+      e.preventDefault();
+      handleNameCancel();
+    }
+  };
+
+  const displayName = cell.name || cell.id;
 
   return (
     <Box
@@ -88,31 +126,116 @@ export const NotebookCell: React.FC<NotebookCellProps> = ({
             marginBottom: '8px',
           }}
         >
-          {/* Cell ID Display (Copyable) */}
-          <Tooltip title={cellIdCopied ? "Copied!" : "Click to copy cell ID for %%ref"}>
-            <Chip
-              label={cell.id}
-              size="small"
-              onClick={handleCopyCellId}
-              icon={cellIdCopied ? <Check sx={{ fontSize: '14px' }} /> : <ContentCopy sx={{ fontSize: '14px' }} />}
-              sx={{
-                height: '24px',
-                fontSize: '0.7rem',
-                fontFamily: 'monospace',
-                bgcolor: '#2a3843',
-                color: '#ff096c',
-                border: '1px solid #4f6172',
-                cursor: 'pointer',
-                '&:hover': {
-                  bgcolor: '#4f6172',
-                  borderColor: '#ff096c',
-                },
-                '& .MuiChip-icon': {
-                  color: '#ff096c',
-                },
-              }}
-            />
-          </Tooltip>
+          {/* Cell Name/ID Display (Editable) */}
+          {isEditingName ? (
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, flex: 1 }}>
+              <TextField
+                value={editedName}
+                onChange={(e) => setEditedName(e.target.value)}
+                onKeyDown={handleNameKeyDown}
+                autoFocus
+                size="small"
+                variant="outlined"
+                sx={{
+                  flex: 1,
+                  '& .MuiOutlinedInput-root': {
+                    height: '28px',
+                    fontSize: '0.75rem',
+                    fontFamily: 'monospace',
+                    backgroundColor: '#12161D',
+                    color: '#E6EDF3',
+                    '& fieldset': {
+                      borderColor: '#ff5fa8',
+                    },
+                    '&:hover fieldset': {
+                      borderColor: '#ff5fa8',
+                    },
+                    '&.Mui-focused fieldset': {
+                      borderColor: '#ff5fa8',
+                    },
+                  },
+                  '& .MuiInputBase-input': {
+                    padding: '4px 8px',
+                  },
+                }}
+              />
+              <IconButton
+                size="small"
+                onClick={handleNameSave}
+                sx={{
+                  color: '#4CAF50',
+                  padding: '2px',
+                  '&:hover': {
+                    backgroundColor: 'rgba(76, 175, 80, 0.12)',
+                  },
+                }}
+              >
+                <CheckIcon sx={{ fontSize: '16px' }} />
+              </IconButton>
+              <IconButton
+                size="small"
+                onClick={handleNameCancel}
+                sx={{
+                  color: '#f44336',
+                  padding: '2px',
+                  '&:hover': {
+                    backgroundColor: 'rgba(244, 67, 54, 0.12)',
+                  },
+                }}
+              >
+                <Close sx={{ fontSize: '16px' }} />
+              </IconButton>
+            </Box>
+          ) : (
+            <>
+              <Tooltip title={cellIdCopied ? "Copied cell ID!" : `Cell name: ${displayName}. Click to copy ID (${cell.id}) for %%ref`}>
+                <Chip
+                  label={displayName}
+                  size="small"
+                  onClick={handleCopyCellId}
+                  icon={cellIdCopied ? <Check sx={{ fontSize: '14px' }} /> : <ContentCopy sx={{ fontSize: '14px' }} />}
+                  sx={{
+                    height: '28px',
+                    fontSize: '0.75rem',
+                    fontFamily: 'monospace',
+                    bgcolor: '#2a3843',
+                    color: '#ff096c',
+                    border: '1px solid #4f6172',
+                    cursor: 'pointer',
+                    maxWidth: '200px',
+                    '& .MuiChip-label': {
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis',
+                    },
+                    '&:hover': {
+                      bgcolor: '#4f6172',
+                      borderColor: '#ff096c',
+                    },
+                    '& .MuiChip-icon': {
+                      color: '#ff096c',
+                    },
+                  }}
+                />
+              </Tooltip>
+              <Tooltip title="Edit cell name (click to rename)">
+                <IconButton
+                  size="small"
+                  onClick={handleNameEdit}
+                  sx={{
+                    color: '#A7B0C0',
+                    padding: '4px',
+                    borderRadius: '6px',
+                    '&:hover': {
+                      backgroundColor: 'rgba(255, 95, 168, 0.12)',
+                      color: '#ff5fa8',
+                    },
+                  }}
+                >
+                  <Edit sx={{ fontSize: '14px' }} />
+                </IconButton>
+              </Tooltip>
+            </>
+          )}
 
           {/* Run Button */}
           <Tooltip title="Run cell">
@@ -312,7 +435,7 @@ export const NotebookCell: React.FC<NotebookCellProps> = ({
               highlightActiveLine: true, // Enable active line highlight for better visibility
               autocompletion: true,
             }}
-            placeholder="Start coding or generate with AI. Use %%ref <cell_id> AS <alias> to reference other cells. Press Shift+Enter to run."
+            placeholder="Start coding or generate with AI. Use %%ref <cell_name_or_id> AS <alias> to reference other cells by name (e.g., 'base') or ID. Press Shift+Enter to run."
           />
         </Box>
 

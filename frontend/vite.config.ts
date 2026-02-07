@@ -15,5 +15,6 @@ export default defineConfig({
   },
   // Expose environment variables to the client
   // Only variables prefixed with VITE_ are exposed
+  // Vite automatically loads .env.local from the frontend directory
   envPrefix: 'VITE_',
 })

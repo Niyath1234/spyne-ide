@@ -22,6 +22,9 @@ apiClient.interceptors.request.use((config) => {
 apiClient.interceptors.response.use(
   (response) => response,
   (error: AxiosError) => {
+    // Don't log 404 errors - they're often expected (e.g., checking if resource exists)
+    const is404 = error.response?.status === 404;
+    
     // Check for CORS errors
     const isCorsError = !error.response && (
       error.message?.includes('CORS') ||
@@ -46,7 +49,11 @@ apiClient.interceptors.response.use(
       Object.assign(errorResponse, error.response.data);
     }
     
-    console.error('API Error:', errorResponse);
+    // Only log non-404 errors
+    if (!is404) {
+      console.error('API Error:', errorResponse);
+    }
+    
     return Promise.reject(errorResponse);
   }
 );
@@ -301,6 +308,7 @@ export const metadataAPI = {
 // Notebook API
 export interface NotebookCell {
   id: string;
+  name?: string; // User-friendly editable name for the cell
   sql: string;
   status?: 'idle' | 'running' | 'success' | 'error';
   result?: {
@@ -336,10 +344,11 @@ export const notebookAPI = {
       const response = await apiClient.get(`/api/v1/notebooks/${notebookId}`);
       return response.data;
     } catch (err: any) {
-      // 404 is expected if notebook doesn't exist
-      if (err.response?.status === 404) {
+      // 404 is expected if notebook doesn't exist - don't log as error
+      if (err.status === 404 || err.response?.status === 404) {
         return { success: false, notebook: {} as Notebook, error: 'Notebook not found' };
       }
+      // Only log non-404 errors
       console.error('Notebook API get error:', err);
       throw err;
     }

@@ -57,7 +57,7 @@ export const TrinoNotebook: React.FC = () => {
             status: (cell.status as NotebookCell['status']) || 'idle',
           }));
           setNotebook({ ...notebookData, cells: typedCells });
-          setCells(typedCells.length > 0 ? typedCells : [{ id: `cell${Date.now()}`, sql: '', status: 'idle' }]);
+          setCells(typedCells.length > 0 ? typedCells : [{ id: `cell${Date.now()}`, name: 'cell1', sql: '', status: 'idle' }]);
           // Set engine from notebook if available
           if (notebookData.engine) {
             setEngine(notebookData.engine);
@@ -66,13 +66,17 @@ export const TrinoNotebook: React.FC = () => {
           return;
           }
         } catch (loadErr: any) {
-          // Notebook doesn't exist, create new one
-          console.log('Notebook not found, creating new one:', loadErr.message);
+          // Notebook doesn't exist, create new one - this is expected behavior
+          // Don't log as error since 404 is handled gracefully
+          if (loadErr.status !== 404 && loadErr.response?.status !== 404) {
+            console.log('Notebook not found, creating new one');
+          }
         }
 
         // Create new notebook with one empty cell
         const emptyCell: NotebookCell = {
           id: `cell${Date.now()}`,
+          name: 'cell1', // Default name that user can edit
           sql: '',
           status: 'idle',
         };
@@ -123,6 +127,7 @@ export const TrinoNotebook: React.FC = () => {
           // Create local notebook as fallback with one empty cell
           const emptyCell: NotebookCell = {
             id: `cell${Date.now()}`,
+            name: 'cell1', // Default name that user can edit
             sql: '',
             status: 'idle',
           };
@@ -157,8 +162,10 @@ export const TrinoNotebook: React.FC = () => {
   }, []);
 
   const addCell = () => {
+    const cellNumber = cells.length + 1;
     const newCell: NotebookCell = {
       id: `cell${Date.now()}`,
+      name: `cell${cellNumber}`, // Default name that user can edit
       sql: '',
       status: 'idle',
     };
@@ -171,6 +178,10 @@ export const TrinoNotebook: React.FC = () => {
     const newCells = cells.map((c) => (c.id === cellId ? { ...c, ...updates } : c));
     setCells(newCells);
     updateNotebook({ cells: newCells });
+  };
+
+  const handleCellNameChange = (cellId: string, name: string) => {
+    updateCell(cellId, { name });
   };
 
   const updateNotebook = async (updates: Partial<Notebook>) => {
@@ -472,6 +483,7 @@ export const TrinoNotebook: React.FC = () => {
                     cell={cell}
                     onRun={executeCell}
                     onChange={(cellId, sql) => updateCell(cellId, { sql })}
+                    onNameChange={handleCellNameChange}
                     isAIOpen={aiOpenCellId === cell.id}
                     onToggleAI={handleToggleAI}
                   />

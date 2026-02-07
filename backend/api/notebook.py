@@ -193,6 +193,36 @@ def _compile_notebook(notebook: Dict[str, Any], target_cell_id: Optional[str] = 
     # Build cell map (internal use only - cell_ids never appear in generated SQL)
     cell_map = {cell['id']: cell for cell in cells}
     
+    # Build name-to-ID mapping for cell references
+    # Maps both cell names and cell IDs to actual cell IDs
+    # This allows users to reference cells by name (e.g., "base") or by ID (e.g., "cell1770481568550")
+    name_to_id_map: Dict[str, str] = {}
+    for cell in cells:
+        cell_id = cell['id']
+        cell_name = cell.get('name')
+        
+        # Always map cell ID to itself
+        name_to_id_map[cell_id] = cell_id
+        
+        # Map cell name to cell ID if name exists
+        if cell_name:
+            cell_name = cell_name.strip()
+            if cell_name:
+                # If name already exists, prefer the first occurrence (or could raise error)
+                if cell_name not in name_to_id_map:
+                    name_to_id_map[cell_name] = cell_id
+                elif name_to_id_map[cell_name] != cell_id:
+                    # Name collision - warn but use first occurrence
+                    # Could return error here if we want strict uniqueness
+                    pass
+    
+    def resolve_cell_reference(ref_identifier: str) -> Optional[str]:
+        """
+        Resolve a cell reference (name or ID) to the actual cell ID.
+        Returns None if reference cannot be resolved.
+        """
+        return name_to_id_map.get(ref_identifier)
+    
     # Extract refs for each cell and build dependency order
     # This is simple ordered resolution of explicit %%ref directives, not a DAG
     refs_map: Dict[str, List[tuple[str, str]]] = {}  # cell_id -> [(ref_cell_id, alias), ...]
@@ -213,21 +243,43 @@ def _compile_notebook(notebook: Dict[str, Any], target_cell_id: Optional[str] = 
             if stripped.startswith('%%ref'):
                 match = re.match(r'%%ref\s+(\w+)\s+AS\s+(\w+)', stripped, re.IGNORECASE)
                 if match:
-                    ref_cell_id = match.group(1)
+                    ref_identifier = match.group(1)  # Could be name or ID
                     alias = match.group(2)
-                    refs.append((ref_cell_id, alias))
+                    
+                    # Resolve reference (name or ID) to actual cell ID
+                    resolved_cell_id = resolve_cell_reference(ref_identifier)
+                    if resolved_cell_id is None:
+                        # Build user-friendly list of available cells (prefer names over IDs)
+                        available_cells = []
+                        seen_ids = set()
+                        for cell in cells:
+                            cell_id_val = cell['id']
+                            cell_name_val = cell.get('name', '').strip()
+                            if cell_name_val and cell_name_val not in seen_ids:
+                                available_cells.append(f"'{cell_name_val}' (ID: {cell_id_val})")
+                                seen_ids.add(cell_name_val)
+                            elif cell_id_val not in seen_ids:
+                                available_cells.append(f"'{cell_id_val}'")
+                                seen_ids.add(cell_id_val)
+                        
+                        return "", (
+                            f"Cell {cell_id} references unknown cell '{ref_identifier}'. "
+                            f"Available cells: {', '.join(sorted(available_cells))}"
+                        )
+                    
+                    refs.append((resolved_cell_id, alias))
                 else:
                     # Invalid %%ref syntax
                     return "", (
                         f"Cell {cell_id}: Invalid %%ref syntax: '{stripped}'. "
-                        f"Use format: '%%ref <cell_id> AS <alias>'"
+                        f"Use format: '%%ref <cell_name_or_id> AS <alias>'"
                     )
             elif stripped.startswith('ref ') and not stripped.startswith('%%ref'):
                 # User wrote 'ref' instead of '%%ref' - provide helpful error
                 return "", (
                     f"Cell {cell_id}: Missing '%%' prefix in ref directive: '{stripped}'. "
-                    f"Use format: '%%ref <cell_id> AS <alias>' (with double percent signs). "
-                    f"Example: '%%ref {stripped.replace('ref ', '').split()[0] if stripped.split() else 'cell_id'} AS base'"
+                    f"Use format: '%%ref <cell_name_or_id> AS <alias>' (with double percent signs). "
+                    f"Example: '%%ref {stripped.replace('ref ', '').split()[0] if stripped.split() else 'cell_name'} AS base'"
                 )
             else:
                 sql_lines.append(line)
@@ -245,11 +297,11 @@ def _compile_notebook(notebook: Dict[str, Any], target_cell_id: Optional[str] = 
             if stripped.startswith('%%ref-'):
                 return "", (
                     f"Cell {cell_id}: Invalid %%ref syntax. "
-                    f"Use space-separated format: '%%ref <cell_id> AS <alias>' "
-                    f"instead of '%%ref-<cell_id> AS <alias>'"
+                    f"Use space-separated format: '%%ref <cell_name_or_id> AS <alias>' "
+                    f"instead of '%%ref-<cell_name_or_id> AS <alias>'"
                 )
         
-        # Check that all referenced cells exist
+        # Check that all referenced cells exist (should already be resolved, but double-check)
         for ref_cell_id, alias in refs:
             if ref_cell_id not in cell_map:
                 return "", f"Cell {cell_id} references unknown cell {ref_cell_id}"

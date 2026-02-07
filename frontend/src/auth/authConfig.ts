@@ -9,9 +9,12 @@ const getAzureConfig = () => {
   const tenantId = import.meta.env.VITE_AZURE_TENANT_ID;
 
   if (!clientId || !tenantId) {
-    throw new Error(
-      'Missing Azure AD configuration. Please set VITE_AZURE_CLIENT_ID and VITE_AZURE_TENANT_ID in your .env file.'
-    );
+    console.error('Missing Azure AD configuration. Please set VITE_AZURE_CLIENT_ID and VITE_AZURE_TENANT_ID in your .env file.');
+    // Return placeholder values to prevent crash, but app won't work
+    return {
+      clientId: 'missing-client-id',
+      authority: 'https://login.microsoftonline.com/missing-tenant-id',
+    };
   }
 
   return {
@@ -51,3 +54,15 @@ export const loginRequest: RedirectRequest = {
 
 // Create MSAL instance
 export const msalInstance = new PublicClientApplication(msalConfig);
+
+// Initialize MSAL instance
+msalInstance.initialize().then(() => {
+  console.log('MSAL initialized successfully');
+  // Set active account if one exists
+  const accounts = msalInstance.getAllAccounts();
+  if (accounts.length > 0) {
+    msalInstance.setActiveAccount(accounts[0]);
+  }
+}).catch((error) => {
+  console.error('MSAL initialization failed:', error);
+});
