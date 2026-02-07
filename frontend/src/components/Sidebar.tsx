@@ -15,6 +15,7 @@ import {
   Code as CodeIcon,
 } from '@mui/icons-material';
 import { useStore } from '../store/useStore';
+import logoImage from '../assets/logo.png';
 
 interface SidebarProps {
   width: number;
@@ -64,6 +65,33 @@ export const Sidebar: React.FC<SidebarProps> = ({ width }) => {
         boxShadow: '0 8px 24px rgba(0, 0, 0, 0.25)',
       }}
     >
+      <Box
+        sx={{
+          display: 'flex',
+          justifyContent: 'center',
+          alignItems: 'center',
+          mb: 3,
+          pb: 3,
+          pt: 1,
+          px: 2,
+        }}
+      >
+        <Box
+          component="img"
+          src={logoImage}
+          alt="Logo"
+          sx={{
+            height: 150,
+            width: 'auto',
+            maxWidth: '100%',
+            objectFit: 'contain',
+            transition: 'transform 0.2s ease',
+            '&:hover': {
+              transform: 'scale(1.05)',
+            },
+          }}
+        />
+      </Box>
       <List sx={{ p: 0.5 }}>
         {menuItems.map((item) => (
           <ListItem key={item.id} disablePadding sx={{ mb: 0.5 }}>
@@ -78,18 +106,18 @@ export const Sidebar: React.FC<SidebarProps> = ({ width }) => {
                 border: '1px solid transparent',
                 '&.Mui-selected': {
                   backgroundColor: '#161B22',
-                  color: '#ff5fa8',
-                  borderColor: 'rgba(255, 95, 168, 0.35)',
-                  boxShadow: '0 0 12px rgba(255, 95, 168, 0.18)',
+                  color: '#E6EDF3',
+                  borderColor: 'rgba(255, 255, 255, 0.15)',
+                  boxShadow: '0 0 8px rgba(0, 0, 0, 0.2)',
                   '&:hover': {
                     backgroundColor: '#1A202A',
-                    color: '#ff5fa8',
+                    color: '#E6EDF3',
                     '& .MuiListItemIcon-root': {
-                      color: '#ff5fa8',
+                      color: '#A7B0C0',
                     },
                   },
                   '& .MuiListItemIcon-root': {
-                    color: '#ff5fa8',
+                    color: '#A7B0C0',
                   },
                 },
                 '&:not(.Mui-selected):hover': {
@@ -104,7 +132,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ width }) => {
             >
               <ListItemIcon
                 sx={{
-                  color: viewMode === item.id ? '#ff5fa8' : '#A7B0C0',
+                  color: viewMode === item.id ? '#A7B0C0' : '#A7B0C0',
                   minWidth: 40,
                 }}
               >

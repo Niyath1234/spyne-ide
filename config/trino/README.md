@@ -68,6 +68,87 @@ SHOW SCHEMAS FROM tpch;
 ### TPCDS (`tpcds.properties`)
 TPC-DS benchmark connector for testing and demos.
 
+**Configuration**:
+- `connector.name=tpcds` - TPC-DS connector
+- `tpcds.splits-per-node=4` - Parallel processing splits
+
+**Available Schemas**:
+- `tiny` - Smallest dataset (scale factor 0.01, ~10MB) - useful for testing
+- `sf1` - Scale factor 1 (~1GB)
+- `sf10` - Scale factor 10 (~10GB)
+- `sf100` - Scale factor 100 (~100GB)
+- `sf300` - Scale factor 300 (~300GB)
+- `sf1000` - Scale factor 1000 (~1TB)
+- `sf3000` - Scale factor 3000 (~3TB)
+- `sf10000` - Scale factor 10000 (~10TB)
+- `sf30000` - Scale factor 30000 (~30TB)
+- `sf100000` - Scale factor 100000 (~100TB)
+
+**TPC-DS Tables (24 total)**:
+- **Fact Tables (7)**: `store_sales`, `store_returns`, `catalog_sales`, `catalog_returns`, `web_sales`, `web_returns`, `inventory`
+- **Dimension Tables (17)**: `store`, `call_center`, `catalog_page`, `web_site`, `web_page`, `warehouse`, `customer`, `customer_address`, `customer_demographics`, `date_dim`, `household_demographics`, `item`, `promotion`, `reason`, `ship_mode`, `time_dim`, `income_band`
+
+**Example Queries**:
+```sql
+-- List available schemas
+SHOW SCHEMAS FROM tpcds;
+
+-- List tables in tiny schema
+SHOW TABLES FROM tpcds.tiny;
+
+-- Query customer table
+SELECT * FROM tpcds.tiny.customer LIMIT 10;
+
+-- Query store sales
+SELECT * FROM tpcds.tiny.store_sales LIMIT 10;
+
+-- Join customer and store sales
+SELECT 
+    c.c_customer_id,
+    c.c_first_name,
+    c.c_last_name,
+    COUNT(ss.ss_item_sk) as purchase_count,
+    SUM(ss.ss_sales_price) as total_spent
+FROM tpcds.tiny.customer c
+LEFT JOIN tpcds.tiny.store_sales ss ON c.c_customer_sk = ss.ss_customer_sk
+GROUP BY c.c_customer_id, c.c_first_name, c.c_last_name
+LIMIT 10;
+
+-- Multi-channel sales analysis
+SELECT 
+    'store' as channel,
+    COUNT(*) as sales_count,
+    SUM(ss_sales_price) as total_revenue
+FROM tpcds.tiny.store_sales
+UNION ALL
+SELECT 
+    'catalog' as channel,
+    COUNT(*) as sales_count,
+    SUM(cs_sales_price) as total_revenue
+FROM tpcds.tiny.catalog_sales
+UNION ALL
+SELECT 
+    'web' as channel,
+    COUNT(*) as sales_count,
+    SUM(ws_sales_price) as total_revenue
+FROM tpcds.tiny.web_sales;
+```
+
+**Verifying TPC-DS is Enabled**:
+```sql
+-- Check if TPC-DS catalog is available
+SHOW CATALOGS;
+-- Should show: tpch, postgres, tpcds
+
+-- Check TPC-DS schemas
+SHOW SCHEMAS FROM tpcds;
+-- Should show: information_schema, tiny, sf1, sf10, sf100, sf300, sf1000, etc.
+
+-- List tables in tiny schema
+SHOW TABLES FROM tpcds.tiny;
+-- Should show all 24 TPC-DS tables
+```
+
 ## Usage
 
 ### Starting Trino

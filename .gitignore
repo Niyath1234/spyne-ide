@@ -46,6 +46,7 @@ logs/
 .env.*.local
 .env.production
 .env.development
+# Note: .env.template is committed but should only contain placeholders
 
 # Data files
 data/*.parquet

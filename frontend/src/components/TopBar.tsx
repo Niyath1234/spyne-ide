@@ -17,11 +17,7 @@ export const TopBar: React.FC = () => {
         boxShadow: '0 8px 24px rgba(0, 0, 0, 0.25)',
       }}
     >
-      <Box sx={{ flex: 1, display: 'flex', alignItems: 'center', gap: 1 }}>
-        <Box sx={{ color: '#ff5fa8', fontSize: '0.9rem', fontWeight: 600, letterSpacing: '0.02em' }}>
-          SPYNE-NN
-        </Box>
-      </Box>
+      <Box sx={{ flex: 1 }} />
       <IconButton
         size="small"
         sx={{

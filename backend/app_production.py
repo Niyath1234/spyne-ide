@@ -752,6 +752,82 @@ def generate_sql():
         }), 500
 
 
+@query_bp.route('/graph', methods=['GET'])
+def get_graph():
+    """Get hypergraph visualization data."""
+    try:
+        # Load metadata files
+        metadata_dir = Path(project_root) / 'metadata'
+        tables_file = metadata_dir / 'tables.json'
+        lineage_file = metadata_dir / 'lineage.json'
+        
+        # Load tables
+        if not tables_file.exists():
+            logging.getLogger('error').warning(f'Tables metadata file not found at {tables_file}')
+            return jsonify({
+                'error': f'Tables metadata file not found at {tables_file}',
+            }), 404
+        
+        with open(tables_file, 'r', encoding='utf-8') as f:
+            tables_data = json.load(f)
+        
+        # Load lineage
+        edges_data = []
+        if lineage_file.exists():
+            with open(lineage_file, 'r', encoding='utf-8') as f:
+                lineage_data = json.load(f)
+                edges_data = lineage_data.get('edges', [])
+        else:
+            logging.getLogger('info').info(f'Lineage file not found at {lineage_file}, using empty edges')
+        
+        # Transform tables to nodes
+        nodes = []
+        for table in tables_data.get('tables', []):
+            columns = [col['name'] for col in table.get('columns', [])]
+            nodes.append({
+                'id': table['name'],
+                'label': table['name'],
+                'type': 'table',
+                'columns': columns,
+                'title': f"{table['name']} - {table.get('entity', '')}",
+            })
+        
+        # Transform lineage to edges
+        edges = []
+        for idx, edge in enumerate(edges_data):
+            edges.append({
+                'id': f'edge_{idx}',
+                'from': edge['from'],
+                'to': edge['to'],
+                'label': edge.get('on', ''),
+                'joinCondition': edge.get('on', ''),
+                'relationship': edge.get('description', ''),
+            })
+        
+        # Calculate stats
+        table_count = len(nodes)
+        column_count = sum(len(node.get('columns', [])) for node in nodes)
+        
+        result = {
+            'nodes': nodes,
+            'edges': edges,
+            'stats': {
+                'total_nodes': len(nodes),
+                'total_edges': len(edges),
+                'table_count': table_count,
+                'column_count': column_count,
+            },
+        }
+        
+        logging.getLogger('info').info(f'Graph data loaded: {table_count} tables, {len(edges)} edges')
+        return jsonify(result)
+    except Exception as e:
+        logging.getLogger('error').exception('Error loading graph data')
+        return jsonify({
+            'error': str(e),
+        }), 500
+
+
 # ============================================================================
 # Agent Endpoints
 # ============================================================================
@@ -1209,7 +1285,7 @@ assistant_bp = Blueprint('assistant', __name__)
 
 @assistant_bp.route('/assistant/ask', methods=['POST'])
 def assistant_ask():
-    """Handle assistant questions."""
+    """Handle assistant questions - execute queries directly and return results with LLM conclusion."""
     try:
         data = request.get_json() or {}
         question = data.get('question', '')
@@ -1220,52 +1296,221 @@ def assistant_ask():
                 'error': 'question is required',
             }), 400
         
-        # Check if it's a SQL query request
-        is_query_request = any(keyword in question.lower() for keyword in [
-            'query', 'sql', 'show', 'get', 'find', 'select', 'list'
-        ])
+        # Generate SQL from query
+        generate_sql_from_query, _ = get_query_generator()
+        use_llm = bool(os.getenv('OPENAI_API_KEY', ''))
+        result = generate_sql_from_query(question, use_llm=use_llm)
         
-        if is_query_request:
-            generate_sql_from_query, _ = get_query_generator()
-            use_llm = bool(os.getenv('OPENAI_API_KEY', ''))
-            result = generate_sql_from_query(question, use_llm=use_llm)
-            
-            if result.get('success') and result.get('sql'):
-                return jsonify({
-                    'response_type': 'QueryResult',
-                    'status': 'success',
-                    'answer': f"Here's the SQL query:\n\n```sql\n{result['sql']}\n```",
-                    'result': result['sql'],
-                    'intent': result.get('intent'),
-                    'validation': result.get('validation'),
-                })
-            else:
-                return jsonify({
-                    'response_type': 'NeedsClarification',
-                    'status': 'failed',
-                    'answer': result.get('error', 'I need more information to generate the query.'),
-                    'clarification': {
-                        'query': question,
-                        'question': result.get('error', 'Could you provide more details about what you want to query?'),
-                        'missing_pieces': [{
-                            'field': 'query',
-                            'importance': 'high',
-                            'description': result.get('error', ''),
-                        }] if result.get('error') else [],
-                    },
-                })
-        else:
+        if not result.get('success') or not result.get('sql'):
             return jsonify({
-                'response_type': 'Answer',
-                'status': 'success',
-                'answer': f"""I can help you with SQL queries and data analysis. Try asking me things like:
-- "Show me sales by region"
-- "Query the customer table"
-- "Get revenue metrics"
-- "Find orders from last month"
-
-For your question: "{question}", I can help you generate a SQL query if you provide more details about what data you want to retrieve.""",
+                'response_type': 'NeedsClarification',
+                'status': 'failed',
+                'answer': result.get('error', 'I need more information to generate the query.'),
+                'clarification': {
+                    'query': question,
+                    'question': result.get('error', 'Could you provide more details about what you want to query?'),
+                    'missing_pieces': [{
+                        'field': 'query',
+                        'importance': 'high',
+                        'description': result.get('error', ''),
+                    }] if result.get('error') else [],
+                },
             })
+        
+        sql = result['sql']
+        
+            # Execute query directly using Trino
+        try:
+            import requests
+            logger = logging.getLogger(__name__)
+            
+            # Get Trino configuration
+            trino_url = os.getenv('TRINO_COORDINATOR_URL')
+            if not trino_url:
+                try:
+                    import socket
+                    socket.gethostbyname('trino')
+                    trino_url = 'http://trino:8080'
+                except socket.gaierror:
+                    trino_url = 'http://localhost:8081'
+            
+            trino_user = os.getenv('TRINO_USER', 'admin')
+            trino_catalog = os.getenv('TRINO_CATALOG', 'tpcds')
+            trino_schema = os.getenv('TRINO_SCHEMA', 'tiny')
+            
+            logger.info(f'Executing query via Trino: {trino_url}, catalog={trino_catalog}, schema={trino_schema}')
+            logger.debug(f'SQL: {sql[:200]}...' if len(sql) > 200 else f'SQL: {sql}')
+            
+            headers = {
+                'X-Trino-User': trino_user,
+                'X-Trino-Catalog': trino_catalog,
+                'X-Trino-Schema': trino_schema,
+            }
+            
+            # Execute query with timeout
+            try:
+                response = requests.post(
+                    f'{trino_url}/v1/statement',
+                    headers={**headers, 'Content-Type': 'text/plain'},
+                    data=sql.encode('utf-8'),
+                    timeout=120  # 2 minutes timeout
+                )
+            except requests.exceptions.Timeout:
+                logger.error('Trino query timed out after 120 seconds')
+                raise Exception('Query execution timed out. The query may be too complex or Trino is unavailable.')
+            except requests.exceptions.ConnectionError as e:
+                logger.error(f'Cannot connect to Trino at {trino_url}: {e}')
+                raise Exception(f'Cannot connect to Trino at {trino_url}. Is Trino running?')
+            
+            if response.status_code != 200:
+                raise Exception(f'Trino connection failed (HTTP {response.status_code}): {response.text[:200]}')
+            
+            data = response.json()
+            if data.get('error'):
+                error_info = data['error']
+                raise Exception(f'Trino query error: {error_info.get("message", "Unknown error")}')
+            
+            # Fetch all data chunks
+            rows = []
+            schema = []
+            if 'columns' in data:
+                schema = [{'name': col['name'], 'type': col['type']} for col in data['columns']]
+            if 'data' in data:
+                rows.extend(data['data'])
+            
+            next_uri = data.get('nextUri')
+            max_chunks = 1000  # Safety limit
+            chunk_count = 0
+            while next_uri and chunk_count < max_chunks:
+                chunk_count += 1
+                if next_uri.startswith('http://') or next_uri.startswith('https://'):
+                    chunk_url = next_uri
+                else:
+                    chunk_url = f'{trino_url}{next_uri}'
+                
+                try:
+                    chunk_response = requests.get(chunk_url, headers=headers, timeout=30)
+                    if chunk_response.status_code != 200:
+                        logger.warning(f'Chunk fetch failed with status {chunk_response.status_code}')
+                        break
+                    
+                    chunk_data = chunk_response.json()
+                    if chunk_data.get('error'):
+                        error_info = chunk_data['error']
+                        logger.error(f'Trino chunk error: {error_info.get("message", "Unknown error")}')
+                        break
+                    
+                    if 'data' in chunk_data:
+                        rows.extend(chunk_data['data'])
+                    
+                    if 'columns' in chunk_data and not schema:
+                        schema = [{'name': col['name'], 'type': col['type']} for col in chunk_data['columns']]
+                    
+                    stats = chunk_data.get('stats', {})
+                    query_state = stats.get('state')
+                    if query_state == 'FINISHED':
+                        break
+                    elif query_state == 'FAILED':
+                        error_info = chunk_data.get('error', {})
+                        raise Exception(f'Query failed: {error_info.get("message", "Unknown error")}')
+                    
+                    next_uri = chunk_data.get('nextUri')
+                    if not next_uri:
+                        break
+                except requests.exceptions.Timeout:
+                    logger.warning(f'Chunk fetch timed out after 30 seconds (fetched {chunk_count} chunks)')
+                    break
+                except Exception as chunk_error:
+                    logger.error(f'Error fetching chunk: {chunk_error}')
+                    break
+            
+            if chunk_count >= max_chunks:
+                logger.warning(f'Reached maximum chunk limit ({max_chunks}), stopping fetch')
+            
+            # Get first 5 rows for preview
+            preview_rows = rows[:5]
+            total_rows = len(rows)
+            
+            # Generate LLM conclusion if API key is available
+            conclusion = None
+            if use_llm and rows:
+                try:
+                    from openai import OpenAI
+                    
+                    # Format data for LLM
+                    column_names = [col['name'] for col in schema]
+                    sample_data = preview_rows[:5]  # Use preview rows for context
+                    
+                    # Create a readable summary of the data
+                    data_summary = f"Query: {question}\n\n"
+                    data_summary += f"Columns: {', '.join(column_names)}\n"
+                    data_summary += f"Total rows: {total_rows}\n\n"
+                    data_summary += "Sample data (first 5 rows):\n"
+                    for i, row in enumerate(sample_data, 1):
+                        row_str = ', '.join([f"{col}: {val}" for col, val in zip(column_names, row)])
+                        data_summary += f"Row {i}: {row_str}\n"
+                    
+                    # Generate conclusion using OpenAI
+                    client = OpenAI(api_key=os.getenv('OPENAI_API_KEY'))
+                    model = os.getenv('OPENAI_MODEL', 'gpt-4o-mini')
+                    
+                    completion = client.chat.completions.create(
+                        model=model,
+                        messages=[
+                            {
+                                "role": "system",
+                                "content": "You are a data analyst assistant. Analyze query results and provide a clear, concise conclusion about what the data shows. Focus on insights, patterns, and key findings. Keep it conversational and helpful."
+                            },
+                            {
+                                "role": "user",
+                                "content": f"{data_summary}\n\nBased on this query and results, provide a clear conclusion about what the data shows."
+                            }
+                        ],
+                        temperature=0.7,
+                        max_tokens=500
+                    )
+                    
+                    conclusion = completion.choices[0].message.content.strip()
+                except Exception as e:
+                    logger.warning(f"Failed to generate LLM conclusion: {e}")
+                    conclusion = f"Query executed successfully. Found {total_rows} row{'s' if total_rows != 1 else ''}."
+            
+            # Format rows for CSV download
+            csv_content = ','.join([col['name'] for col in schema]) + '\n'
+            for row in rows:
+                csv_content += ','.join([str(val) if val is not None else '' for val in row]) + '\n'
+            
+            return jsonify({
+                'response_type': 'QueryResult',
+                'status': 'success',
+                'answer': conclusion or f"Query executed successfully. Found {total_rows} row{'s' if total_rows != 1 else ''}.",
+                'conclusion': conclusion,
+                'preview_data': {
+                    'columns': schema,
+                    'rows': preview_rows,
+                    'total_rows': total_rows,
+                },
+                'full_data': {
+                    'columns': schema,
+                    'rows': rows,
+                    'csv': csv_content,
+                },
+                'sql': sql,
+                'intent': result.get('intent'),
+                'validation': result.get('validation'),
+            })
+            
+        except Exception as exec_error:
+            logger.error(f"Query execution failed: {exec_error}", exc_info=True)
+            # Return error response
+            return jsonify({
+                'response_type': 'Error',
+                'status': 'error',
+                'error': str(exec_error),
+                'answer': f"Query execution failed: {str(exec_error)}",
+                'sql': sql,
+            }), 500
+            
     except Exception as e:
         logging.getLogger('error').exception('Error in assistant ask')
         return jsonify({

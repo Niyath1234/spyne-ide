@@ -13,4 +13,7 @@ export default defineConfig({
       },
     },
   },
+  // Expose environment variables to the client
+  // Only variables prefixed with VITE_ are exposed
+  envPrefix: 'VITE_',
 })

@@ -554,9 +554,26 @@ def execute_notebook(notebook_id: str):
             
             trino_user = os.getenv('TRINO_USER', 'admin')
             # Use notebook engine or default catalog
-            # For Trino, use 'tpch' catalog for testing, or 'memory' as default
-            trino_catalog = os.getenv('TRINO_CATALOG', 'tpch' if notebook_engine == 'trino' else 'memory')
-            trino_schema = os.getenv('TRINO_SCHEMA', 'tiny')  # Default to 'tiny' schema for TPCH
+            # For Trino, detect catalog from SQL query or use environment/default
+            # Auto-detect catalog from SQL: if query references tpch.* use tpch, if tpcds.* use tpcds
+            sql_lower = compiled_sql.lower()
+            
+            # Auto-detect catalog from SQL query
+            if 'tpch.' in sql_lower or 'from tpch' in sql_lower or 'join tpch' in sql_lower:
+                detected_catalog = 'tpch'
+            elif 'tpcds.' in sql_lower or 'from tpcds' in sql_lower or 'join tpcds' in sql_lower:
+                detected_catalog = 'tpcds'
+            else:
+                # Default: use environment variable or fallback to tpcds
+                detected_catalog = None
+            
+            # Use detected catalog, environment variable, or default
+            if notebook_engine == 'trino':
+                trino_catalog = os.getenv('TRINO_CATALOG', detected_catalog or 'tpcds')
+            else:
+                trino_catalog = os.getenv('TRINO_CATALOG', 'memory')
+            
+            trino_schema = os.getenv('TRINO_SCHEMA', 'tiny')  # Default to 'tiny' schema for both TPCH and TPCDS
             
             logger.info(f'Executing Trino query: URL={trino_url}, Catalog={trino_catalog}, Schema={trino_schema}, User={trino_user}')
             logger.debug(f'Compiled SQL: {compiled_sql[:200]}...' if len(compiled_sql) > 200 else f'Compiled SQL: {compiled_sql}')

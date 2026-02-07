@@ -39,6 +39,126 @@
       "description": "Individual line items within orders in the TPCH benchmark",
       "entity": "lineitem",
       "system": "tpch"
+    },
+    "tpcds.tiny.customer": {
+      "description": "Customers who make purchases across store, catalog, and web channels in the TPC-DS benchmark",
+      "entity": "customer",
+      "system": "tpcds"
+    },
+    "tpcds.tiny.store_sales": {
+      "description": "Sales transactions through the store channel in the TPC-DS benchmark",
+      "entity": "store_sales",
+      "system": "tpcds"
+    },
+    "tpcds.tiny.store_returns": {
+      "description": "Returns for store channel sales in the TPC-DS benchmark",
+      "entity": "store_returns",
+      "system": "tpcds"
+    },
+    "tpcds.tiny.catalog_sales": {
+      "description": "Sales transactions through the catalog channel in the TPC-DS benchmark",
+      "entity": "catalog_sales",
+      "system": "tpcds"
+    },
+    "tpcds.tiny.catalog_returns": {
+      "description": "Returns for catalog channel sales in the TPC-DS benchmark",
+      "entity": "catalog_returns",
+      "system": "tpcds"
+    },
+    "tpcds.tiny.web_sales": {
+      "description": "Sales transactions through the web channel in the TPC-DS benchmark",
+      "entity": "web_sales",
+      "system": "tpcds"
+    },
+    "tpcds.tiny.web_returns": {
+      "description": "Returns for web channel sales in the TPC-DS benchmark",
+      "entity": "web_returns",
+      "system": "tpcds"
+    },
+    "tpcds.tiny.inventory": {
+      "description": "Product quantities on-hand at warehouses by week in the TPC-DS benchmark",
+      "entity": "inventory",
+      "system": "tpcds"
+    },
+    "tpcds.tiny.date_dim": {
+      "description": "Calendar date dimension table with various date attributes in the TPC-DS benchmark",
+      "entity": "date_dim",
+      "system": "tpcds"
+    },
+    "tpcds.tiny.item": {
+      "description": "Product/item information including brand, class, category, and pricing in the TPC-DS benchmark",
+      "entity": "item",
+      "system": "tpcds"
+    },
+    "tpcds.tiny.store": {
+      "description": "Store locations and details in the TPC-DS benchmark",
+      "entity": "store",
+      "system": "tpcds"
+    },
+    "tpcds.tiny.warehouse": {
+      "description": "Warehouse locations and details in the TPC-DS benchmark",
+      "entity": "warehouse",
+      "system": "tpcds"
+    },
+    "tpcds.tiny.customer_address": {
+      "description": "Customer address information in the TPC-DS benchmark",
+      "entity": "customer_address",
+      "system": "tpcds"
+    },
+    "tpcds.tiny.customer_demographics": {
+      "description": "Customer demographic combinations in the TPC-DS benchmark",
+      "entity": "customer_demographics",
+      "system": "tpcds"
+    },
+    "tpcds.tiny.household_demographics": {
+      "description": "Household demographic information in the TPC-DS benchmark",
+      "entity": "household_demographics",
+      "system": "tpcds"
+    },
+    "tpcds.tiny.promotion": {
+      "description": "Promotion information including discounts and special offers in the TPC-DS benchmark",
+      "entity": "promotion",
+      "system": "tpcds"
+    },
+    "tpcds.tiny.call_center": {
+      "description": "Call center details for catalog sales support in the TPC-DS benchmark",
+      "entity": "call_center",
+      "system": "tpcds"
+    },
+    "tpcds.tiny.catalog_page": {
+      "description": "Catalog page details for catalog sales in the TPC-DS benchmark",
+      "entity": "catalog_page",
+      "system": "tpcds"
+    },
+    "tpcds.tiny.web_site": {
+      "description": "Website details for web sales in the TPC-DS benchmark",
+      "entity": "web_site",
+      "system": "tpcds"
+    },
+    "tpcds.tiny.web_page": {
+      "description": "Web page details for web sales in the TPC-DS benchmark",
+      "entity": "web_page",
+      "system": "tpcds"
+    },
+    "tpcds.tiny.time_dim": {
+      "description": "Time dimension table with time-of-day attributes in the TPC-DS benchmark",
+      "entity": "time_dim",
+      "system": "tpcds"
+    },
+    "tpcds.tiny.ship_mode": {
+      "description": "Shipping mode information for deliveries in the TPC-DS benchmark",
+      "entity": "ship_mode",
+      "system": "tpcds"
+    },
+    "tpcds.tiny.reason": {
+      "description": "Return reason codes for product returns in the TPC-DS benchmark",
+      "entity": "reason",
+      "system": "tpcds"
+    },
+    "tpcds.tiny.income_band": {
+      "description": "Income band ranges for demographic analysis in the TPC-DS benchmark",
+      "entity": "income_band",
+      "system": "tpcds"
     }
   },
   "relationships": {
@@ -95,7 +215,172 @@
       "to": "tpch.tiny.supplier",
       "type": "references",
       "description": "Part-supplier relationship references a supplier"
+    },
+    "store_sales_to_customer": {
+      "from": "tpcds.tiny.store_sales",
+      "to": "tpcds.tiny.customer",
+      "type": "made_by",
+      "description": "Store sales transaction made by a customer"
+    },
+    "store_sales_to_item": {
+      "from": "tpcds.tiny.store_sales",
+      "to": "tpcds.tiny.item",
+      "type": "references",
+      "description": "Store sales transaction references an item"
+    },
+    "store_sales_to_store": {
+      "from": "tpcds.tiny.store_sales",
+      "to": "tpcds.tiny.store",
+      "type": "at",
+      "description": "Store sales transaction occurs at a store"
+    },
+    "store_sales_to_date": {
+      "from": "tpcds.tiny.store_sales",
+      "to": "tpcds.tiny.date_dim",
+      "type": "on",
+      "description": "Store sales transaction occurs on a date"
+    },
+    "store_sales_to_promotion": {
+      "from": "tpcds.tiny.store_sales",
+      "to": "tpcds.tiny.promotion",
+      "type": "uses",
+      "description": "Store sales transaction may use a promotion"
+    },
+    "web_sales_to_customer": {
+      "from": "tpcds.tiny.web_sales",
+      "to": "tpcds.tiny.customer",
+      "type": "made_by",
+      "description": "Web sales transaction made by a customer"
+    },
+    "web_sales_to_item": {
+      "from": "tpcds.tiny.web_sales",
+      "to": "tpcds.tiny.item",
+      "type": "references",
+      "description": "Web sales transaction references an item"
+    },
+    "web_sales_to_date": {
+      "from": "tpcds.tiny.web_sales",
+      "to": "tpcds.tiny.date_dim",
+      "type": "on",
+      "description": "Web sales transaction occurs on a date"
+    },
+    "web_sales_to_web_site": {
+      "from": "tpcds.tiny.web_sales",
+      "to": "tpcds.tiny.web_site",
+      "type": "on",
+      "description": "Web sales transaction occurs on a website"
+    },
+    "web_sales_to_warehouse": {
+      "from": "tpcds.tiny.web_sales",
+      "to": "tpcds.tiny.warehouse",
+      "type": "from",
+      "description": "Web sales transaction ships from a warehouse"
+    },
+    "catalog_sales_to_customer": {
+      "from": "tpcds.tiny.catalog_sales",
+      "to": "tpcds.tiny.customer",
+      "type": "made_by",
+      "description": "Catalog sales transaction made by a customer"
+    },
+    "catalog_sales_to_item": {
+      "from": "tpcds.tiny.catalog_sales",
+      "to": "tpcds.tiny.item",
+      "type": "references",
+      "description": "Catalog sales transaction references an item"
+    },
+    "catalog_sales_to_date": {
+      "from": "tpcds.tiny.catalog_sales",
+      "to": "tpcds.tiny.date_dim",
+      "type": "on",
+      "description": "Catalog sales transaction occurs on a date"
+    },
+    "catalog_sales_to_call_center": {
+      "from": "tpcds.tiny.catalog_sales",
+      "to": "tpcds.tiny.call_center",
+      "type": "through",
+      "description": "Catalog sales transaction processed through a call center"
+    },
+    "catalog_sales_to_warehouse": {
+      "from": "tpcds.tiny.catalog_sales",
+      "to": "tpcds.tiny.warehouse",
+      "type": "from",
+      "description": "Catalog sales transaction ships from a warehouse"
+    },
+    "inventory_to_item": {
+      "from": "tpcds.tiny.inventory",
+      "to": "tpcds.tiny.item",
+      "type": "references",
+      "description": "Inventory record references an item"
+    },
+    "inventory_to_warehouse": {
+      "from": "tpcds.tiny.inventory",
+      "to": "tpcds.tiny.warehouse",
+      "type": "at",
+      "description": "Inventory is located at a warehouse"
+    },
+    "inventory_to_date": {
+      "from": "tpcds.tiny.inventory",
+      "to": "tpcds.tiny.date_dim",
+      "type": "on",
+      "description": "Inventory snapshot on a specific date"
+    },
+    "customer_to_address": {
+      "from": "tpcds.tiny.customer",
+      "to": "tpcds.tiny.customer_address",
+      "type": "has",
+      "description": "Customer has an address"
+    },
+    "customer_to_demographics": {
+      "from": "tpcds.tiny.customer",
+      "to": "tpcds.tiny.customer_demographics",
+      "type": "has",
+      "description": "Customer has demographic attributes"
+    },
+    "customer_to_household": {
+      "from": "tpcds.tiny.customer",
+      "to": "tpcds.tiny.household_demographics",
+      "type": "belongs_to",
+      "description": "Customer belongs to a household demographic group"
+    },
+    "store_returns_to_store_sales": {
+      "from": "tpcds.tiny.store_returns",
+      "to": "tpcds.tiny.store_sales",
+      "type": "returns",
+      "description": "Store return references original store sale"
+    },
+    "web_returns_to_web_sales": {
+      "from": "tpcds.tiny.web_returns",
+      "to": "tpcds.tiny.web_sales",
+      "type": "returns",
+      "description": "Web return references original web sale"
+    },
+    "catalog_returns_to_catalog_sales": {
+      "from": "tpcds.tiny.catalog_returns",
+      "to": "tpcds.tiny.catalog_sales",
+      "type": "returns",
+      "description": "Catalog return references original catalog sale"
     }
   },
-  "terms": {}
+  "terms": {
+    "multi-channel": {
+      "description": "Refers to sales across multiple channels: store, catalog, and web",
+      "related_tables": ["tpcds.tiny.store_sales", "tpcds.tiny.catalog_sales", "tpcds.tiny.web_sales"]
+    },
+    "sales": {
+      "description": "Sales transactions across all channels",
+      "related_tables": ["tpcds.tiny.store_sales", "tpcds.tiny.catalog_sales", "tpcds.tiny.web_sales"]
+    },
+    "returns": {
+      "description": "Product returns across all channels",
+      "related_tables": ["tpcds.tiny.store_returns", "tpcds.tiny.catalog_returns", "tpcds.tiny.web_returns"]
+    },
+    "revenue": {
+      "description": "Total sales revenue, typically calculated from sales_price columns",
+      "related_tables": ["tpcds.tiny.store_sales", "tpcds.tiny.catalog_sales", "tpcds.tiny.web_sales"]
+    },
+    "inventory": {
+      "description": "Product inventory levels at warehouses",
+      "related_tables": ["tpcds.tiny.inventory", "tpcds.tiny.item", "tpcds.tiny.warehouse"]
+    }
+  }
 }

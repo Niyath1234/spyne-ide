@@ -30,6 +30,7 @@ export const colabTheme = EditorView.theme({
     fontSize: '0.875rem',
     fontFamily: "'JetBrains Mono', 'Fira Code', Menlo, Monaco, Consolas, 'Courier New', monospace",
     color: `${textPrimary} !important`,
+    caretColor: `${accentPink} !important`, // Cursor color for visibility
   },
   '.cm-focused': {
     outline: 'none',
@@ -53,7 +54,13 @@ export const colabTheme = EditorView.theme({
     backgroundColor: `${darkGray} !important`,
   },
   '.cm-selectionBackground': {
-    backgroundColor: `${mediumGray} !important`,
+    backgroundColor: `rgba(255, 95, 168, 0.3) !important`, // Pink selection color
+  },
+  '.cm-selectionMatch': {
+    backgroundColor: `rgba(255, 95, 168, 0.4) !important`, // Pink match color
+  },
+  '.cm-focused .cm-selectionBackground': {
+    backgroundColor: `rgba(255, 95, 168, 0.4) !important`, // Brighter when focused
   },
   '.cm-keyword': { color: `${accentPink} !important`, fontWeight: 'bold' },
   '.cm-string': { color: '#C4B5FD !important' },
@@ -62,4 +69,13 @@ export const colabTheme = EditorView.theme({
   '.cm-variable': { color: '#E6EDF3 !important' },
   '.cm-builtin': { color: '#8BD5CA !important' },
   '.cm-comment': { color: `${textSecondary} !important`, fontStyle: 'italic' },
+  // Cursor styling for visibility
+  '.cm-cursor': {
+    borderLeftColor: `${accentPink} !important`,
+    borderLeftWidth: '2px !important',
+  },
+  '.cm-focused .cm-cursor': {
+    borderLeftColor: `${accentPink} !important`,
+    borderLeftWidth: '2px !important',
+  },
 });

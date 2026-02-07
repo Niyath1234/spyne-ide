@@ -59,6 +59,150 @@
       "to": "tpch.tiny.partsupp",
       "on": "lineitem.l_partkey = partsupp.ps_partkey AND lineitem.l_suppkey = partsupp.ps_suppkey",
       "description": "Line item references part-supplier relationship"
+    },
+    {
+      "from": "tpcds.tiny.store_sales",
+      "to": "tpcds.tiny.customer",
+      "on": "store_sales.ss_customer_sk = customer.c_customer_sk",
+      "description": "Store sales transaction made by a customer"
+    },
+    {
+      "from": "tpcds.tiny.store_sales",
+      "to": "tpcds.tiny.item",
+      "on": "store_sales.ss_item_sk = item.i_item_sk",
+      "description": "Store sales transaction references an item"
+    },
+    {
+      "from": "tpcds.tiny.store_sales",
+      "to": "tpcds.tiny.store",
+      "on": "store_sales.ss_store_sk = store.s_store_sk",
+      "description": "Store sales transaction occurs at a store"
+    },
+    {
+      "from": "tpcds.tiny.store_sales",
+      "to": "tpcds.tiny.date_dim",
+      "on": "store_sales.ss_sold_date_sk = date_dim.d_date_sk",
+      "description": "Store sales transaction occurs on a date"
+    },
+    {
+      "from": "tpcds.tiny.store_sales",
+      "to": "tpcds.tiny.promotion",
+      "on": "store_sales.ss_promo_sk = promotion.p_promo_sk",
+      "description": "Store sales transaction may use a promotion"
+    },
+    {
+      "from": "tpcds.tiny.web_sales",
+      "to": "tpcds.tiny.customer",
+      "on": "web_sales.ws_bill_customer_sk = customer.c_customer_sk",
+      "description": "Web sales transaction made by a customer"
+    },
+    {
+      "from": "tpcds.tiny.web_sales",
+      "to": "tpcds.tiny.item",
+      "on": "web_sales.ws_item_sk = item.i_item_sk",
+      "description": "Web sales transaction references an item"
+    },
+    {
+      "from": "tpcds.tiny.web_sales",
+      "to": "tpcds.tiny.date_dim",
+      "on": "web_sales.ws_sold_date_sk = date_dim.d_date_sk",
+      "description": "Web sales transaction occurs on a date"
+    },
+    {
+      "from": "tpcds.tiny.web_sales",
+      "to": "tpcds.tiny.web_site",
+      "on": "web_sales.ws_web_site_sk = web_site.web_site_sk",
+      "description": "Web sales transaction occurs on a website"
+    },
+    {
+      "from": "tpcds.tiny.web_sales",
+      "to": "tpcds.tiny.warehouse",
+      "on": "web_sales.ws_warehouse_sk = warehouse.w_warehouse_sk",
+      "description": "Web sales transaction ships from a warehouse"
+    },
+    {
+      "from": "tpcds.tiny.catalog_sales",
+      "to": "tpcds.tiny.customer",
+      "on": "catalog_sales.cs_bill_customer_sk = customer.c_customer_sk",
+      "description": "Catalog sales transaction made by a customer"
+    },
+    {
+      "from": "tpcds.tiny.catalog_sales",
+      "to": "tpcds.tiny.item",
+      "on": "catalog_sales.cs_item_sk = item.i_item_sk",
+      "description": "Catalog sales transaction references an item"
+    },
+    {
+      "from": "tpcds.tiny.catalog_sales",
+      "to": "tpcds.tiny.date_dim",
+      "on": "catalog_sales.cs_sold_date_sk = date_dim.d_date_sk",
+      "description": "Catalog sales transaction occurs on a date"
+    },
+    {
+      "from": "tpcds.tiny.catalog_sales",
+      "to": "tpcds.tiny.call_center",
+      "on": "catalog_sales.cs_call_center_sk = call_center.cc_call_center_sk",
+      "description": "Catalog sales transaction processed through a call center"
+    },
+    {
+      "from": "tpcds.tiny.catalog_sales",
+      "to": "tpcds.tiny.warehouse",
+      "on": "catalog_sales.cs_warehouse_sk = warehouse.w_warehouse_sk",
+      "description": "Catalog sales transaction ships from a warehouse"
+    },
+    {
+      "from": "tpcds.tiny.inventory",
+      "to": "tpcds.tiny.item",
+      "on": "inventory.inv_item_sk = item.i_item_sk",
+      "description": "Inventory record references an item"
+    },
+    {
+      "from": "tpcds.tiny.inventory",
+      "to": "tpcds.tiny.warehouse",
+      "on": "inventory.inv_warehouse_sk = warehouse.w_warehouse_sk",
+      "description": "Inventory is located at a warehouse"
+    },
+    {
+      "from": "tpcds.tiny.inventory",
+      "to": "tpcds.tiny.date_dim",
+      "on": "inventory.inv_date_sk = date_dim.d_date_sk",
+      "description": "Inventory snapshot on a specific date"
+    },
+    {
+      "from": "tpcds.tiny.customer",
+      "to": "tpcds.tiny.customer_address",
+      "on": "customer.c_current_addr_sk = customer_address.ca_address_sk",
+      "description": "Customer has an address"
+    },
+    {
+      "from": "tpcds.tiny.customer",
+      "to": "tpcds.tiny.customer_demographics",
+      "on": "customer.c_current_cdemo_sk = customer_demographics.cd_demo_sk",
+      "description": "Customer has demographic attributes"
+    },
+    {
+      "from": "tpcds.tiny.customer",
+      "to": "tpcds.tiny.household_demographics",
+      "on": "customer.c_current_hdemo_sk = household_demographics.hd_demo_sk",
+      "description": "Customer belongs to a household demographic group"
+    },
+    {
+      "from": "tpcds.tiny.store_returns",
+      "to": "tpcds.tiny.store_sales",
+      "on": "store_returns.sr_ticket_number = store_sales.ss_ticket_number AND store_returns.sr_item_sk = store_sales.ss_item_sk",
+      "description": "Store return references original store sale"
+    },
+    {
+      "from": "tpcds.tiny.web_returns",
+      "to": "tpcds.tiny.web_sales",
+      "on": "web_returns.wr_order_number = web_sales.ws_order_number AND web_returns.wr_item_sk = web_sales.ws_item_sk",
+      "description": "Web return references original web sale"
+    },
+    {
+      "from": "tpcds.tiny.catalog_returns",
+      "to": "tpcds.tiny.catalog_sales",
+      "on": "catalog_returns.cr_order_number = catalog_sales.cs_order_number AND catalog_returns.cr_item_sk = catalog_sales.cs_item_sk",
+      "description": "Catalog return references original catalog sale"
     }
   ]
 }

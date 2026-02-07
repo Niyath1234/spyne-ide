@@ -169,6 +169,30 @@ const downloadCSV = (content: string, filename: string = 'rca-results.csv') => {
   window.URL.revokeObjectURL(url);
 };
 
+// Helper function to download entire conversation
+const downloadConversation = (steps: any[]) => {
+  let conversationText = 'Conversation Export\n';
+  conversationText += '='.repeat(50) + '\n\n';
+  
+  steps.forEach((step) => {
+    const date = new Date(step.timestamp);
+    conversationText += `[${date.toLocaleString()}]\n`;
+    conversationText += `Type: ${step.type.toUpperCase()}\n`;
+    conversationText += `Content:\n${step.content}\n`;
+    conversationText += '\n' + '-'.repeat(50) + '\n\n';
+  });
+  
+  const blob = new Blob([conversationText], { type: 'text/plain' });
+  const url = window.URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = `conversation-${new Date().toISOString().split('T')[0]}.txt`;
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  window.URL.revokeObjectURL(url);
+};
+
 // Helper function to parse RCA result content into structured sections
 const parseRCAResult = (content: string) => {
   const sections: {
@@ -570,12 +594,13 @@ export const ReasoningChat: React.FC = () => {
     setInput('');
     setIsLoading(true);
 
-    // Add user message
+    // Add user message (mark as user for ChatGPT-like display)
     addReasoningStep({
       id: `user-${Date.now()}`,
       type: 'action',
       content: userQuery,
       timestamp: new Date().toISOString(),
+      metadata: { isUser: true },
     });
 
     try {
@@ -740,21 +765,147 @@ export const ReasoningChat: React.FC = () => {
           });        }
       }
 
-      // Call the assistant API which returns reasoning_steps
+      // Call the assistant API which executes queries directly
       try {
-        const assistantResponse = await assistantAPI.ask(userQuery);
+        // Add timeout wrapper to prevent hanging
+        const timeoutPromise = new Promise((_, reject) => {
+          setTimeout(() => reject(new Error('Request timeout: The query took too long to execute')), 120000); // 2 minutes
+        });
+        
+        const assistantResponse = await Promise.race([
+          assistantAPI.ask(userQuery),
+          timeoutPromise
+        ]) as any;
+        
+        console.log('Assistant API response:', assistantResponse);
         const assistantData = assistantResponse;
         
-        // Display reasoning_steps from the API response - DYNAMICALLY
-        if (assistantData?.reasoning_steps && Array.isArray(assistantData.reasoning_steps)) {
-          // Clear existing steps and add all reasoning steps from API dynamically
-          clearReasoning();
+        // Debug: Log the structure
+        console.log('Response type:', assistantData?.response_type);
+        console.log('Has preview_data:', !!assistantData?.preview_data);
+        console.log('Has answer:', !!assistantData?.answer);
+        console.log('Has reasoning_steps:', !!assistantData?.reasoning_steps);
+        console.log('Full response keys:', assistantData ? Object.keys(assistantData) : 'null/undefined');
+        
+        // Handle new response format with preview_data and conclusion
+        if (assistantData?.response_type === 'QueryResult' && assistantData?.preview_data) {
+          const { preview_data, full_data, conclusion, answer } = assistantData;
           
-          // Add steps dynamically with delays for visual effect
+          // Build result content with conclusion and preview table
+          let resultContent = '';
+          
+          // Add LLM conclusion prominently
+          if (conclusion) {
+            resultContent += `## Conclusion\n\n${conclusion}\n\n`;
+          } else if (answer) {
+            resultContent += `## Result\n\n${answer}\n\n`;
+          }
+          
+          // Add preview table (first 5 rows)
+          if (preview_data?.columns && preview_data?.rows) {
+            resultContent += `### Data Preview (showing ${Math.min(preview_data.rows.length, 5)} of ${preview_data.total_rows} rows)\n\n`;
+            
+            // Create CSV-like table format
+            const headers = preview_data.columns.map((col: any) => col.name);
+            resultContent += headers.join(',') + '\n';
+            
+            preview_data.rows.slice(0, 5).forEach((row: any[]) => {
+              resultContent += row.map((val: any) => val !== null && val !== undefined ? String(val) : '').join(',') + '\n';
+            });
+            
+            // Store full data for download
+            if (full_data?.csv) {
+              // Store CSV in metadata for download
+              resultContent += `\n[FULL_DATA_CSV:${full_data.csv}]`;
+            }
+          }
+          
+          // Add result step with conclusion and preview
+          addReasoningStep({
+            id: `assistant-result-${Date.now()}`,
+            type: 'result',
+            content: resultContent,
+            timestamp: new Date().toISOString(),
+            metadata: {
+              conclusion,
+              preview_data,
+              full_data,
+            },
+          });
+          
+          setIsLoading(false);
+          return;
+        }
+        
+        // Handle other response types
+        if (assistantData?.response_type === 'QueryResult' && assistantData?.answer) {
+          // Response without preview_data - show answer
+          addReasoningStep({
+            id: `assistant-result-${Date.now()}`,
+            type: 'result',
+            content: assistantData.answer,
+            timestamp: new Date().toISOString(),
+          });
+          setIsLoading(false);
+          return;
+        }
+        
+        // Handle error response
+        if (assistantData?.response_type === 'Error') {
+          addReasoningStep({
+            id: `assistant-error-${Date.now()}`,
+            type: 'error',
+            content: assistantData.error || assistantData.answer || 'An error occurred while processing your query.',
+            timestamp: new Date().toISOString(),
+          });
+          setIsLoading(false);
+          return;
+        }
+        
+        // Handle any response with an answer field (catch-all)
+        if (assistantData?.answer) {
+          console.log('Using answer field from response');
+          addReasoningStep({
+            id: `assistant-answer-${Date.now()}`,
+            type: 'result',
+            content: assistantData.answer,
+            timestamp: new Date().toISOString(),
+          });
+          setIsLoading(false);
+          return;
+        }
+        
+        // Handle unexpected response format - show what we got
+        if (assistantData && Object.keys(assistantData).length > 0) {
+          console.warn('Unexpected response format:', assistantData);
+          const displayContent = assistantData.message || assistantData.result || assistantData.status || JSON.stringify(assistantData, null, 2);
+          addReasoningStep({
+            id: `assistant-unexpected-${Date.now()}`,
+            type: 'result',
+            content: displayContent,
+            timestamp: new Date().toISOString(),
+          });
+          setIsLoading(false);
+          return;
+        }
+        
+        // If we get here, response was empty or null - show error
+        console.error('Empty or null response from assistant API');
+        addReasoningStep({
+          id: `assistant-empty-${Date.now()}`,
+          type: 'error',
+          content: 'Received empty response from server. Please check:\n- Backend is running\n- Query was valid\n- Try again in a moment',
+          timestamp: new Date().toISOString(),
+        });
+        setIsLoading(false);
+        return;
+        
+        // Fallback: Handle reasoning_steps format (legacy)
+        if (assistantData?.reasoning_steps && Array.isArray(assistantData.reasoning_steps)) {
+          // Don't clear reasoning - just add steps
+          
           for (let i = 0; i < assistantData.reasoning_steps.length; i++) {
             const step = assistantData.reasoning_steps[i];
-            
-            // Determine step type based on content
             const stepLower = step.toLowerCase();
             let stepType: 'thought' | 'action' | 'result' | 'error' = 'thought';
             
@@ -766,7 +917,6 @@ export const ReasoningChat: React.FC = () => {
               stepType = 'action';
             }
             
-            // Add delay between steps for dynamic display (faster for thoughts, slower for results)
             const delay = stepType === 'thought' ? 100 : stepType === 'action' ? 200 : 300;
             
             setTimeout(() => {
@@ -777,7 +927,6 @@ export const ReasoningChat: React.FC = () => {
                 timestamp: new Date().toISOString(),
               });
               
-              // Scroll to bottom after adding step
               setTimeout(() => {
                 const chatContainer = document.querySelector('[data-chat-container]');
                 if (chatContainer) {
@@ -787,7 +936,6 @@ export const ReasoningChat: React.FC = () => {
             }, i * delay);
           }
           
-          // Add final answer if present (after all steps)
           if (assistantData.answer) {
             const totalDelay = assistantData.reasoning_steps.length * 200;
             setTimeout(() => {
@@ -798,7 +946,6 @@ export const ReasoningChat: React.FC = () => {
                 timestamp: new Date().toISOString(),
               });
               
-              // Scroll to bottom after adding answer
               setTimeout(() => {
                 const chatContainer = document.querySelector('[data-chat-container]');
                 if (chatContainer) {
@@ -809,7 +956,6 @@ export const ReasoningChat: React.FC = () => {
               setIsLoading(false);
             }, totalDelay + 300);
           } else {
-            // No answer, just set loading to false after last step
             const totalDelay = assistantData.reasoning_steps.length * 200;
             setTimeout(() => {
               setIsLoading(false);
@@ -818,8 +964,34 @@ export const ReasoningChat: React.FC = () => {
           
           return;
         }
+        
+        // If we get here and no data was handled, show error
+        console.error('No valid response format detected:', assistantData);
+        addReasoningStep({
+          id: `assistant-no-format-${Date.now()}`,
+          type: 'error',
+          content: 'Received response in unexpected format. Response data: ' + JSON.stringify(assistantData, null, 2),
+          timestamp: new Date().toISOString(),
+        });
+        setIsLoading(false);
+        return;
       } catch (assistantError: any) {
-        console.log('Assistant API failed, falling back to reasoning API:', assistantError);
+        console.error('Assistant API failed:', assistantError);
+        
+        // Show error to user with helpful message
+        const errorMsg = assistantError.message || assistantError.error || assistantError.response?.data?.error || 
+                        'Failed to execute query. The backend may be unavailable or the query timed out.';
+        
+        addReasoningStep({
+          id: `assistant-error-${Date.now()}`,
+          type: 'error',
+          content: `**Error:** ${errorMsg}\n\nPlease check:\n- Backend server is running\n- Network connection is stable\n- Query syntax is correct`,
+          timestamp: new Date().toISOString(),
+        });
+        setIsLoading(false);
+        
+        // Don't fall through to reasoning API if we've already shown an error
+        return;
       }
 
       // Fallback to reasoning API
@@ -885,8 +1057,8 @@ export const ReasoningChat: React.FC = () => {
                   currentResult.includes('Use CLI for full execution') ||
                   currentResult.length < 100) {
                 const systemsMatch = userQuery.match(/(\w+)\s+and\s+(\w+)/i);
-                const systemA = systemsMatch ? systemsMatch[1] : 'system_a';
-                const systemB = systemsMatch ? systemsMatch[2] : 'system_b';
+                const systemA = systemsMatch?.[1] ?? 'system_a';
+                const systemB = systemsMatch?.[2] ?? 'system_b';
                 const hasBalance = queryLower.includes('balance') || queryLower.includes('ledger');
                 
                 stepsToShow[lastResultIndex].content = `Root Cause Analysis Complete
@@ -931,8 +1103,8 @@ ${systemB}, Transaction Count, 145, Mismatch, -5`;
         
         // Extract system names from query (e.g., "scf_1 and scf_recon")
         const systemsMatch = userQuery.match(/(\w+)\s+and\s+(\w+)/i);
-        const systemA = systemsMatch ? systemsMatch[1] : 'system_a';
-        const systemB = systemsMatch ? systemsMatch[2] : 'system_b';
+        const systemA = systemsMatch?.[1] ?? 'system_a';
+        const systemB = systemsMatch?.[2] ?? 'system_b';
         
         let detailedResult = resultText;
         if (!detailedResult && hasMismatch) {
@@ -1038,11 +1210,11 @@ cargo run --bin rca-engine run "${userQuery}" --metadata-dir ./metadata --data-d
       } catch (apiError: any) {
         // Better error handling
         console.error('API Error:', apiError);
-      const errorMessage = apiError.response?.data?.error || 
-                          apiError.response?.data?.message || 
-                          apiError.message || 
-                          'An error occurred during analysis';
-      const statusCode = apiError.response?.status;
+        const errorMessage = apiError.response?.data?.error || 
+                            apiError.response?.data?.message || 
+                            apiError.message || 
+                            'An error occurred during analysis';
+        const statusCode = apiError.response?.status;
       
       // If API fails, use intelligent mock reasoning
       if (apiError.code === 'ERR_NETWORK' || apiError.message?.includes('Network Error')) {
@@ -1058,8 +1230,8 @@ cargo run --bin rca-engine run "${userQuery}" --metadata-dir ./metadata --data-d
         
         // Extract system names from query (e.g., "scf_1 and scf_recon")
         const systemsMatch = userQuery.match(/(\w+)\s+and\s+(\w+)/i);
-        const systemA = systemsMatch ? systemsMatch[1] : (hasScf ? 'scf_recon' : 'system_a');
-        const systemB = systemsMatch ? systemsMatch[2] : (hasScf ? 'scf_csv' : 'system_b');
+        const systemA = systemsMatch?.[1] ?? (hasScf ? 'scf_recon' : 'system_a');
+        const systemB = systemsMatch?.[2] ?? (hasScf ? 'scf_csv' : 'system_b');
         
         // Generate detailed result for mismatch queries
         let detailedResult = '';
@@ -1197,9 +1369,12 @@ cargo run --bin rca-engine run "${userQuery}" --metadata-dir ./metadata --data-d
       addReasoningStep({
         id: `error-${Date.now()}`,
         type: 'error',
-        content: `Unexpected error: ${outerError.message || 'Unknown error'}`,
+        content: `Unexpected error: ${outerError.message || 'Unknown error'}. Please try again.`,
         timestamp: new Date().toISOString(),
       });
+      setIsLoading(false);
+    } finally {
+      // Always clear loading state as a safety measure
       setIsLoading(false);
     }
   };
@@ -1224,20 +1399,35 @@ cargo run --bin rca-engine run "${userQuery}" --metadata-dir ./metadata --data-d
         }}
       >
         <Typography variant="body2" sx={{ color: '#8B949E', fontWeight: 500 }}>
-          Reasoning
-          </Typography>
+          Reasoning Chat
+        </Typography>
         {reasoningSteps.length > 0 && (
-          <Typography
-            variant="caption"
-            onClick={clearReasoning}
-            sx={{
-              color: '#6E7681',
-              cursor: 'pointer',
-              '&:hover': { color: '#8B949E' },
-            }}
-          >
-            Clear
-          </Typography>
+          <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
+            <Button
+              size="small"
+              startIcon={<DownloadIcon />}
+              onClick={() => downloadConversation(reasoningSteps)}
+              sx={{
+                color: '#8B949E',
+                fontSize: '0.7rem',
+                textTransform: 'none',
+                '&:hover': { color: '#E6EDF3' },
+              }}
+            >
+              Download Conversation
+            </Button>
+            <Typography
+              variant="caption"
+              onClick={clearReasoning}
+              sx={{
+                color: '#6E7681',
+                cursor: 'pointer',
+                '&:hover': { color: '#8B949E' },
+              }}
+            >
+              Clear
+            </Typography>
+          </Box>
         )}
       </Box>
 
@@ -1252,7 +1442,7 @@ cargo run --bin rca-engine run "${userQuery}" --metadata-dir ./metadata --data-d
           flexDirection: 'column',
         }}
       >
-        {reasoningSteps.length === 0 ? (
+        {reasoningSteps.length === 0 && !isLoading ? (
           <Box
             sx={{
               display: 'flex',
@@ -1267,13 +1457,36 @@ cargo run --bin rca-engine run "${userQuery}" --metadata-dir ./metadata --data-d
               Ask a question about your data reconciliation or root cause analysis
             </Typography>
           </Box>
-        ) : (
+        ) : reasoningSteps.length > 0 ? (
           reasoningSteps.map((step: any) => {
             // ChatGPT-like compact style
+            const isUser = step.metadata?.isUser || (step.type === 'action' && step.content && !step.content.startsWith('[') && !step.content.includes('CLARIFY') && !step.content.includes('CHOICE') && !step.content.includes('📝'));
             const isThought = step.type === 'thought';
-            const isAction = step.type === 'action';
+            const isAction = step.type === 'action' && !isUser;
             const isResult = step.type === 'result';
             const isError = step.type === 'error';
+            
+            // User message - display like ChatGPT
+            if (isUser) {
+              return (
+                <Box key={step.id} sx={{ mb: 2, display: 'flex', justifyContent: 'flex-end' }}>
+                  <Box
+                    sx={{
+                      maxWidth: '80%',
+                      backgroundColor: '#252526',
+                      color: '#E6EDF3',
+                      borderRadius: '18px 18px 4px 18px',
+                      px: 2,
+                      py: 1.25,
+                      fontSize: '0.9rem',
+                      lineHeight: 1.5,
+                    }}
+                  >
+                    {step.content}
+                  </Box>
+                </Box>
+              );
+            }
             
             return (
               <Box key={step.id} sx={{ mb: isThought || isAction ? 0.25 : 1.5 }}>
@@ -1287,20 +1500,21 @@ cargo run --bin rca-engine run "${userQuery}" --metadata-dir ./metadata --data-d
                     <Typography
                       variant="caption"
                       sx={{
-                        color: isCompletenessStep ? '#ff5fa8' : '#6E7681',
-                        fontSize: '0.65rem',
-                        fontStyle: 'italic',
-                        opacity: isCompletenessStep ? 0.9 : 0.5,
-                        pl: 1,
+                        color: isCompletenessStep ? '#ff5fa8' : '#E6EDF3',
+                        fontSize: '0.75rem',
+                        fontStyle: 'normal',
+                        opacity: isCompletenessStep ? 1 : 0.85,
+                        pl: 1.5,
                         fontWeight: isCompletenessStep ? 500 : 400,
-                        lineHeight: 1.4,
-                        backgroundColor: isCompletenessStep ? 'rgba(255, 9, 108, 0.1)' : 'transparent',
+                        lineHeight: 1.6,
+                        backgroundColor: isCompletenessStep ? 'rgba(255, 9, 108, 0.1)' : 'rgba(255, 255, 255, 0.03)',
                         borderRadius: isCompletenessStep ? 1 : 0,
-                        px: isCompletenessStep ? 1 : 0,
-                        py: isCompletenessStep ? 0.5 : 0,
+                        px: isCompletenessStep ? 1 : 1,
+                        py: isCompletenessStep ? 0.5 : 0.5,
+                        mb: 0.5,
                       }}
                     >
-                      {isCompletenessStep ? '⭐ ' : '[THOUGHT] '}{step.content}
+                      {isCompletenessStep ? '⭐ ' : '💭 '}{step.content}
                     </Typography>
                   );
                 })()}
@@ -1318,51 +1532,81 @@ cargo run --bin rca-engine run "${userQuery}" --metadata-dir ./metadata --data-d
                     <Typography
                       variant="caption"
                       sx={{
-                        color: isCompletenessStep ? '#ff5fa8' : '#6E7681',
-                        fontSize: '0.65rem',
-                        pl: 1,
-                        opacity: isCompletenessStep ? 0.9 : 0.5,
+                        color: isCompletenessStep ? '#ff5fa8' : '#C9D1D9',
+                        fontSize: '0.75rem',
+                        pl: 1.5,
+                        opacity: isCompletenessStep ? 1 : 0.9,
                         fontWeight: isCompletenessStep ? 500 : 400,
-                        lineHeight: 1.4,
-                        backgroundColor: isCompletenessStep ? 'rgba(255, 9, 108, 0.1)' : 'transparent',
+                        lineHeight: 1.6,
+                        backgroundColor: isCompletenessStep ? 'rgba(255, 9, 108, 0.1)' : 'rgba(255, 255, 255, 0.03)',
                         borderRadius: isCompletenessStep ? 1 : 0,
-                        px: isCompletenessStep ? 1 : 0,
-                        py: isCompletenessStep ? 0.5 : 0,
+                        px: isCompletenessStep ? 1 : 1,
+                        py: isCompletenessStep ? 0.5 : 0.5,
+                        mb: 0.5,
                       }}
                     >
-                      {isCompletenessStep ? '⭐ ' : '[ACTION] '}{step.content}
+                      {isCompletenessStep ? '⭐ ' : '⚡ '}{step.content}
                     </Typography>
                   );
                 })()}
                 {(isResult || isError) && (() => {
-                  const rcaResult = parseRCAResult(step.content);
-                  const tableData = rcaResult.mismatchDetails || parseTableData(step.content);
+                  // Extract conclusion and data from metadata if available
+                  const conclusion = step.metadata?.conclusion;
+                  const previewData = step.metadata?.preview_data;
+                  const fullData = step.metadata?.full_data;
                   
                   // Extract CSV content for download
                   let csvContent = '';
-                  if (tableData) {
-                    const lines = step.content.split('\n');
-                    const csvLines: string[] = [];
-                    const csvPattern = /^[^,|]*(,[^,|]*){2,}/;
-                    for (const line of lines) {
-                      if (csvPattern.test(line.trim())) {
-                        csvLines.push(line);
-                      }
+                  if (fullData?.csv) {
+                    csvContent = fullData.csv;
+                  } else {
+                    // Fallback: parse from content
+                    const csvMatch = step.content.match(/\[FULL_DATA_CSV:(.*?)\]/s);
+                    if (csvMatch) {
+                      csvContent = csvMatch[1];
                     }
-                    csvContent = csvLines.filter(l => l.trim()).join('\n');
                   }
                   
-                  // Extract text content (everything except table data)
-                  const textContent = step.content.split('\n')
-                    .filter((line: string) => {
-                      const trimmed = line.trim();
-                      if (!trimmed) return true;
-                      // Exclude CSV/table lines
-                      const csvPattern = /^[^,|]*(,[^,|]*){2,}/;
-                      return !csvPattern.test(trimmed);
-                    })
-                    .join('\n')
-                    .trim();
+                  // Parse table data - use preview_data if available, otherwise parse from content
+                  let tableData = null;
+                  if (previewData?.columns && previewData?.rows) {
+                    // Use preview data structure
+                    tableData = {
+                      headers: previewData.columns.map((col: any) => col.name),
+                      rows: previewData.rows.slice(0, 5), // Only show first 5 rows
+                      totalRows: previewData.total_rows || previewData.rows.length,
+                    };
+                  } else {
+                    // Fallback: parse from content
+                    const rcaResult = parseRCAResult(step.content);
+                    tableData = rcaResult.mismatchDetails || parseTableData(step.content);
+                    if (tableData) {
+                      // Limit to first 5 rows
+                      tableData = {
+                        ...tableData,
+                        rows: tableData.rows.slice(0, 5),
+                        totalRows: tableData.rows.length,
+                      };
+                    }
+                  }
+                  
+                  // Extract text content (conclusion and other text)
+                  let textContent = '';
+                  if (conclusion) {
+                    textContent = conclusion;
+                  } else {
+                    // Extract from step content, excluding CSV/table lines
+                    textContent = step.content.split('\n')
+                      .filter((line: string) => {
+                        const trimmed = line.trim();
+                        if (!trimmed) return false;
+                        // Exclude CSV/table lines and metadata markers
+                        const csvPattern = /^[^,|]*(,[^,|]*){2,}/;
+                        return !csvPattern.test(trimmed) && !trimmed.startsWith('[FULL_DATA_CSV:');
+                      })
+                      .join('\n')
+                      .trim();
+                  }
                   
                   const hasCLICommand = textContent.includes('cargo run') || textContent.includes('CLI');
                   
@@ -1375,8 +1619,11 @@ cargo run --bin rca-engine run "${userQuery}" --metadata-dir ./metadata --data-d
                         mt: 0.5,
                       }}
                     >
-                      {/* Text content (excluding CLI commands if table data exists) */}
+                      {/* Conclusion/Text content - Show prominently */}
                       {textContent && (!tableData || !hasCLICommand) && (() => {
+                        // Check if this is a conclusion (from metadata or starts with "Conclusion")
+                        const isConclusion = conclusion || textContent.toLowerCase().includes('conclusion') || textContent.toLowerCase().startsWith('## conclusion');
+                        
                         // Format text content with better styling
                         const formatTextContent = (text: string): React.ReactNode => {
                           const lines = text.split('\n');
@@ -1389,12 +1636,32 @@ cargo run --bin rca-engine run "${userQuery}" --metadata-dir ./metadata --data-d
                               return;
                             }
                             
-                            // Check for section headers (lines ending with colon or all caps)
+                            // Check for markdown headers
+                            const isMarkdownHeader = trimmed.startsWith('##');
                             const isHeader = trimmed.endsWith(':') || (trimmed.length < 50 && trimmed === trimmed.toUpperCase() && !trimmed.includes(','));
                             const isListItem = trimmed.startsWith('- ') || trimmed.match(/^\d+\./);
                             const isBoldSection = trimmed.includes('Root Cause') || trimmed.includes('Population Comparison') || trimmed.includes('Query:');
                             
-                            if (isHeader || isBoldSection) {
+                            if (isMarkdownHeader) {
+                              // Remove markdown header markers
+                              const headerText = trimmed.replace(/^#+\s*/, '');
+                              formattedLines.push(
+                                <Typography
+                                  key={idx}
+                                  variant="h6"
+                                  sx={{
+                                    color: '#ff5fa8',
+                                    fontWeight: 700,
+                                    fontSize: '1.1rem',
+                                    mt: idx > 0 ? 2.5 : 0,
+                                    mb: 1,
+                                    letterSpacing: '0.3px',
+                                  }}
+                                >
+                                  {headerText}
+                                </Typography>
+                              );
+                            } else if (isHeader || isBoldSection) {
                               formattedLines.push(
                                 <Typography
                                   key={idx}
@@ -1439,16 +1706,17 @@ cargo run --bin rca-engine run "${userQuery}" --metadata-dir ./metadata --data-d
                                 </Box>
                               );
                             } else {
-                              // Regular text line
+                              // Regular text line - make it conversational
                               formattedLines.push(
                                 <Typography
                                   key={idx}
-                                  variant="body2"
+                                  variant="body1"
                                   sx={{
-                                    color: '#C9D1D9',
-                                    fontSize: '0.875rem',
-                                    lineHeight: 1.7,
-                                    mb: 0.5,
+                                    color: isConclusion ? '#E6EDF3' : '#C9D1D9',
+                                    fontSize: isConclusion ? '0.95rem' : '0.875rem',
+                                    lineHeight: 1.8,
+                                    mb: 0.75,
+                                    fontWeight: isConclusion ? 400 : 400,
                                   }}
                                 >
                                   {trimmed}
@@ -1463,10 +1731,10 @@ cargo run --bin rca-engine run "${userQuery}" --metadata-dir ./metadata --data-d
                         return (
                           <Box
                             sx={{
-                              backgroundColor: 'rgba(255, 9, 108, 0.03)',
+                              backgroundColor: isConclusion ? 'rgba(255, 9, 108, 0.08)' : 'rgba(255, 9, 108, 0.03)',
                               borderRadius: 2,
-                              p: 2,
-                              border: '1px solid rgba(255, 9, 108, 0.1)',
+                              p: isConclusion ? 2.5 : 2,
+                              border: `1px solid ${isConclusion ? 'rgba(255, 9, 108, 0.2)' : 'rgba(255, 9, 108, 0.1)'}`,
                               mb: tableData ? 3 : 0,
                             }}
                           >
@@ -1517,28 +1785,32 @@ cargo run --bin rca-engine run "${userQuery}" --metadata-dir ./metadata --data-d
                                   letterSpacing: '0.5px',
                                 }}
                               >
-                                Mismatch Details
+                                Data Preview {tableData.totalRows ? `(showing ${tableData.rows.length} of ${tableData.totalRows} rows)` : ''}
                               </Typography>
-                              <Button
-                                size="small"
-                                startIcon={<DownloadIcon />}
-                                onClick={() => downloadCSV(csvContent, 'rca-results.csv')}
-                                sx={{
-                                  color: '#ff5fa8',
-                                  fontSize: '0.75rem',
-                                  textTransform: 'none',
-                                  border: '1px solid rgba(255, 9, 108, 0.3)',
-                                  borderRadius: 1,
-                                  px: 1.5,
-                                  py: 0.5,
-                                  '&:hover': {
-                                    backgroundColor: 'rgba(255, 9, 108, 0.1)',
-                                    borderColor: '#ff5fa8',
-                                  },
-                                }}
-                              >
-                                Download CSV
-                              </Button>
+                              <Box sx={{ display: 'flex', gap: 1 }}>
+                                {csvContent && (
+                                  <Button
+                                    size="small"
+                                    startIcon={<DownloadIcon />}
+                                    onClick={() => downloadCSV(csvContent, 'query-results.csv')}
+                                    sx={{
+                                      color: '#ff5fa8',
+                                      fontSize: '0.75rem',
+                                      textTransform: 'none',
+                                      border: '1px solid rgba(255, 9, 108, 0.3)',
+                                      borderRadius: 1,
+                                      px: 1.5,
+                                      py: 0.5,
+                                      '&:hover': {
+                                        backgroundColor: 'rgba(255, 9, 108, 0.1)',
+                                        borderColor: '#ff5fa8',
+                                      },
+                                    }}
+                                  >
+                                    Download CSV
+                                  </Button>
+                                )}
+                              </Box>
                             </Box>
                             <TableContainer 
                               component={Paper} 
@@ -1568,7 +1840,7 @@ cargo run --bin rca-engine run "${userQuery}" --metadata-dir ./metadata --data-d
                               <Table size="small" stickyHeader>
                                 <TableHead>
                                   <TableRow>
-                                    {tableData.headers.map((header, idx) => (
+                                    {tableData.headers.map((header: string, idx: number) => (
                                       <TableCell
                                         key={idx}
                                         sx={{
@@ -1589,7 +1861,7 @@ cargo run --bin rca-engine run "${userQuery}" --metadata-dir ./metadata --data-d
                                   </TableRow>
                                 </TableHead>
                                 <TableBody>
-                                  {tableData.rows.map((row, rowIdx) => {
+                                  {tableData.rows.map((row: any[], rowIdx: number) => {
                                     return (
                                       <TableRow 
                                         key={rowIdx}
@@ -1601,7 +1873,7 @@ cargo run --bin rca-engine run "${userQuery}" --metadata-dir ./metadata --data-d
                                           transition: 'background-color 0.2s',
                                         }}
                                       >
-                                        {row.map((cell, cellIdx) => {
+                                        {row.map((cell: any, cellIdx: number) => {
                                           const header = tableData.headers[cellIdx];
                                           const isNumericCell = isNumeric(cell);
                                           const isDiff = isDiffColumn(header);
@@ -1655,18 +1927,20 @@ cargo run --bin rca-engine run "${userQuery}" --metadata-dir ./metadata --data-d
                                 </TableBody>
                               </Table>
                             </TableContainer>
-                            <Typography 
-                              variant="caption" 
-                              sx={{ 
-                                color: '#6E7681', 
-                                fontSize: '0.7rem',
-                                mt: 1,
-                                display: 'block',
-                                fontStyle: 'italic',
-                              }}
-                            >
-                              Showing {tableData.rows.length} row{tableData.rows.length !== 1 ? 's' : ''}
-                            </Typography>
+                            {tableData.totalRows && tableData.totalRows > tableData.rows.length && (
+                              <Typography 
+                                variant="caption" 
+                                sx={{ 
+                                  color: '#6E7681', 
+                                  fontSize: '0.7rem',
+                                  mt: 1,
+                                  display: 'block',
+                                  fontStyle: 'italic',
+                                }}
+                              >
+                                Showing {tableData.rows.length} of {tableData.totalRows} rows. Download CSV for full results.
+                              </Typography>
+                            )}
                           </Box>
                         );
                       })()}                    </Box>
@@ -1675,21 +1949,27 @@ cargo run --bin rca-engine run "${userQuery}" --metadata-dir ./metadata --data-d
               </Box>
             );
           })
-        )}
+        ) : null}
         {isLoading && (
           <Typography
             variant="caption"
             sx={{
-              color: '#6E7681',
-              fontSize: '0.65rem',
-              fontStyle: 'italic',
-              opacity: 0.5,
-              pl: 1,
+              color: '#E6EDF3',
+              fontSize: '0.75rem',
+              fontStyle: 'normal',
+              opacity: 0.85,
+              pl: 1.5,
               fontWeight: 400,
-              lineHeight: 1.4,
+              lineHeight: 1.6,
+              backgroundColor: 'rgba(255, 255, 255, 0.03)',
+              borderRadius: 0,
+              px: 1,
+              py: 0.5,
+              mb: 0.5,
             }}
           >
-            [THOUGHT] Analyzing...            </Typography>
+            💭 Analyzing...
+          </Typography>
         )}
         <div ref={messagesEndRef} />
       </Box>

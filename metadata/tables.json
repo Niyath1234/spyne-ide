@@ -360,6 +360,1099 @@
           "description": "Comment about line item"
         }
       ]
+    },
+    {
+      "name": "tpcds.tiny.customer",
+      "entity": "customer",
+      "system": "tpcds",
+      "columns": [
+        {
+          "name": "c_customer_sk",
+          "type": "bigint",
+          "description": "Primary key for customer"
+        },
+        {
+          "name": "c_customer_id",
+          "type": "varchar",
+          "description": "Customer identifier"
+        },
+        {
+          "name": "c_current_cdemo_sk",
+          "type": "bigint",
+          "description": "Current customer demographics key"
+        },
+        {
+          "name": "c_current_hdemo_sk",
+          "type": "bigint",
+          "description": "Current household demographics key"
+        },
+        {
+          "name": "c_current_addr_sk",
+          "type": "bigint",
+          "description": "Current address key"
+        },
+        {
+          "name": "c_first_shipto_date_sk",
+          "type": "bigint",
+          "description": "First ship-to date key"
+        },
+        {
+          "name": "c_first_sales_date_sk",
+          "type": "bigint",
+          "description": "First sales date key"
+        },
+        {
+          "name": "c_salutation",
+          "type": "varchar",
+          "description": "Customer salutation"
+        },
+        {
+          "name": "c_first_name",
+          "type": "varchar",
+          "description": "Customer first name"
+        },
+        {
+          "name": "c_last_name",
+          "type": "varchar",
+          "description": "Customer last name"
+        },
+        {
+          "name": "c_preferred_cust_flag",
+          "type": "varchar",
+          "description": "Preferred customer flag"
+        },
+        {
+          "name": "c_birth_day",
+          "type": "integer",
+          "description": "Birth day"
+        },
+        {
+          "name": "c_birth_month",
+          "type": "integer",
+          "description": "Birth month"
+        },
+        {
+          "name": "c_birth_year",
+          "type": "integer",
+          "description": "Birth year"
+        },
+        {
+          "name": "c_birth_country",
+          "type": "varchar",
+          "description": "Birth country"
+        },
+        {
+          "name": "c_login",
+          "type": "varchar",
+          "description": "Customer login"
+        },
+        {
+          "name": "c_email_address",
+          "type": "varchar",
+          "description": "Email address"
+        },
+        {
+          "name": "c_last_review_date_sk",
+          "type": "bigint",
+          "description": "Last review date key"
+        }
+      ]
+    },
+    {
+      "name": "tpcds.tiny.store_sales",
+      "entity": "store_sales",
+      "system": "tpcds",
+      "columns": [
+        {
+          "name": "ss_sold_date_sk",
+          "type": "bigint",
+          "description": "Sold date key"
+        },
+        {
+          "name": "ss_sold_time_sk",
+          "type": "bigint",
+          "description": "Sold time key"
+        },
+        {
+          "name": "ss_item_sk",
+          "type": "bigint",
+          "description": "Item key"
+        },
+        {
+          "name": "ss_customer_sk",
+          "type": "bigint",
+          "description": "Customer key"
+        },
+        {
+          "name": "ss_cdemo_sk",
+          "type": "bigint",
+          "description": "Customer demographics key"
+        },
+        {
+          "name": "ss_hdemo_sk",
+          "type": "bigint",
+          "description": "Household demographics key"
+        },
+        {
+          "name": "ss_addr_sk",
+          "type": "bigint",
+          "description": "Address key"
+        },
+        {
+          "name": "ss_store_sk",
+          "type": "bigint",
+          "description": "Store key"
+        },
+        {
+          "name": "ss_promo_sk",
+          "type": "bigint",
+          "description": "Promotion key"
+        },
+        {
+          "name": "ss_ticket_number",
+          "type": "bigint",
+          "description": "Ticket number"
+        },
+        {
+          "name": "ss_quantity",
+          "type": "integer",
+          "description": "Quantity sold"
+        },
+        {
+          "name": "ss_wholesale_cost",
+          "type": "double",
+          "description": "Wholesale cost"
+        },
+        {
+          "name": "ss_list_price",
+          "type": "double",
+          "description": "List price"
+        },
+        {
+          "name": "ss_sales_price",
+          "type": "double",
+          "description": "Sales price"
+        },
+        {
+          "name": "ss_ext_discount_amt",
+          "type": "double",
+          "description": "Extended discount amount"
+        },
+        {
+          "name": "ss_ext_sales_price",
+          "type": "double",
+          "description": "Extended sales price"
+        },
+        {
+          "name": "ss_ext_wholesale_cost",
+          "type": "double",
+          "description": "Extended wholesale cost"
+        },
+        {
+          "name": "ss_ext_list_price",
+          "type": "double",
+          "description": "Extended list price"
+        },
+        {
+          "name": "ss_ext_tax",
+          "type": "double",
+          "description": "Extended tax"
+        },
+        {
+          "name": "ss_coupon_amt",
+          "type": "double",
+          "description": "Coupon amount"
+        },
+        {
+          "name": "ss_net_paid",
+          "type": "double",
+          "description": "Net paid"
+        },
+        {
+          "name": "ss_net_paid_inc_tax",
+          "type": "double",
+          "description": "Net paid including tax"
+        },
+        {
+          "name": "ss_net_profit",
+          "type": "double",
+          "description": "Net profit"
+        }
+      ]
+    },
+    {
+      "name": "tpcds.tiny.date_dim",
+      "entity": "date_dim",
+      "system": "tpcds",
+      "columns": [
+        {
+          "name": "d_date_sk",
+          "type": "bigint",
+          "description": "Primary key for date"
+        },
+        {
+          "name": "d_date_id",
+          "type": "varchar",
+          "description": "Date identifier"
+        },
+        {
+          "name": "d_date",
+          "type": "date",
+          "description": "Date"
+        },
+        {
+          "name": "d_month_seq",
+          "type": "integer",
+          "description": "Month sequence"
+        },
+        {
+          "name": "d_week_seq",
+          "type": "integer",
+          "description": "Week sequence"
+        },
+        {
+          "name": "d_quarter_seq",
+          "type": "integer",
+          "description": "Quarter sequence"
+        },
+        {
+          "name": "d_year",
+          "type": "integer",
+          "description": "Year"
+        },
+        {
+          "name": "d_dow",
+          "type": "integer",
+          "description": "Day of week"
+        },
+        {
+          "name": "d_moy",
+          "type": "integer",
+          "description": "Month of year"
+        },
+        {
+          "name": "d_dom",
+          "type": "integer",
+          "description": "Day of month"
+        },
+        {
+          "name": "d_qoy",
+          "type": "integer",
+          "description": "Quarter of year"
+        },
+        {
+          "name": "d_fy_year",
+          "type": "integer",
+          "description": "Fiscal year"
+        },
+        {
+          "name": "d_fy_quarter_seq",
+          "type": "integer",
+          "description": "Fiscal quarter sequence"
+        },
+        {
+          "name": "d_fy_week_seq",
+          "type": "integer",
+          "description": "Fiscal week sequence"
+        },
+        {
+          "name": "d_day_name",
+          "type": "varchar",
+          "description": "Day name"
+        },
+        {
+          "name": "d_quarter_name",
+          "type": "varchar",
+          "description": "Quarter name"
+        },
+        {
+          "name": "d_holiday",
+          "type": "varchar",
+          "description": "Holiday flag"
+        },
+        {
+          "name": "d_weekend",
+          "type": "varchar",
+          "description": "Weekend flag"
+        },
+        {
+          "name": "d_following_holiday",
+          "type": "varchar",
+          "description": "Following holiday flag"
+        },
+        {
+          "name": "d_first_dom",
+          "type": "integer",
+          "description": "First day of month"
+        },
+        {
+          "name": "d_last_dom",
+          "type": "integer",
+          "description": "Last day of month"
+        },
+        {
+          "name": "d_same_day_ly",
+          "type": "integer",
+          "description": "Same day last year"
+        },
+        {
+          "name": "d_same_day_lq",
+          "type": "integer",
+          "description": "Same day last quarter"
+        },
+        {
+          "name": "d_current_day",
+          "type": "varchar",
+          "description": "Current day flag"
+        },
+        {
+          "name": "d_current_week",
+          "type": "varchar",
+          "description": "Current week flag"
+        },
+        {
+          "name": "d_current_month",
+          "type": "varchar",
+          "description": "Current month flag"
+        },
+        {
+          "name": "d_current_quarter",
+          "type": "varchar",
+          "description": "Current quarter flag"
+        },
+        {
+          "name": "d_current_year",
+          "type": "varchar",
+          "description": "Current year flag"
+        }
+      ]
+    },
+    {
+      "name": "tpcds.tiny.item",
+      "entity": "item",
+      "system": "tpcds",
+      "columns": [
+        {
+          "name": "i_item_sk",
+          "type": "bigint",
+          "description": "Primary key for item"
+        },
+        {
+          "name": "i_item_id",
+          "type": "varchar",
+          "description": "Item identifier"
+        },
+        {
+          "name": "i_rec_start_date",
+          "type": "date",
+          "description": "Record start date"
+        },
+        {
+          "name": "i_rec_end_date",
+          "type": "date",
+          "description": "Record end date"
+        },
+        {
+          "name": "i_item_desc",
+          "type": "varchar",
+          "description": "Item description"
+        },
+        {
+          "name": "i_current_price",
+          "type": "double",
+          "description": "Current price"
+        },
+        {
+          "name": "i_wholesale_cost",
+          "type": "double",
+          "description": "Wholesale cost"
+        },
+        {
+          "name": "i_brand_id",
+          "type": "integer",
+          "description": "Brand identifier"
+        },
+        {
+          "name": "i_brand",
+          "type": "varchar",
+          "description": "Brand name"
+        },
+        {
+          "name": "i_class_id",
+          "type": "integer",
+          "description": "Class identifier"
+        },
+        {
+          "name": "i_class",
+          "type": "varchar",
+          "description": "Class name"
+        },
+        {
+          "name": "i_category_id",
+          "type": "integer",
+          "description": "Category identifier"
+        },
+        {
+          "name": "i_category",
+          "type": "varchar",
+          "description": "Category name"
+        },
+        {
+          "name": "i_manufact_id",
+          "type": "integer",
+          "description": "Manufacturer identifier"
+        },
+        {
+          "name": "i_manufact",
+          "type": "varchar",
+          "description": "Manufacturer name"
+        },
+        {
+          "name": "i_size",
+          "type": "varchar",
+          "description": "Item size"
+        },
+        {
+          "name": "i_formulation",
+          "type": "varchar",
+          "description": "Formulation"
+        },
+        {
+          "name": "i_color",
+          "type": "varchar",
+          "description": "Item color"
+        },
+        {
+          "name": "i_units",
+          "type": "varchar",
+          "description": "Units"
+        },
+        {
+          "name": "i_container",
+          "type": "varchar",
+          "description": "Container type"
+        },
+        {
+          "name": "i_manager_id",
+          "type": "integer",
+          "description": "Manager identifier"
+        },
+        {
+          "name": "i_product_name",
+          "type": "varchar",
+          "description": "Product name"
+        }
+      ]
+    },
+    {
+      "name": "tpcds.tiny.store",
+      "entity": "store",
+      "system": "tpcds",
+      "columns": [
+        {
+          "name": "s_store_sk",
+          "type": "bigint",
+          "description": "Primary key for store"
+        },
+        {
+          "name": "s_store_id",
+          "type": "varchar",
+          "description": "Store identifier"
+        },
+        {
+          "name": "s_rec_start_date",
+          "type": "date",
+          "description": "Record start date"
+        },
+        {
+          "name": "s_rec_end_date",
+          "type": "date",
+          "description": "Record end date"
+        },
+        {
+          "name": "s_closed_date_sk",
+          "type": "bigint",
+          "description": "Closed date key"
+        },
+        {
+          "name": "s_store_name",
+          "type": "varchar",
+          "description": "Store name"
+        },
+        {
+          "name": "s_number_employees",
+          "type": "integer",
+          "description": "Number of employees"
+        },
+        {
+          "name": "s_floor_space",
+          "type": "integer",
+          "description": "Floor space"
+        },
+        {
+          "name": "s_hours",
+          "type": "varchar",
+          "description": "Store hours"
+        },
+        {
+          "name": "s_manager",
+          "type": "varchar",
+          "description": "Store manager"
+        },
+        {
+          "name": "s_market_id",
+          "type": "integer",
+          "description": "Market identifier"
+        },
+        {
+          "name": "s_geography_class",
+          "type": "varchar",
+          "description": "Geography class"
+        },
+        {
+          "name": "s_market_desc",
+          "type": "varchar",
+          "description": "Market description"
+        },
+        {
+          "name": "s_market_manager",
+          "type": "varchar",
+          "description": "Market manager"
+        },
+        {
+          "name": "s_division_id",
+          "type": "integer",
+          "description": "Division identifier"
+        },
+        {
+          "name": "s_division_name",
+          "type": "varchar",
+          "description": "Division name"
+        },
+        {
+          "name": "s_company_id",
+          "type": "integer",
+          "description": "Company identifier"
+        },
+        {
+          "name": "s_company_name",
+          "type": "varchar",
+          "description": "Company name"
+        },
+        {
+          "name": "s_street_number",
+          "type": "varchar",
+          "description": "Street number"
+        },
+        {
+          "name": "s_street_name",
+          "type": "varchar",
+          "description": "Street name"
+        },
+        {
+          "name": "s_street_type",
+          "type": "varchar",
+          "description": "Street type"
+        },
+        {
+          "name": "s_suite_number",
+          "type": "varchar",
+          "description": "Suite number"
+        },
+        {
+          "name": "s_city",
+          "type": "varchar",
+          "description": "City"
+        },
+        {
+          "name": "s_county",
+          "type": "varchar",
+          "description": "County"
+        },
+        {
+          "name": "s_state",
+          "type": "varchar",
+          "description": "State"
+        },
+        {
+          "name": "s_zip",
+          "type": "varchar",
+          "description": "ZIP code"
+        },
+        {
+          "name": "s_country",
+          "type": "varchar",
+          "description": "Country"
+        },
+        {
+          "name": "s_gmt_offset",
+          "type": "double",
+          "description": "GMT offset"
+        },
+        {
+          "name": "s_tax_precentage",
+          "type": "double",
+          "description": "Tax percentage"
+        }
+      ]
+    },
+    {
+      "name": "tpcds.tiny.warehouse",
+      "entity": "warehouse",
+      "system": "tpcds",
+      "columns": [
+        {
+          "name": "w_warehouse_sk",
+          "type": "bigint",
+          "description": "Primary key for warehouse"
+        },
+        {
+          "name": "w_warehouse_id",
+          "type": "varchar",
+          "description": "Warehouse identifier"
+        },
+        {
+          "name": "w_warehouse_name",
+          "type": "varchar",
+          "description": "Warehouse name"
+        },
+        {
+          "name": "w_warehouse_sq_ft",
+          "type": "integer",
+          "description": "Warehouse square feet"
+        },
+        {
+          "name": "w_street_number",
+          "type": "varchar",
+          "description": "Street number"
+        },
+        {
+          "name": "w_street_name",
+          "type": "varchar",
+          "description": "Street name"
+        },
+        {
+          "name": "w_street_type",
+          "type": "varchar",
+          "description": "Street type"
+        },
+        {
+          "name": "w_suite_number",
+          "type": "varchar",
+          "description": "Suite number"
+        },
+        {
+          "name": "w_city",
+          "type": "varchar",
+          "description": "City"
+        },
+        {
+          "name": "w_county",
+          "type": "varchar",
+          "description": "County"
+        },
+        {
+          "name": "w_state",
+          "type": "varchar",
+          "description": "State"
+        },
+        {
+          "name": "w_zip",
+          "type": "varchar",
+          "description": "ZIP code"
+        },
+        {
+          "name": "w_country",
+          "type": "varchar",
+          "description": "Country"
+        },
+        {
+          "name": "w_gmt_offset",
+          "type": "double",
+          "description": "GMT offset"
+        }
+      ]
+    },
+    {
+      "name": "tpcds.tiny.web_sales",
+      "entity": "web_sales",
+      "system": "tpcds",
+      "columns": [
+        {
+          "name": "ws_sold_date_sk",
+          "type": "bigint",
+          "description": "Sold date key"
+        },
+        {
+          "name": "ws_sold_time_sk",
+          "type": "bigint",
+          "description": "Sold time key"
+        },
+        {
+          "name": "ws_ship_date_sk",
+          "type": "bigint",
+          "description": "Ship date key"
+        },
+        {
+          "name": "ws_item_sk",
+          "type": "bigint",
+          "description": "Item key"
+        },
+        {
+          "name": "ws_bill_customer_sk",
+          "type": "bigint",
+          "description": "Bill customer key"
+        },
+        {
+          "name": "ws_bill_cdemo_sk",
+          "type": "bigint",
+          "description": "Bill customer demographics key"
+        },
+        {
+          "name": "ws_bill_hdemo_sk",
+          "type": "bigint",
+          "description": "Bill household demographics key"
+        },
+        {
+          "name": "ws_bill_addr_sk",
+          "type": "bigint",
+          "description": "Bill address key"
+        },
+        {
+          "name": "ws_ship_customer_sk",
+          "type": "bigint",
+          "description": "Ship customer key"
+        },
+        {
+          "name": "ws_ship_cdemo_sk",
+          "type": "bigint",
+          "description": "Ship customer demographics key"
+        },
+        {
+          "name": "ws_ship_hdemo_sk",
+          "type": "bigint",
+          "description": "Ship household demographics key"
+        },
+        {
+          "name": "ws_ship_addr_sk",
+          "type": "bigint",
+          "description": "Ship address key"
+        },
+        {
+          "name": "ws_web_page_sk",
+          "type": "bigint",
+          "description": "Web page key"
+        },
+        {
+          "name": "ws_web_site_sk",
+          "type": "bigint",
+          "description": "Web site key"
+        },
+        {
+          "name": "ws_ship_mode_sk",
+          "type": "bigint",
+          "description": "Ship mode key"
+        },
+        {
+          "name": "ws_warehouse_sk",
+          "type": "bigint",
+          "description": "Warehouse key"
+        },
+        {
+          "name": "ws_promo_sk",
+          "type": "bigint",
+          "description": "Promotion key"
+        },
+        {
+          "name": "ws_order_number",
+          "type": "bigint",
+          "description": "Order number"
+        },
+        {
+          "name": "ws_quantity",
+          "type": "integer",
+          "description": "Quantity"
+        },
+        {
+          "name": "ws_wholesale_cost",
+          "type": "double",
+          "description": "Wholesale cost"
+        },
+        {
+          "name": "ws_list_price",
+          "type": "double",
+          "description": "List price"
+        },
+        {
+          "name": "ws_sales_price",
+          "type": "double",
+          "description": "Sales price"
+        },
+        {
+          "name": "ws_ext_discount_amt",
+          "type": "double",
+          "description": "Extended discount amount"
+        },
+        {
+          "name": "ws_ext_sales_price",
+          "type": "double",
+          "description": "Extended sales price"
+        },
+        {
+          "name": "ws_ext_wholesale_cost",
+          "type": "double",
+          "description": "Extended wholesale cost"
+        },
+        {
+          "name": "ws_ext_list_price",
+          "type": "double",
+          "description": "Extended list price"
+        },
+        {
+          "name": "ws_ext_tax",
+          "type": "double",
+          "description": "Extended tax"
+        },
+        {
+          "name": "ws_coupon_amt",
+          "type": "double",
+          "description": "Coupon amount"
+        },
+        {
+          "name": "ws_ext_ship_cost",
+          "type": "double",
+          "description": "Extended ship cost"
+        },
+        {
+          "name": "ws_net_paid",
+          "type": "double",
+          "description": "Net paid"
+        },
+        {
+          "name": "ws_net_paid_inc_tax",
+          "type": "double",
+          "description": "Net paid including tax"
+        },
+        {
+          "name": "ws_net_paid_inc_ship",
+          "type": "double",
+          "description": "Net paid including ship"
+        },
+        {
+          "name": "ws_net_paid_inc_ship_tax",
+          "type": "double",
+          "description": "Net paid including ship and tax"
+        },
+        {
+          "name": "ws_net_profit",
+          "type": "double",
+          "description": "Net profit"
+        }
+      ]
+    },
+    {
+      "name": "tpcds.tiny.catalog_sales",
+      "entity": "catalog_sales",
+      "system": "tpcds",
+      "columns": [
+        {
+          "name": "cs_sold_date_sk",
+          "type": "bigint",
+          "description": "Sold date key"
+        },
+        {
+          "name": "cs_sold_time_sk",
+          "type": "bigint",
+          "description": "Sold time key"
+        },
+        {
+          "name": "cs_ship_date_sk",
+          "type": "bigint",
+          "description": "Ship date key"
+        },
+        {
+          "name": "cs_bill_customer_sk",
+          "type": "bigint",
+          "description": "Bill customer key"
+        },
+        {
+          "name": "cs_bill_cdemo_sk",
+          "type": "bigint",
+          "description": "Bill customer demographics key"
+        },
+        {
+          "name": "cs_bill_hdemo_sk",
+          "type": "bigint",
+          "description": "Bill household demographics key"
+        },
+        {
+          "name": "cs_bill_addr_sk",
+          "type": "bigint",
+          "description": "Bill address key"
+        },
+        {
+          "name": "cs_ship_customer_sk",
+          "type": "bigint",
+          "description": "Ship customer key"
+        },
+        {
+          "name": "cs_ship_cdemo_sk",
+          "type": "bigint",
+          "description": "Ship customer demographics key"
+        },
+        {
+          "name": "cs_ship_hdemo_sk",
+          "type": "bigint",
+          "description": "Ship household demographics key"
+        },
+        {
+          "name": "cs_ship_addr_sk",
+          "type": "bigint",
+          "description": "Ship address key"
+        },
+        {
+          "name": "cs_call_center_sk",
+          "type": "bigint",
+          "description": "Call center key"
+        },
+        {
+          "name": "cs_catalog_page_sk",
+          "type": "bigint",
+          "description": "Catalog page key"
+        },
+        {
+          "name": "cs_ship_mode_sk",
+          "type": "bigint",
+          "description": "Ship mode key"
+        },
+        {
+          "name": "cs_warehouse_sk",
+          "type": "bigint",
+          "description": "Warehouse key"
+        },
+        {
+          "name": "cs_item_sk",
+          "type": "bigint",
+          "description": "Item key"
+        },
+        {
+          "name": "cs_promo_sk",
+          "type": "bigint",
+          "description": "Promotion key"
+        },
+        {
+          "name": "cs_order_number",
+          "type": "bigint",
+          "description": "Order number"
+        },
+        {
+          "name": "cs_quantity",
+          "type": "integer",
+          "description": "Quantity"
+        },
+        {
+          "name": "cs_wholesale_cost",
+          "type": "double",
+          "description": "Wholesale cost"
+        },
+        {
+          "name": "cs_list_price",
+          "type": "double",
+          "description": "List price"
+        },
+        {
+          "name": "cs_sales_price",
+          "type": "double",
+          "description": "Sales price"
+        },
+        {
+          "name": "cs_ext_discount_amt",
+          "type": "double",
+          "description": "Extended discount amount"
+        },
+        {
+          "name": "cs_ext_sales_price",
+          "type": "double",
+          "description": "Extended sales price"
+        },
+        {
+          "name": "cs_ext_wholesale_cost",
+          "type": "double",
+          "description": "Extended wholesale cost"
+        },
+        {
+          "name": "cs_ext_list_price",
+          "type": "double",
+          "description": "Extended list price"
+        },
+        {
+          "name": "cs_ext_tax",
+          "type": "double",
+          "description": "Extended tax"
+        },
+        {
+          "name": "cs_coupon_amt",
+          "type": "double",
+          "description": "Coupon amount"
+        },
+        {
+          "name": "cs_ext_ship_cost",
+          "type": "double",
+          "description": "Extended ship cost"
+        },
+        {
+          "name": "cs_net_paid",
+          "type": "double",
+          "description": "Net paid"
+        },
+        {
+          "name": "cs_net_paid_inc_tax",
+          "type": "double",
+          "description": "Net paid including tax"
+        },
+        {
+          "name": "cs_net_paid_inc_ship",
+          "type": "double",
+          "description": "Net paid including ship"
+        },
+        {
+          "name": "cs_net_paid_inc_ship_tax",
+          "type": "double",
+          "description": "Net paid including ship and tax"
+        },
+        {
+          "name": "cs_net_profit",
+          "type": "double",
+          "description": "Net profit"
+        }
+      ]
+    },
+    {
+      "name": "tpcds.tiny.inventory",
+      "entity": "inventory",
+      "system": "tpcds",
+      "columns": [
+        {
+          "name": "inv_date_sk",
+          "type": "bigint",
+          "description": "Date key"
+        },
+        {
+          "name": "inv_item_sk",
+          "type": "bigint",
+          "description": "Item key"
+        },
+        {
+          "name": "inv_warehouse_sk",
+          "type": "bigint",
+          "description": "Warehouse key"
+        },
+        {
+          "name": "inv_quantity_on_hand",
+          "type": "integer",
+          "description": "Quantity on hand"
+        }
+      ]
     }
   ]
 }

@@ -19,7 +19,8 @@ import {
 } from '@mui/icons-material';
 import CodeMirror from '@uiw/react-codemirror';
 import { sql } from '@codemirror/lang-sql';
-import { EditorView } from '@codemirror/view';
+import { EditorView, keymap } from '@codemirror/view';
+import { defaultKeymap } from '@codemirror/commands';
 import type { NotebookCell as NotebookCellType } from '../api/client';
 import { colabTheme } from './colabTheme';
 
@@ -215,9 +216,18 @@ export const NotebookCell: React.FC<NotebookCellProps> = ({
               fontSize: '0.875rem',
               fontFamily: "'JetBrains Mono', 'Fira Code', Menlo, Monaco, Consolas, 'Courier New', monospace",
               color: '#E6EDF3 !important',
+              caretColor: '#ff5fa8 !important', // Cursor color
             },
             '& .cm-focused': {
               outline: 'none',
+            },
+            '& .cm-cursor': {
+              borderLeftColor: '#ff5fa8 !important',
+              borderLeftWidth: '2px !important',
+            },
+            '&.cm-focused .cm-cursor': {
+              borderLeftColor: '#ff5fa8 !important',
+              borderLeftWidth: '2px !important',
             },
             '& .cm-gutters': {
               backgroundColor: '#12161D !important',
@@ -236,25 +246,73 @@ export const NotebookCell: React.FC<NotebookCellProps> = ({
               sql(),
               colabTheme,
               EditorView.lineWrapping,
+              // Keyboard shortcut: Shift+Enter (or Shift+Return on Mac) to run cell
+              // Use domEventHandlers to catch the event before CodeMirror processes it
+              EditorView.domEventHandlers({
+                keydown: (event) => {
+                  // Check for Shift+Enter or Shift+Return (Mac uses Return key)
+                  if (event.shiftKey && (event.key === 'Enter' || event.keyCode === 13 || event.which === 13)) {
+                    event.preventDefault();
+                    event.stopPropagation();
+                    // Use setTimeout to ensure it runs after the event is fully handled
+                    setTimeout(() => {
+                      onRun(cell.id);
+                    }, 0);
+                    return true;
+                  }
+                  return false;
+                },
+              }),
+              keymap.of([
+                ...defaultKeymap,
+              ]),
               EditorView.theme({
                 '&': {
                   backgroundColor: '#12161D',
                 },
                 '.cm-content': {
                   color: '#E6EDF3',
+                  caretColor: '#ff5fa8', // Visible cursor color
                 },
                 '.cm-focused': {
                   outline: 'none',
+                },
+                '.cm-cursor': {
+                  borderLeftColor: '#ff5fa8 !important', // Cursor color
+                  borderLeftWidth: '2px !important',
+                },
+                '.cm-cursorLayer': {
+                  zIndex: '100',
+                },
+                // Make cursor more visible when focused
+                '&.cm-focused .cm-cursor': {
+                  borderLeftColor: '#ff5fa8 !important',
+                  borderLeftWidth: '2px !important',
+                  animation: 'blink 1s step-end infinite',
+                },
+                // Selection/highlight color
+                '.cm-selectionBackground': {
+                  backgroundColor: 'rgba(255, 95, 168, 0.3) !important',
+                },
+                '.cm-selectionMatch': {
+                  backgroundColor: 'rgba(255, 95, 168, 0.4) !important',
+                },
+                '.cm-focused .cm-selectionBackground': {
+                  backgroundColor: 'rgba(255, 95, 168, 0.4) !important',
+                },
+                '@keyframes blink': {
+                  '0%, 50%': { opacity: '1' },
+                  '51%, 100%': { opacity: '0' },
                 },
               }),
             ]}
             basicSetup={{
               lineNumbers: true,
               foldGutter: false,
-              highlightActiveLine: false,
+              highlightActiveLine: true, // Enable active line highlight for better visibility
               autocompletion: true,
             }}
-            placeholder="Start coding or generate with AI. Use %%ref <cell_id> AS <alias> to reference other cells."
+            placeholder="Start coding or generate with AI. Use %%ref <cell_id> AS <alias> to reference other cells. Press Shift+Enter to run."
           />
         </Box>
 

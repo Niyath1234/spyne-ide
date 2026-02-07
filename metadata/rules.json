@@ -1,3 +1,88 @@
 {
-  "rules": []
+  "rules": [
+    {
+      "name": "tpcds_multi_channel_sales",
+      "description": "Sales can occur across three channels: store, catalog, and web. When aggregating total sales, combine all three channels.",
+      "applies_to": ["tpcds.tiny.store_sales", "tpcds.tiny.catalog_sales", "tpcds.tiny.web_sales"],
+      "rule": "Total sales = SUM(store_sales.ss_sales_price) + SUM(catalog_sales.cs_sales_price) + SUM(web_sales.ws_sales_price)",
+      "type": "aggregation"
+    },
+    {
+      "name": "tpcds_sales_date_join",
+      "description": "Sales fact tables must join with date_dim using the sold_date_sk column for time-based analysis.",
+      "applies_to": ["tpcds.tiny.store_sales", "tpcds.tiny.catalog_sales", "tpcds.tiny.web_sales", "tpcds.tiny.date_dim"],
+      "rule": "store_sales.ss_sold_date_sk = date_dim.d_date_sk OR catalog_sales.cs_sold_date_sk = date_dim.d_date_sk OR web_sales.ws_sold_date_sk = date_dim.d_date_sk",
+      "type": "join"
+    },
+    {
+      "name": "tpcds_customer_sales_join",
+      "description": "Sales transactions join to customer table using customer_sk columns. Store sales uses ss_customer_sk, web/catalog sales use bill_customer_sk.",
+      "applies_to": ["tpcds.tiny.store_sales", "tpcds.tiny.web_sales", "tpcds.tiny.catalog_sales", "tpcds.tiny.customer"],
+      "rule": "store_sales.ss_customer_sk = customer.c_customer_sk OR web_sales.ws_bill_customer_sk = customer.c_customer_sk OR catalog_sales.cs_bill_customer_sk = customer.c_customer_sk",
+      "type": "join"
+    },
+    {
+      "name": "tpcds_item_sales_join",
+      "description": "All sales fact tables join to item table using item_sk columns.",
+      "applies_to": ["tpcds.tiny.store_sales", "tpcds.tiny.catalog_sales", "tpcds.tiny.web_sales", "tpcds.tiny.item"],
+      "rule": "store_sales.ss_item_sk = item.i_item_sk OR catalog_sales.cs_item_sk = item.i_item_sk OR web_sales.ws_item_sk = item.i_item_sk",
+      "type": "join"
+    },
+    {
+      "name": "tpcds_returns_reference_sales",
+      "description": "Return tables reference their corresponding sales tables. Store returns reference store sales, web returns reference web sales, catalog returns reference catalog sales.",
+      "applies_to": ["tpcds.tiny.store_returns", "tpcds.tiny.web_returns", "tpcds.tiny.catalog_returns"],
+      "rule": "Returns must join to their corresponding sales table using ticket_number/order_number and item_sk",
+      "type": "relationship"
+    },
+    {
+      "name": "tpcds_inventory_snapshot",
+      "description": "Inventory table represents weekly snapshots of product quantities at warehouses. Join with date_dim for time-based inventory analysis.",
+      "applies_to": ["tpcds.tiny.inventory", "tpcds.tiny.date_dim", "tpcds.tiny.item", "tpcds.tiny.warehouse"],
+      "rule": "inventory.inv_date_sk = date_dim.d_date_sk AND inventory.inv_item_sk = item.i_item_sk AND inventory.inv_warehouse_sk = warehouse.w_warehouse_sk",
+      "type": "join"
+    },
+    {
+      "name": "tpcds_promotion_optional",
+      "description": "Promotions are optional in sales transactions. Use LEFT JOIN when including promotions, as not all sales have promotions.",
+      "applies_to": ["tpcds.tiny.store_sales", "tpcds.tiny.promotion"],
+      "rule": "When joining promotions, use LEFT JOIN as ss_promo_sk can be NULL",
+      "type": "join"
+    },
+    {
+      "name": "tpcds_revenue_calculation",
+      "description": "Revenue is calculated from sales_price columns. Net profit accounts for costs and discounts.",
+      "applies_to": ["tpcds.tiny.store_sales", "tpcds.tiny.catalog_sales", "tpcds.tiny.web_sales"],
+      "rule": "Revenue = SUM(sales_price), Net Profit = SUM(net_profit)",
+      "type": "calculation"
+    },
+    {
+      "name": "tpcds_customer_demographics",
+      "description": "Customer table links to customer_demographics and household_demographics for demographic analysis.",
+      "applies_to": ["tpcds.tiny.customer", "tpcds.tiny.customer_demographics", "tpcds.tiny.household_demographics"],
+      "rule": "customer.c_current_cdemo_sk = customer_demographics.cd_demo_sk AND customer.c_current_hdemo_sk = household_demographics.hd_demo_sk",
+      "type": "join"
+    },
+    {
+      "name": "tpcds_warehouse_shipment",
+      "description": "Web and catalog sales ship from warehouses. Store sales occur at stores, not warehouses.",
+      "applies_to": ["tpcds.tiny.web_sales", "tpcds.tiny.catalog_sales", "tpcds.tiny.warehouse"],
+      "rule": "web_sales.ws_warehouse_sk = warehouse.w_warehouse_sk OR catalog_sales.cs_warehouse_sk = warehouse.w_warehouse_sk",
+      "type": "join"
+    },
+    {
+      "name": "tpcds_date_dimension_usage",
+      "description": "date_dim is the primary time dimension for all TPC-DS fact tables. Use it for date filtering, grouping, and time-based analysis.",
+      "applies_to": ["tpcds.tiny.date_dim"],
+      "rule": "Always join date_dim when performing time-based queries on sales or inventory data",
+      "type": "best_practice"
+    },
+    {
+      "name": "tpcds_channel_identification",
+      "description": "To identify sales channel, use the fact table name or add a literal column: 'store' for store_sales, 'catalog' for catalog_sales, 'web' for web_sales.",
+      "applies_to": ["tpcds.tiny.store_sales", "tpcds.tiny.catalog_sales", "tpcds.tiny.web_sales"],
+      "rule": "When combining channels, add 'store' AS channel, 'catalog' AS channel, or 'web' AS channel",
+      "type": "best_practice"
+    }
+  ]
 }
